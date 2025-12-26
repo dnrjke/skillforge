@@ -59,26 +59,34 @@ export default class BootScene extends Phaser.Scene {
     }
 
     createAnimations() {
-        // knight_idle: 프레임 0~3 (반복)
+        // knight_idle: 행 3 (프레임 30~33) - 서있는 포즈
         this.anims.create({
             key: 'knight_idle',
-            frames: this.anims.generateFrameNumbers('knight', { start: 0, end: 3 }),
+            frames: this.anims.generateFrameNumbers('knight', { start: 30, end: 33 }),
             frameRate: 8,
             repeat: -1
         });
 
-        // knight_attack: 프레임 4~10
+        // knight_attack: 행 1~2 (프레임 10~23) - 공격 동작
         this.anims.create({
             key: 'knight_attack',
-            frames: this.anims.generateFrameNumbers('knight', { start: 4, end: 10 }),
+            frames: this.anims.generateFrameNumbers('knight', { start: 10, end: 23 }),
             frameRate: 12,
             repeat: 0
         });
 
-        // knight_hit: 프레임 11~13
+        // knight_hit: 행 5 (프레임 50~53) - 피격 동작
         this.anims.create({
             key: 'knight_hit',
-            frames: this.anims.generateFrameNumbers('knight', { start: 11, end: 13 }),
+            frames: this.anims.generateFrameNumbers('knight', { start: 50, end: 53 }),
+            frameRate: 10,
+            repeat: 0
+        });
+
+        // knight_death: 행 0 (프레임 0~9) - 죽음 동작
+        this.anims.create({
+            key: 'knight_death',
+            frames: this.anims.generateFrameNumbers('knight', { start: 0, end: 9 }),
             frameRate: 10,
             repeat: 0
         });
