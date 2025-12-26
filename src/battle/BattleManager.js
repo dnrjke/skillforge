@@ -527,16 +527,20 @@ export default class BattleManager {
         banner.setDepth(3000);
         banner.setScrollFactor(0);
 
-        // 배경 바
-        const bgGlow = this.scene.add.rectangle(0, 0, 340, 60, 0xffaa44, 0.25);
+        // 배경 바 (AP 알갱이 포함하도록 세로로 늘림)
+        const hasAp = apCost > 0;
+        const bannerHeight = hasAp ? 65 : 50;
+        const textY = hasAp ? 8 : 0;
+
+        const bgGlow = this.scene.add.rectangle(0, 0, 340, bannerHeight + 10, 0xffaa44, 0.25);
         bgGlow.setScrollFactor(0);
 
-        const bg = this.scene.add.rectangle(0, 0, 320, 50, 0x000000, 0.85);
+        const bg = this.scene.add.rectangle(0, 0, 320, bannerHeight, 0x000000, 0.85);
         bg.setStrokeStyle(2, 0xffaa44);
         bg.setScrollFactor(0);
 
         // 행동 이름
-        const text = this.scene.add.text(0, 0, actionName, {
+        const text = this.scene.add.text(0, textY, actionName, {
             fontSize: '22px',
             fill: '#ffffff',
             fontFamily: 'Arial',
@@ -546,13 +550,13 @@ export default class BattleManager {
         }).setOrigin(0.5).setScrollFactor(0);
 
         // 좌우 장식
-        const leftDeco = this.scene.add.text(-120, 0, '【', {
+        const leftDeco = this.scene.add.text(-120, textY, '【', {
             fontSize: '26px',
             fill: '#ffaa44',
             fontFamily: 'Arial'
         }).setOrigin(0.5).setScrollFactor(0);
 
-        const rightDeco = this.scene.add.text(120, 0, '】', {
+        const rightDeco = this.scene.add.text(120, textY, '】', {
             fontSize: '26px',
             fill: '#ffaa44',
             fontFamily: 'Arial'
@@ -560,29 +564,41 @@ export default class BattleManager {
 
         banner.add([bgGlow, bg, leftDeco, text, rightDeco]);
 
-        // AP 소모량 알갱이 표시 (왼쪽 1-5, 오른쪽 6-10)
-        const dotSize = 8;
-        const dotGap = 12;
-        const dotY = 0;
+        // AP 소모량 알갱이 표시 (스킬명 상단에 가로 배열)
+        if (apCost > 0) {
+            const dotSize = 6;
+            const dotGap = 10;
+            const dotY = -15;  // 스킬명 위쪽
+            const firstGroupCount = Math.min(5, apCost);
+            const secondGroupCount = Math.max(0, Math.min(5, apCost - 5));
 
-        // 왼쪽 알갱이 (1-5)
-        const leftDots = Math.min(5, apCost);
-        for (let i = 0; i < leftDots; i++) {
-            const dotX = -145 - (4 - i) * dotGap;
-            const dot = this.scene.add.circle(dotX, dotY, dotSize / 2, 0xffcc66);
-            dot.setScrollFactor(0);
-            dot.setStrokeStyle(1, 0xffaa44);
-            banner.add(dot);
-        }
+            // 전체 알갱이 너비 계산 (그룹 사이 간격 포함)
+            const groupGap = 8;  // 첫번째/두번째 그룹 사이 간격
+            const firstGroupWidth = (firstGroupCount - 1) * dotGap;
+            const secondGroupWidth = secondGroupCount > 0 ? (secondGroupCount - 1) * dotGap : 0;
+            const totalWidth = firstGroupWidth + (secondGroupCount > 0 ? groupGap + secondGroupWidth : 0);
+            const startX = -totalWidth / 2;
 
-        // 오른쪽 알갱이 (6-10)
-        const rightDots = Math.max(0, Math.min(5, apCost - 5));
-        for (let i = 0; i < rightDots; i++) {
-            const dotX = 145 + i * dotGap;
-            const dot = this.scene.add.circle(dotX, dotY, dotSize / 2, 0xffcc66);
-            dot.setScrollFactor(0);
-            dot.setStrokeStyle(1, 0xffaa44);
-            banner.add(dot);
+            // 첫번째 그룹 (1-5)
+            for (let i = 0; i < firstGroupCount; i++) {
+                const dotX = startX + i * dotGap;
+                const dot = this.scene.add.circle(dotX, dotY, dotSize / 2, 0xffcc66);
+                dot.setScrollFactor(0);
+                dot.setStrokeStyle(1, 0xffaa44);
+                banner.add(dot);
+            }
+
+            // 두번째 그룹 (6-10)
+            if (secondGroupCount > 0) {
+                const secondStartX = startX + firstGroupWidth + groupGap;
+                for (let i = 0; i < secondGroupCount; i++) {
+                    const dotX = secondStartX + i * dotGap;
+                    const dot = this.scene.add.circle(dotX, dotY, dotSize / 2, 0xffcc66);
+                    dot.setScrollFactor(0);
+                    dot.setStrokeStyle(1, 0xffaa44);
+                    banner.add(dot);
+                }
+            }
         }
 
         // 등장 애니메이션

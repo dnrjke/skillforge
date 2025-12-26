@@ -13,20 +13,57 @@ export default class BattleControlUI {
         this.speedOptions = [0.5, 1, 2, 4, 8];
         this.speedLabels = ['1x', '2x', '4x', '8x', '16x'];
 
-        this.speedBadge = null;
-        this.controlPanel = null;
-
         // 모바일 감지
         this.isMobile = this.detectMobile();
         this.scale = this.isMobile ? 1.5 : 1;
 
+        // 게임 컨테이너 참조
+        this.gameContainer = document.getElementById('game-container');
+
         this.createSpeedBadge();
         this.createControlPanel();
+        this.setupResizeHandler();
     }
 
     detectMobile() {
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
                window.innerWidth <= 768;
+    }
+
+    // 리사이즈 핸들러 설정
+    setupResizeHandler() {
+        this.updatePosition();
+        window.addEventListener('resize', () => this.updatePosition());
+    }
+
+    // 위치 업데이트 (게임 캔버스 기준)
+    updatePosition() {
+        if (!this.gameContainer) return;
+
+        const canvas = this.gameContainer.querySelector('canvas');
+        if (!canvas) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = rect.width / 1280;
+
+        // 배속 뱃지 위치
+        if (this.speedBadgeWrapper) {
+            const badgeX = this.isMobile ? 1220 : 1240;
+            const badgeY = this.isMobile ? 50 : 40;
+            this.speedBadgeWrapper.style.left = `${rect.left + badgeX * scaleX}px`;
+            this.speedBadgeWrapper.style.top = `${rect.top + badgeY * scaleX}px`;
+            this.speedBadgeWrapper.style.transform = `translate(-50%, -50%) scale(${scaleX})`;
+        }
+
+        // 컨트롤 패널 위치
+        if (this.controlPanelWrapper) {
+            const panelX = this.isMobile ? 1210 : 1230;
+            const panelY = this.isMobile ? 540 : 580;
+            this.controlPanelWrapper.style.left = `${rect.left + panelX * scaleX}px`;
+            this.controlPanelWrapper.style.top = `${rect.top + panelY * scaleX}px`;
+            this.controlPanelWrapper.style.transform = `translate(-100%, 0) scale(${scaleX})`;
+            this.controlPanelWrapper.style.transformOrigin = 'top right';
+        }
     }
 
     // 우상단 배속 뱃지
@@ -35,7 +72,16 @@ export default class BattleControlUI {
         const fontSize = Math.round(16 * this.scale);
         const borderWidth = Math.round(3 * this.scale);
 
-        const html = `
+        // 순수 HTML 요소 생성
+        this.speedBadgeWrapper = document.createElement('div');
+        this.speedBadgeWrapper.id = 'speed-badge-wrapper';
+        this.speedBadgeWrapper.style.cssText = `
+            position: fixed;
+            z-index: 1000;
+            pointer-events: auto;
+        `;
+
+        this.speedBadgeWrapper.innerHTML = `
             <style>
                 #speed-badge {
                     width: ${size}px;
@@ -74,14 +120,9 @@ export default class BattleControlUI {
             <div id="speed-badge">1x</div>
         `;
 
-        const posX = this.isMobile ? 1220 : 1240;
-        const posY = this.isMobile ? 50 : 40;
-        this.speedBadge = this.scene.add.dom(posX, posY).createFromHTML(html);
-        this.speedBadge.setOrigin(0.5, 0.5);
-        this.speedBadge.setDepth(2000);
-        this.speedBadge.setScrollFactor(0);  // 카메라 워킹 영향 안받음
+        document.body.appendChild(this.speedBadgeWrapper);
 
-        const badge = this.speedBadge.node.querySelector('#speed-badge');
+        const badge = this.speedBadgeWrapper.querySelector('#speed-badge');
 
         // 클릭으로 배속 순환
         badge.addEventListener('click', (e) => {
@@ -108,7 +149,16 @@ export default class BattleControlUI {
         const statusFontSize = Math.round(11 * this.scale);
         const statusPadding = Math.round(4 * this.scale);
 
-        const html = `
+        // 순수 HTML 요소 생성
+        this.controlPanelWrapper = document.createElement('div');
+        this.controlPanelWrapper.id = 'control-panel-wrapper';
+        this.controlPanelWrapper.style.cssText = `
+            position: fixed;
+            z-index: 1000;
+            pointer-events: auto;
+        `;
+
+        this.controlPanelWrapper.innerHTML = `
             <style>
                 #control-panel {
                     display: flex;
@@ -156,19 +206,12 @@ export default class BattleControlUI {
             </div>
         `;
 
-        // 우하단 배치 (모바일에서 약간 위로)
-        const posX = this.isMobile ? 1210 : 1230;
-        const posY = this.isMobile ? 540 : 580;
-        this.controlPanel = this.scene.add.dom(posX, posY).createFromHTML(html);
-        this.controlPanel.setOrigin(1, 0);
-        this.controlPanel.setDepth(2000);
-        this.controlPanel.setScrollFactor(0);  // 카메라 워킹 영향 안받음
-
+        document.body.appendChild(this.controlPanelWrapper);
         this.setupControlEvents();
     }
 
     setupControlEvents() {
-        const container = this.controlPanel.node;
+        const container = this.controlPanelWrapper.querySelector('#control-panel');
 
         // 자동 전투 버튼
         const autoBtn = container.querySelector('#auto-btn');
@@ -205,7 +248,7 @@ export default class BattleControlUI {
     }
 
     applySpeed() {
-        const badge = this.speedBadge.node.querySelector('#speed-badge');
+        const badge = this.speedBadgeWrapper.querySelector('#speed-badge');
         const label = this.speedLabels[this.currentSpeedIndex];
         const actualSpeed = this.speedOptions[this.currentSpeedIndex];
 
@@ -230,7 +273,7 @@ export default class BattleControlUI {
     toggleAuto() {
         if (!this.battleManager) return;
 
-        const autoBtn = this.controlPanel.node.querySelector('#auto-btn');
+        const autoBtn = this.controlPanelWrapper.querySelector('#auto-btn');
 
         if (!this.battleManager.isRunning) {
             // 전투 시작
@@ -251,7 +294,7 @@ export default class BattleControlUI {
     togglePause() {
         if (!this.battleManager || !this.battleManager.isRunning) return;
 
-        const pauseBtn = this.controlPanel.node.querySelector('#pause-btn');
+        const pauseBtn = this.controlPanelWrapper.querySelector('#pause-btn');
         const isPaused = this.battleManager.togglePause();
 
         pauseBtn.classList.toggle('paused', isPaused);
@@ -266,7 +309,7 @@ export default class BattleControlUI {
     }
 
     updateStatus() {
-        const statusEl = this.controlPanel.node.querySelector('#battle-status');
+        const statusEl = this.controlPanelWrapper.querySelector('#battle-status');
         if (!this.battleManager) {
             statusEl.textContent = '대기 중';
             return;
@@ -289,15 +332,15 @@ export default class BattleControlUI {
 
     // 전투 종료 시 호출
     onBattleEnd(result) {
-        const autoBtn = this.controlPanel.node.querySelector('#auto-btn');
-        const pauseBtn = this.controlPanel.node.querySelector('#pause-btn');
+        const autoBtn = this.controlPanelWrapper.querySelector('#auto-btn');
+        const pauseBtn = this.controlPanelWrapper.querySelector('#pause-btn');
 
         autoBtn.classList.remove('active');
         autoBtn.textContent = '▶ AUTO';
         pauseBtn.classList.remove('paused');
         pauseBtn.textContent = '⏸ PAUSE';
 
-        const statusEl = this.controlPanel.node.querySelector('#battle-status');
+        const statusEl = this.controlPanelWrapper.querySelector('#battle-status');
         statusEl.textContent = `종료: ${result}`;
     }
 }

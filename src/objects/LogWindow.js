@@ -1,8 +1,8 @@
 export default class LogWindow {
     constructor(scene, startMinimized = true) {
         this.scene = scene;
-        this.isMinimized = startMinimized; // Phase 4.75: 기본 숨김
-        this.initialHeight = 180; // 초기 높이
+        this.isMinimized = startMinimized;
+        this.initialHeight = 180;
         this.currentHeight = startMinimized ? 0 : 180;
         this.minHeight = 80;
         this.maxHeight = 350;
@@ -27,14 +27,42 @@ export default class LogWindow {
         // 모바일 감지
         this.isMobile = this.detectMobile();
 
+        // 게임 컨테이너 참조
+        this.gameContainer = document.getElementById('game-container');
+
         this.createDOM();
         this.setupDragHandle();
         this.setupToggleButton();
+        this.setupResizeHandler();
 
-        // Phase 4.75: 초기 숨김 상태 적용
+        // 초기 숨김 상태 적용
         if (this.isMinimized) {
             this.applyMinimizedState();
         }
+    }
+
+    // 리사이즈 핸들러 설정
+    setupResizeHandler() {
+        this.updatePosition();
+        window.addEventListener('resize', () => this.updatePosition());
+    }
+
+    // 위치 업데이트 (게임 캔버스 기준)
+    updatePosition() {
+        if (!this.gameContainer || !this.wrapper) return;
+
+        const canvas = this.gameContainer.querySelector('canvas');
+        if (!canvas) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = rect.width / 1280;
+        const scaleY = rect.height / 720;
+
+        // wrapper 위치 및 스케일 조정
+        this.wrapper.style.left = `${rect.left + (640 - this.windowWidth / 2) * scaleX}px`;
+        this.wrapper.style.bottom = `${window.innerHeight - rect.bottom}px`;
+        this.wrapper.style.transform = `scale(${scaleX})`;
+        this.wrapper.style.transformOrigin = 'bottom left';
     }
 
     // 최소화 상태 적용 (초기화용)
@@ -44,7 +72,6 @@ export default class LogWindow {
         this.dragHandle.style.height = `${handleHeight}px`;
         this.window.style.height = `${handleHeight}px`;
         this.topY = 720 - handleHeight;
-        this.domElement.setY(this.topY);
         this.toggleBtn.textContent = '▲';
         this.dragHandle.style.cursor = 'pointer';
         this.window.style.borderRadius = '8px';
@@ -59,7 +86,16 @@ export default class LogWindow {
         const baseFontSize = this.isMobile ? 22 : 13;
         const toggleSize = this.isMobile ? 40 : 28;
 
-        const html = `
+        // 순수 HTML 요소로 생성 (카메라 영향 안받음)
+        this.wrapper = document.createElement('div');
+        this.wrapper.id = 'log-wrapper';
+        this.wrapper.style.cssText = `
+            position: fixed;
+            z-index: 1000;
+            pointer-events: auto;
+        `;
+
+        this.wrapper.innerHTML = `
             <style>
                 #log-window *::-webkit-scrollbar {
                     width: ${this.isMobile ? 10 : 6}px;
@@ -75,15 +111,6 @@ export default class LogWindow {
                 #log-window *::-webkit-scrollbar-thumb:hover {
                     background: rgba(255, 255, 255, 0.25);
                 }
-                #log-content {
-                    overscroll-behavior: contain;
-                    -webkit-overflow-scrolling: auto;
-                }
-                @media (max-width: 768px) {
-                    #log-content {
-                        font-size: ${baseFontSize}px !important;
-                    }
-                }
             </style>
             <div id="log-window" style="
                 position: relative;
@@ -97,7 +124,6 @@ export default class LogWindow {
                 border-radius: 8px 8px 0 0;
                 touch-action: pan-y;
             ">
-                <!-- 드래그 핸들 영역 -->
                 <div id="log-drag-handle" style="
                     height: ${this.dragHandleHeight}px;
                     cursor: ns-resize;
@@ -115,8 +141,6 @@ export default class LogWindow {
                         background: rgba(255,255,255,0.3);
                         border-radius: 3px;
                     "></div>
-
-                    <!-- 토글 버튼 (상단 바 우측) -->
                     <button id="log-toggle" style="
                         position: absolute;
                         right: 8px;
@@ -138,8 +162,6 @@ export default class LogWindow {
                         touch-action: manipulation;
                     ">▼</button>
                 </div>
-
-                <!-- 로그 콘텐츠 영역 -->
                 <div id="log-body" style="
                     flex: 1;
                     position: relative;
@@ -153,23 +175,20 @@ export default class LogWindow {
                         font-size: ${baseFontSize}px;
                         line-height: ${this.isMobile ? 1.6 : 1.5};
                         overscroll-behavior: contain;
-                        touch-action: none;
+                        touch-action: pan-y;
                     "></div>
                 </div>
             </div>
         `;
 
-        this.domElement = this.scene.add.dom(640, this.topY).createFromHTML(html);
-        this.domElement.setOrigin(0.5, 0);
-        this.domElement.setDepth(2000);
-        this.domElement.setScrollFactor(0);  // 카메라 워킹 영향 안받음
+        document.body.appendChild(this.wrapper);
 
-        this.window = this.domElement.getChildByID('log-window');
-        this.dragHandle = this.domElement.getChildByID('log-drag-handle');
-        this.dragIndicator = this.domElement.getChildByID('drag-indicator');
-        this.body = this.domElement.getChildByID('log-body');
-        this.content = this.domElement.getChildByID('log-content');
-        this.toggleBtn = this.domElement.getChildByID('log-toggle');
+        this.window = this.wrapper.querySelector('#log-window');
+        this.dragHandle = this.wrapper.querySelector('#log-drag-handle');
+        this.dragIndicator = this.wrapper.querySelector('#drag-indicator');
+        this.body = this.wrapper.querySelector('#log-body');
+        this.content = this.wrapper.querySelector('#log-content');
+        this.toggleBtn = this.wrapper.querySelector('#log-toggle');
 
         // 키보드 이벤트 전파 방지
         this.window.addEventListener('keydown', (e) => e.stopPropagation());
@@ -304,8 +323,8 @@ export default class LogWindow {
             this.topY = newTop;
             this.currentHeight = newHeight;
 
-            this.domElement.setY(this.topY);
             this.window.style.height = `${newHeight}px`;
+            this.updatePosition();
         }
     }
 
@@ -345,7 +364,6 @@ export default class LogWindow {
             this.dragHandle.style.height = `${handleHeight}px`;
             this.window.style.height = `${handleHeight}px`;
             this.topY = 720 - handleHeight;
-            this.domElement.setY(this.topY);
             this.toggleBtn.textContent = '▲';
             this.dragHandle.style.cursor = 'pointer';
             this.window.style.borderRadius = '8px';
@@ -356,7 +374,6 @@ export default class LogWindow {
             this.currentHeight = this.initialHeight;
             this.window.style.height = `${this.currentHeight}px`;
             this.topY = 720 - this.currentHeight;
-            this.domElement.setY(this.topY);
             this.toggleBtn.textContent = '▼';
             this.dragHandle.style.cursor = 'ns-resize';
             this.window.style.borderRadius = '8px 8px 0 0';
