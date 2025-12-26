@@ -14,6 +14,10 @@ export default class LogWindow {
         // 상단 바의 Y 위치 (화면 좌표 기준)
         this.headerY = 720 - this.currentHeight;
 
+        // 로그 배치 관리
+        this.currentBatch = null;
+        this.batchIndex = 0;
+
         this.createDOM();
         this.setupDragHandle();
         this.setupToggleButton();
@@ -74,7 +78,7 @@ export default class LogWindow {
                     <div id="log-content" style="
                         flex: 1;
                         overflow-y: auto;
-                        padding: 8px 12px 20px 12px;
+                        padding: 4px 0 16px 0;
                         color: #ddd;
                         font-size: 13px;
                         line-height: 1.5;
@@ -185,23 +189,82 @@ export default class LogWindow {
         }
     }
 
+    // 로그 배치 시작 (같은 타이밍의 로그들을 묶음)
+    startBatch() {
+        this.currentBatch = document.createElement('div');
+        this.currentBatch.style.padding = '4px 12px';
+        this.currentBatch.style.marginBottom = '2px';
+
+        // 번갈아가며 배경색 적용
+        if (this.batchIndex % 2 === 1) {
+            this.currentBatch.style.background = 'rgba(255, 255, 255, 0.05)';
+        }
+
+        this.content.appendChild(this.currentBatch);
+        this.batchIndex++;
+    }
+
+    // 로그 배치 종료
+    endBatch() {
+        this.currentBatch = null;
+        this.scrollToBottom();
+    }
+
+    // 캐릭터 이름에 색상 적용
+    formatCharacterName(name) {
+        if (name.includes('아군')) {
+            return `<span style="color: #5dadec; font-weight: bold;">${name}</span>`;
+        } else if (name.includes('적군')) {
+            return `<span style="color: #ec5d5d; font-weight: bold;">${name}</span>`;
+        }
+        return name;
+    }
+
+    // 메시지 내 캐릭터 이름 자동 포맷팅
+    formatMessage(message) {
+        // 아군1, 아군2, 아군3 등의 패턴 찾기
+        message = message.replace(/(아군\d+)/g, '<span style="color: #5dadec; font-weight: bold;">$1</span>');
+        // 적군1, 적군2, 적군3 등의 패턴 찾기
+        message = message.replace(/(적군\d+)/g, '<span style="color: #ec5d5d; font-weight: bold;">$1</span>');
+        return message;
+    }
+
     addLog(message, type = 'info') {
         const colors = {
-            info: '#ccc',
-            damage: '#ff6b6b',
-            heal: '#6bff6b',
-            system: '#6bb5ff',
-            skill: '#ffb86b'
+            info: '#aaa',
+            damage: '#ff8080',
+            heal: '#80ff80',
+            system: '#80b0ff',
+            skill: '#ffb080'
         };
 
         const timestamp = this.getTimestamp();
+        const formattedMessage = this.formatMessage(message);
+
         const logEntry = document.createElement('div');
         logEntry.style.color = colors[type] || colors.info;
-        logEntry.style.marginBottom = '4px';
-        logEntry.innerHTML = `<span style="color: #555;">[${timestamp}]</span> ${message}`;
+        logEntry.style.marginBottom = '2px';
+        logEntry.style.lineHeight = '1.4';
+        logEntry.innerHTML = `<span style="color: #555;">[${timestamp}]</span> ${formattedMessage}`;
 
-        this.content.appendChild(logEntry);
-        this.scrollToBottom();
+        // 현재 배치가 있으면 배치에 추가, 없으면 단독 로그
+        if (this.currentBatch) {
+            this.currentBatch.appendChild(logEntry);
+        } else {
+            // 단독 로그도 배치처럼 처리
+            const singleBatch = document.createElement('div');
+            singleBatch.style.padding = '4px 12px';
+            singleBatch.style.marginBottom = '2px';
+
+            if (this.batchIndex % 2 === 1) {
+                singleBatch.style.background = 'rgba(255, 255, 255, 0.05)';
+            }
+
+            singleBatch.appendChild(logEntry);
+            this.content.appendChild(singleBatch);
+            this.batchIndex++;
+            this.scrollToBottom();
+        }
     }
 
     scrollToBottom() {
@@ -219,5 +282,6 @@ export default class LogWindow {
 
     clear() {
         this.content.innerHTML = '';
+        this.batchIndex = 0;
     }
 }

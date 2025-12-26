@@ -109,7 +109,7 @@ export default class BattleScene extends Phaser.Scene {
             currentHp: 100,
             maxAp: 10,
             currentAp: 0,
-            offsetY: -75
+            offsetY: -70
         });
         character.statusBar = statusBar;
         this.statusBars.push(statusBar);
@@ -175,12 +175,14 @@ export default class BattleScene extends Phaser.Scene {
             }
         });
 
-        // 로그 추가
+        // 로그 추가 (같은 타이밍의 로그를 배치로 묶음)
         const name = target.data.name;
+        this.logWindow.startBatch();
         this.addLog(`${name}이(가) ${damage} 데미지를 받았다! (HP: ${remainingHp})`, 'damage');
 
         if (remainingHp <= 0) {
             this.addLog(`${name}이(가) 쓰러졌다!`, 'system');
         }
+        this.logWindow.endBatch();
     }
 }
