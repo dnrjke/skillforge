@@ -1,9 +1,9 @@
 export default class LogWindow {
-    constructor(scene) {
+    constructor(scene, startMinimized = true) {
         this.scene = scene;
-        this.isMinimized = false;
+        this.isMinimized = startMinimized; // Phase 4.75: 기본 숨김
         this.initialHeight = 180; // 초기 높이
-        this.currentHeight = 180;
+        this.currentHeight = startMinimized ? 0 : 180;
         this.minHeight = 80;
         this.maxHeight = 350;
         this.dragHandleHeight = 28;
@@ -30,6 +30,24 @@ export default class LogWindow {
         this.createDOM();
         this.setupDragHandle();
         this.setupToggleButton();
+
+        // Phase 4.75: 초기 숨김 상태 적용
+        if (this.isMinimized) {
+            this.applyMinimizedState();
+        }
+    }
+
+    // 최소화 상태 적용 (초기화용)
+    applyMinimizedState() {
+        this.body.style.display = 'none';
+        const handleHeight = this.isMobile ? this.minimizedHandleHeight : this.dragHandleHeight;
+        this.dragHandle.style.height = `${handleHeight}px`;
+        this.window.style.height = `${handleHeight}px`;
+        this.topY = 720 - handleHeight;
+        this.domElement.setY(this.topY);
+        this.toggleBtn.textContent = '▲';
+        this.dragHandle.style.cursor = 'pointer';
+        this.window.style.borderRadius = '8px';
     }
 
     detectMobile() {

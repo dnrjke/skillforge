@@ -1,7 +1,9 @@
 // 키워드 기반 전투 시스템 - 유닛 클래스
 // Unit: HP, AP, Speed, Position, Skills[] 보유
+// Phase 4.5: 파티클 효과 연동
 
 import { SkillSets, SkillPresets } from '../data/Skills.js';
+import Phaser from 'phaser';
 
 export default class Unit {
     constructor(config) {
@@ -35,6 +37,11 @@ export default class Unit {
         // 시각적 연결 (Phaser 스프라이트)
         this.sprite = null;
         this.statusBar = null;
+
+        // 지속 이펙트 (방어 태세 등)
+        this.defenseShield = null;
+        this.defenseParticles = null;
+        this.defenseTimer = null;
 
         // 원래 위치 저장 (돌진 후 복귀용)
         this.originalX = 0;
@@ -104,12 +111,16 @@ export default class Unit {
     }
 
     // 데미지 받기
-    takeDamage(damage) {
+    takeDamage(damage, scene = null) {
         // 방어 중이면 데미지 감소
         let finalDamage = damage;
+        let wasDefending = false;
         if (this.isDefending) {
             finalDamage = Math.max(1, Math.floor(damage * 0.5));
             this.isDefending = false;  // 방어 해제
+            wasDefending = true;
+            // 방어 이펙트 제거
+            this.removeDefenseEffect(scene);
         }
 
         // 방어력 적용
@@ -128,8 +139,45 @@ export default class Unit {
         return {
             damage: finalDamage,
             remainingHp: this.currentHp,
-            isDead: !this.isAlive
+            isDead: !this.isAlive,
+            wasDefending: wasDefending
         };
+    }
+
+    // 방어 이펙트 제거
+    removeDefenseEffect(scene) {
+        if (this.defenseShield) {
+            if (scene) {
+                // 깨지는 애니메이션
+                scene.tweens.add({
+                    targets: this.defenseShield,
+                    alpha: 0,
+                    scaleX: 1.5,
+                    scaleY: 1.5,
+                    duration: 200,
+                    ease: 'Power2.easeOut',
+                    onComplete: () => {
+                        if (this.defenseShield) {
+                            this.defenseShield.destroy();
+                            this.defenseShield = null;
+                        }
+                    }
+                });
+            } else {
+                this.defenseShield.destroy();
+                this.defenseShield = null;
+            }
+        }
+        if (this.defenseTimer) {
+            this.defenseTimer.remove();
+            this.defenseTimer = null;
+        }
+        if (this.defenseParticles) {
+            this.defenseParticles.forEach(p => {
+                if (p.obj) p.obj.destroy();
+            });
+            this.defenseParticles = null;
+        }
     }
 
     // 회복
@@ -163,7 +211,7 @@ export default class Unit {
     // Phase 4: 시각적 연출 (Juice)
     // ==========================================
 
-    // 턴 획득 시 Ready Motion (살짝 점프)
+    // 턴 획득 시 Ready Motion (더 눈에 띄게)
     playReadyMotion(scene) {
         return new Promise((resolve) => {
             if (!this.sprite) {
@@ -171,22 +219,44 @@ export default class Unit {
                 return;
             }
 
-            // 살짝 위로 점프
+            // 더 눈에 띄는 점프 + 스케일 효과
             scene.tweens.add({
                 targets: this.sprite,
-                y: this.sprite.y - 20,
-                duration: 100,
+                y: this.sprite.y - 25,
+                scaleX: this.sprite.scaleX * 1.1,
+                scaleY: this.sprite.scaleY * 1.1,
+                duration: 120,
                 ease: 'Power2.easeOut',
                 yoyo: true,
                 onComplete: () => {
                     resolve();
                 }
             });
+
+            // 발밑에 작은 이펙트
+            const readyRing = scene.add.ellipse(
+                this.sprite.x,
+                this.sprite.y + 60,
+                60, 20,
+                0xffff88, 0.6
+            );
+            readyRing.setDepth(this.sprite.depth - 0.5);
+            readyRing.setBlendMode(Phaser.BlendModes.ADD);
+
+            scene.tweens.add({
+                targets: readyRing,
+                scaleX: 1.5,
+                scaleY: 1.5,
+                alpha: 0,
+                duration: 300,
+                ease: 'Power1.easeOut',
+                onComplete: () => readyRing.destroy()
+            });
         });
     }
 
     // 공격 시퀀스: Dash -> Attack -> 피격 판정 -> 복귀
-    async performAttack(target, skill, scene, damageCallback) {
+    async performAttack(target, skill, scene, damageCallback, particleEffects = null) {
         if (!this.sprite || !target.sprite) {
             damageCallback();
             return;
@@ -211,7 +281,7 @@ export default class Unit {
         await this.dashTo(scene, targetX, targetY);
 
         // 4. Attack 애니메이션 재생 + 타격 프레임에서 데미지
-        await this.playAttackAnimation(scene, target, damageCallback);
+        await this.playAttackAnimation(scene, target, damageCallback, skill, particleEffects);
 
         // 5. 원래 자리로 복귀
         await this.dashTo(scene, startX, startY, true);
@@ -243,7 +313,7 @@ export default class Unit {
     }
 
     // Attack 애니메이션 + 타격 프레임에서 데미지 판정
-    playAttackAnimation(scene, target, damageCallback) {
+    playAttackAnimation(scene, target, damageCallback, skill = null, particleEffects = null) {
         return new Promise((resolve) => {
             // attack 애니메이션 재생 (없으면 idle 사용)
             const hasAttackAnim = scene.anims.exists('knight_attack');
@@ -260,7 +330,7 @@ export default class Unit {
                 damageCallback();
 
                 // 피격 효과
-                this.applyHitFeedback(scene, target);
+                this.applyHitFeedback(scene, target, skill, particleEffects);
             });
 
             // 애니메이션 완료 대기
@@ -274,8 +344,8 @@ export default class Unit {
         });
     }
 
-    // 피격 피드백 (타격감 극대화)
-    applyHitFeedback(scene, target) {
+    // 피격 피드백 (타격감 극대화) + 파티클 효과
+    applyHitFeedback(scene, target, skill = null, particleEffects = null) {
         if (!target.sprite) return;
 
         // 1. 붉은색 깜빡임 (0.1초)
@@ -287,10 +357,19 @@ export default class Unit {
             }
         });
 
-        // 2. 화면 흔들림 (짧게)
-        scene.cameras.main.shake(80, 0.005);
+        // 2. 파티클 효과 (Phase 4.5)
+        if (particleEffects) {
+            const apCost = skill ? skill.apCost : 3;
+            particleEffects.playAttackHitEffect(target.sprite.x, target.sprite.y, apCost);
+        }
 
-        // 3. 피격 애니메이션
+        // 3. 화면 흔들림 (AP 소모에 따라 강도 조절)
+        const apCost = skill ? skill.apCost : 3;
+        const shakeIntensity = 0.003 + (apCost / 100);
+        const shakeDuration = 60 + apCost * 10;
+        scene.cameras.main.shake(shakeDuration, shakeIntensity);
+
+        // 4. 피격 애니메이션
         if (target.isAlive) {
             target.sprite.play('knight_hit');
             target.sprite.once('animationcomplete', () => {
@@ -314,7 +393,7 @@ export default class Unit {
             this.sprite.y + yOffset,
             `${prefix}${damage}`,
             {
-                fontSize: '28px',
+                fontSize: isHeal ? '26px' : '28px',
                 fill: color,
                 fontFamily: 'Arial',
                 fontStyle: 'bold',
@@ -328,6 +407,8 @@ export default class Unit {
             targets: text,
             y: text.y - 50,
             alpha: 0,
+            scaleX: isHeal ? 1 : 1.2,
+            scaleY: isHeal ? 1 : 1.2,
             duration: 800,
             ease: 'Power2.easeOut',
             onComplete: () => {
@@ -372,7 +453,7 @@ export default class Unit {
     }
 
     // AP 부족 시 휴식 연출
-    async performRest(scene, recoveredAp) {
+    async performRest(scene, recoveredAp, particleEffects = null) {
         if (!this.sprite) return;
 
         // 1. "기력 부족" 또는 "..." 텍스트
@@ -401,10 +482,15 @@ export default class Unit {
             }
         });
 
-        // 2. 반짝이는 회복 이펙트
+        // 2. 파티클 효과 (Phase 4.5)
+        if (particleEffects) {
+            particleEffects.playRestEffect(this.sprite.x, this.sprite.y);
+        }
+
+        // 3. 반짝이는 회복 이펙트
         await this.playRecoveryEffect(scene);
 
-        // 3. 파란색 AP 회복 숫자
+        // 4. 파란색 AP 회복 숫자
         this.showFloatingAp(scene, recoveredAp, true);
     }
 
@@ -424,6 +510,7 @@ export default class Unit {
                 0x44ccff,
                 0.5
             ).setDepth(this.sprite.depth - 0.5);
+            glow.setBlendMode(Phaser.BlendModes.ADD);
 
             // 확장되며 사라지는 연출
             scene.tweens.add({
@@ -450,11 +537,16 @@ export default class Unit {
         });
     }
 
-    // 치유 스킬 연출
-    async performHeal(target, healAmount, scene) {
+    // 치유 스킬 연출 (파티클 연동)
+    async performHeal(target, healAmount, scene, particleEffects = null) {
         if (!this.sprite || !target.sprite) return;
 
-        // 치유 이펙트
+        // 파티클 효과 (Phase 4.5)
+        if (particleEffects) {
+            particleEffects.playHealEffect(target.sprite.x, target.sprite.y, healAmount);
+        }
+
+        // 기존 치유 이펙트
         const healGlow = scene.add.ellipse(
             target.sprite.x,
             target.sprite.y,
@@ -462,6 +554,7 @@ export default class Unit {
             0x44ff44,
             0.6
         ).setDepth(target.sprite.depth - 0.5);
+        healGlow.setBlendMode(Phaser.BlendModes.ADD);
 
         // 확장되며 사라지는 연출
         scene.tweens.add({
@@ -476,34 +569,160 @@ export default class Unit {
             }
         });
 
-        // 회복 숫자 표시
+        // 대상 캐릭터 녹색 빛남
+        const originalTint = target.isEnemy ? 0xff8888 : 0xffffff;
+        target.sprite.setTint(0x88ff88);
+        scene.time.delayedCall(300, () => {
+            if (target.sprite && target.sprite.active) {
+                target.sprite.setTint(originalTint);
+            }
+        });
+
+        // 회복 숫자 표시 (초록색)
         target.showFloatingDamage(scene, healAmount, true);
     }
 
-    // 방어 스킬 연출
-    async performDefend(scene) {
+    // 방어 스킬 연출 (파티클 연동) + 지속 이펙트
+    async performDefend(scene, particleEffects = null) {
         if (!this.sprite) return;
 
-        // 방어 이펙트 (파란 방패 느낌)
-        const shield = scene.add.ellipse(
+        // 기존 방어 이펙트 제거
+        this.removeDefenseEffect(scene);
+
+        // 파티클 효과 (Phase 4.5)
+        if (particleEffects) {
+            particleEffects.playDefenseEffect(this.sprite.x, this.sprite.y);
+        }
+
+        // 초기 폭발 이펙트 (파란 방패 느낌)
+        const burstShield = scene.add.ellipse(
             this.sprite.x,
             this.sprite.y,
             100, 120,
             0x4488ff,
-            0.4
+            0.6
         ).setDepth(this.sprite.depth + 0.5);
+        burstShield.setBlendMode(Phaser.BlendModes.ADD);
 
         // 펄스 후 사라짐
         scene.tweens.add({
-            targets: shield,
-            scaleX: 1.2,
-            scaleY: 1.2,
+            targets: burstShield,
+            scaleX: 1.3,
+            scaleY: 1.3,
             alpha: 0,
-            duration: 500,
+            duration: 400,
             ease: 'Power2.easeOut',
-            onComplete: () => {
-                shield.destroy();
+            onComplete: () => burstShield.destroy()
+        });
+
+        // 지속 방어막 이펙트 생성
+        this.createPersistentDefenseEffect(scene);
+
+        // 캐릭터 파란색 빛남
+        const originalTint = this.isEnemy ? 0xff8888 : 0xffffff;
+        this.sprite.setTint(0x88aaff);
+        scene.time.delayedCall(400, () => {
+            if (this.sprite && this.sprite.active) {
+                this.sprite.setTint(originalTint);
             }
+        });
+    }
+
+    // 지속 방어막 이펙트 생성
+    createPersistentDefenseEffect(scene) {
+        if (!this.sprite) return;
+
+        // 육각형 방어막 (지속)
+        const graphics = scene.add.graphics();
+        graphics.setDepth(this.sprite.depth + 0.3);
+        graphics.setBlendMode(Phaser.BlendModes.ADD);
+
+        const drawHexagon = () => {
+            if (!this.sprite || !this.isDefending) {
+                graphics.destroy();
+                return;
+            }
+
+            graphics.clear();
+            graphics.lineStyle(2, 0x66aaff, 0.6);
+
+            const x = this.sprite.x;
+            const y = this.sprite.y;
+            const sides = 6;
+            const radius = 55;
+
+            graphics.beginPath();
+            for (let i = 0; i <= sides; i++) {
+                const angle = (Math.PI * 2 / sides) * i - Math.PI / 2;
+                const px = x + Math.cos(angle) * radius;
+                const py = y + Math.sin(angle) * radius;
+                if (i === 0) graphics.moveTo(px, py);
+                else graphics.lineTo(px, py);
+            }
+            graphics.strokePath();
+
+            // 내부 글로우
+            graphics.fillStyle(0x4488ff, 0.15);
+            graphics.beginPath();
+            for (let i = 0; i <= sides; i++) {
+                const angle = (Math.PI * 2 / sides) * i - Math.PI / 2;
+                const px = x + Math.cos(angle) * radius;
+                const py = y + Math.sin(angle) * radius;
+                if (i === 0) graphics.moveTo(px, py);
+                else graphics.lineTo(px, py);
+            }
+            graphics.closePath();
+            graphics.fill();
+        };
+
+        this.defenseShield = graphics;
+
+        // 회전하는 작은 파티클들
+        this.defenseParticles = [];
+        const particleCount = 6;
+        for (let i = 0; i < particleCount; i++) {
+            const particle = scene.add.rectangle(
+                this.sprite.x,
+                this.sprite.y,
+                6, 6,
+                0x88ccff
+            );
+            particle.setDepth(this.sprite.depth + 0.4);
+            particle.setBlendMode(Phaser.BlendModes.ADD);
+            particle.setAlpha(0.7);
+            this.defenseParticles.push({
+                obj: particle,
+                angle: (Math.PI * 2 / particleCount) * i,
+                radius: 50
+            });
+        }
+
+        // 지속적인 업데이트
+        let elapsed = 0;
+        this.defenseTimer = scene.time.addEvent({
+            delay: 16,
+            callback: () => {
+                if (!this.isDefending || !this.sprite) {
+                    this.removeDefenseEffect(scene);
+                    return;
+                }
+
+                elapsed += 16;
+                const pulse = 0.9 + Math.sin(elapsed * 0.005) * 0.1;
+
+                drawHexagon();
+
+                // 파티클 회전
+                this.defenseParticles.forEach((p, idx) => {
+                    const angle = p.angle + elapsed * 0.002;
+                    const radius = p.radius * pulse;
+                    p.obj.x = this.sprite.x + Math.cos(angle) * radius;
+                    p.obj.y = this.sprite.y + Math.sin(angle) * radius;
+                    p.obj.setRotation(angle);
+                    p.obj.setAlpha(0.5 + Math.sin(elapsed * 0.01 + idx) * 0.3);
+                });
+            },
+            loop: true
         });
     }
 }

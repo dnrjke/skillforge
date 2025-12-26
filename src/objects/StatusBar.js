@@ -1,3 +1,5 @@
+import Phaser from 'phaser';
+
 export default class StatusBar {
     constructor(scene, character, config = {}) {
         this.scene = scene;
@@ -30,6 +32,7 @@ export default class StatusBar {
         this.actionBarBg = null;
         this.actionBarFill = null;
         this.shineEffect = null;
+        this.glowEffect = null;
 
         this.create();
     }
@@ -121,13 +124,21 @@ export default class StatusBar {
             0x44ccff
         ).setOrigin(0, 0.5);
 
-        // Shine 효과용 그래픽 (초기에는 숨김)
+        // Glow 효과 (100% 시 지속적으로 빛남)
+        this.glowEffect = this.scene.add.rectangle(
+            0, actionBarY,
+            this.barWidth + 8, 8,
+            0xffff88,
+            0
+        ).setOrigin(0.5).setBlendMode(Phaser.BlendModes.ADD);
+
+        // Shine 효과용 그래픽 (초기에는 숨김) - 더 크고 밝게
         this.shineEffect = this.scene.add.rectangle(
             -this.barWidth / 2, actionBarY,
-            20, 3,
+            30, 6,
             0xffffff,
-            0.8
-        ).setOrigin(0, 0.5).setVisible(false);
+            1
+        ).setOrigin(0, 0.5).setVisible(false).setBlendMode(Phaser.BlendModes.ADD);
 
         // 컨테이너에 추가
         this.container.add([
@@ -141,6 +152,7 @@ export default class StatusBar {
             this.actionBarBg,
             this.actionBarInnerBg,
             this.actionBarFill,
+            this.glowEffect,
             this.shineEffect
         ]);
 
@@ -182,40 +194,80 @@ export default class StatusBar {
             if (!wasFullBefore) {
                 this.playShineEffect();
                 this.triggerReadyMotion();
+                this.startGlowPulse();
             }
         } else {
             this.actionBarFill.setFillStyle(0x44ccff);
             this.wasReady = false;
+            this.stopGlowPulse();
         }
     }
 
-    // Shine 효과 (게이지 위를 빛이 흐르는 효과)
+    // Glow 펄스 시작 (100% 유지 중)
+    startGlowPulse() {
+        if (this.glowTween) {
+            this.glowTween.stop();
+        }
+
+        this.glowEffect.alpha = 0.3;
+        this.glowTween = this.scene.tweens.add({
+            targets: this.glowEffect,
+            alpha: 0.6,
+            scaleX: 1.1,
+            scaleY: 1.2,
+            duration: 400,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+    }
+
+    // Glow 펄스 정지
+    stopGlowPulse() {
+        if (this.glowTween) {
+            this.glowTween.stop();
+            this.glowTween = null;
+        }
+        this.glowEffect.alpha = 0;
+        this.glowEffect.setScale(1);
+    }
+
+    // Shine 효과 (게이지 위를 빛이 흐르는 효과) - 더 눈에 띄게
     playShineEffect() {
         if (!this.shineEffect) return;
 
         this.shineEffect.setVisible(true);
-        this.shineEffect.x = -this.barWidth / 2;
-        this.shineEffect.alpha = 0.8;
+        this.shineEffect.x = -this.barWidth / 2 - 30;
+        this.shineEffect.alpha = 1;
 
-        // 좌에서 우로 흐르는 빛
+        // 좌에서 우로 흐르는 빛 (더 길게)
         this.scene.tweens.add({
             targets: this.shineEffect,
-            x: this.barWidth / 2,
-            duration: 300,
-            ease: 'Power1.easeInOut',
+            x: this.barWidth / 2 + 10,
+            duration: 400,
+            ease: 'Power1.easeOut',
             onComplete: () => {
                 this.shineEffect.setVisible(false);
             }
         });
 
-        // 테두리 빛 효과 (행동 바 배경 펄스)
+        // 테두리 빛 효과 (행동 바 배경 펄스) - 더 강하게
         this.scene.tweens.add({
             targets: this.actionBarBg,
-            scaleX: 1.1,
-            scaleY: 1.5,
-            duration: 150,
+            scaleX: 1.15,
+            scaleY: 2,
+            duration: 200,
             yoyo: true,
             ease: 'Power2.easeOut'
+        });
+
+        // 행동 바 자체도 잠깐 밝아짐
+        const originalColor = 0xffff44;
+        this.actionBarFill.setFillStyle(0xffffaa);
+        this.scene.time.delayedCall(200, () => {
+            if (this.actionBarFill && this.actionBarFill.active) {
+                this.actionBarFill.setFillStyle(originalColor);
+            }
         });
     }
 
@@ -237,6 +289,7 @@ export default class StatusBar {
     // 행동 게이지 리셋
     resetAction() {
         this.wasReady = false;
+        this.stopGlowPulse();
         this.setAction(0, false);
     }
 
@@ -347,6 +400,7 @@ export default class StatusBar {
     }
 
     destroy() {
+        this.stopGlowPulse();
         this.container.destroy();
     }
 }

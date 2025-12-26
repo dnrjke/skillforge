@@ -1,10 +1,12 @@
 // 키워드 기반 전투 시스템 - 전투 매니저
 // 턴 시스템, 행동 결정, 타겟팅, 전투 진행 관리
 // Phase 4: 비동기 공격 시퀀스 및 시각적 연출
+// Phase 4.5: 파티클 효과 연동
 
 import Unit from './Unit.js';
 import { SkillSets } from '../data/Skills.js';
 import { getKeyword } from '../data/Keywords.js';
+import ParticleEffects from '../effects/ParticleEffects.js';
 
 export default class BattleManager {
     constructor(scene) {
@@ -25,6 +27,13 @@ export default class BattleManager {
         this.actionTickRate = 100;  // 틱 간격 (ms)
         this.actionTickTimer = null;
         this.isProcessingAction = false;  // 행동 처리 중 여부
+
+        // Phase 4.5: 파티클 효과 시스템
+        this.particleEffects = new ParticleEffects(scene);
+
+        // Phase 4.75: 카메라/연출 설정
+        this.originalZoom = 1;
+        this.skillBanner = null;
     }
 
     // 유닛 초기화 (스프라이트와 연결)
@@ -333,11 +342,11 @@ export default class BattleManager {
 
         this.log(`${unit.name}이(가) 휴식 (AP ${beforeAp} → ${unit.currentAp})`, 'info');
 
-        // 휴식 연출 (기력 부족 텍스트 + 회복 이펙트)
-        await unit.performRest(this.scene, recovered);
+        // 휴식 연출 (기력 부족 텍스트 + 회복 이펙트 + 파티클)
+        await unit.performRest(this.scene, recovered, this.particleEffects);
     }
 
-    // 공격 실행 (비동기 시퀀스)
+    // 공격 실행 (비동기 시퀀스) - Phase 4.75: 카메라/히트스탑 연출
     async executeAttack(attacker, skill) {
         const target = this.selectTarget(attacker);
         if (!target) {
@@ -354,6 +363,7 @@ export default class BattleManager {
         let damage = skill.power;
         let hits = 1;
         let ignoreDefense = false;
+        let isCritical = Math.random() < 0.15; // 15% 크리티컬 확률
 
         // 키워드 특수 효과 확인
         skill.keywords.forEach(keywordId => {
@@ -364,37 +374,258 @@ export default class BattleManager {
             }
         });
 
+        // 크리티컬 시 데미지 1.5배
+        if (isCritical) {
+            damage = Math.floor(damage * 1.5);
+        }
+
         // 로그 출력 (공격 시작)
         this.log(
             `${attacker.name}이(가) ${skill.toString()} 사용! (AP ${apCost} 소모)`,
             'skill'
         );
 
-        // 비동기 공격 시퀀스 실행
+        // Phase 4.75: 스킬 배너 표시
+        this.showSkillBanner(skill.name);
+
+        // Phase 4.75: 강력한 공격 시 카메라 줌인 (AP 5 이상)
+        if (apCost >= 5) {
+            await this.cameraFocusOnCombat(attacker, target);
+        }
+
+        // 비동기 공격 시퀀스 실행 (파티클 효과 포함)
         let totalDamage = 0;
+        let targetDied = false;
+        let wasDefending = false;
 
         await attacker.performAttack(target, skill, this.scene, () => {
             // 타격 프레임에서 실행되는 데미지 콜백
             for (let i = 0; i < hits; i++) {
-                const result = target.takeDamage(Math.floor(damage / hits));
+                const result = target.takeDamage(Math.floor(damage / hits), this.scene);
                 totalDamage += result.damage;
+                if (result.isDead) targetDied = true;
+                if (result.wasDefending) wasDefending = true;
             }
 
-            // 플로팅 데미지 표시
-            target.showFloatingDamage(this.scene, totalDamage);
-        });
+            // Phase 4.75: 히트 스탑 (50ms 멈춤)
+            this.playHitStop(apCost, isCritical);
+
+            // 플로팅 데미지 표시 (크리티컬 시 더 크게)
+            this.showDamageNumber(target, totalDamage, isCritical);
+
+            // 크리티컬 시 불꽃 파티클
+            if (isCritical) {
+                this.particleEffects.playCriticalHitEffect(target.sprite.x, target.sprite.y);
+            }
+        }, this.particleEffects);
+
+        // Phase 4.75: 카메라 복귀
+        if (apCost >= 5) {
+            await this.cameraReset();
+        }
 
         // 데미지 로그
+        const critText = isCritical ? ' [크리티컬!]' : '';
+        const defText = wasDefending ? ' (방어 관통)' : '';
         this.log(
-            `→ ${target.name}에게 ${totalDamage} 데미지!`,
+            `→ ${target.name}에게 ${totalDamage} 데미지!${critText}${defText}`,
             'damage'
         );
 
         // 사망 체크
-        if (target.isDead) {
+        if (targetDied) {
             this.log(`${target.name}이(가) 쓰러졌다!`, 'system');
             this.playDeathAnimation(target);
+
+            // 마지막 일격 효과 (적군이 전멸했을 때)
+            const remainingEnemies = attacker.isEnemy ? this.getAliveAllies() : this.getAliveEnemies();
+            if (remainingEnemies.length === 0) {
+                this.particleEffects.playKOEffect(target.sprite.x, target.sprite.y);
+            } else {
+                this.particleEffects.playDeathEffect(target.sprite.x, target.sprite.y, target.isEnemy);
+            }
         }
+    }
+
+    // Phase 4.75: 스킬 배너 표시
+    showSkillBanner(skillName) {
+        // 기존 배너 제거
+        if (this.skillBanner) {
+            this.skillBanner.destroy();
+        }
+
+        // 하단 중앙에 스킬 이름 배너
+        const banner = this.scene.add.container(640, 580);
+        banner.setDepth(3000);
+
+        // 배경 바
+        const bg = this.scene.add.rectangle(0, 0, 300, 50, 0x000000, 0.8);
+        bg.setStrokeStyle(2, 0xffcc00);
+
+        // 스킬 이름
+        const text = this.scene.add.text(0, 0, skillName, {
+            fontSize: '24px',
+            fill: '#ffffff',
+            fontFamily: 'Arial',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(0.5);
+
+        // 좌우 장식
+        const leftDeco = this.scene.add.text(-120, 0, '【', {
+            fontSize: '28px',
+            fill: '#ffcc00',
+            fontFamily: 'Arial'
+        }).setOrigin(0.5);
+
+        const rightDeco = this.scene.add.text(120, 0, '】', {
+            fontSize: '28px',
+            fill: '#ffcc00',
+            fontFamily: 'Arial'
+        }).setOrigin(0.5);
+
+        banner.add([bg, leftDeco, text, rightDeco]);
+
+        // 등장 애니메이션
+        banner.setScale(0.5);
+        banner.setAlpha(0);
+
+        this.scene.tweens.add({
+            targets: banner,
+            scaleX: 1,
+            scaleY: 1,
+            alpha: 1,
+            duration: 150,
+            ease: 'Back.easeOut'
+        });
+
+        // 0.8초 후 사라짐
+        this.scene.time.delayedCall(800, () => {
+            this.scene.tweens.add({
+                targets: banner,
+                alpha: 0,
+                y: banner.y - 20,
+                duration: 200,
+                onComplete: () => {
+                    banner.destroy();
+                    if (this.skillBanner === banner) {
+                        this.skillBanner = null;
+                    }
+                }
+            });
+        });
+
+        this.skillBanner = banner;
+    }
+
+    // Phase 4.75: 카메라 포커스 (공격자와 피격자 중앙)
+    async cameraFocusOnCombat(attacker, target) {
+        return new Promise((resolve) => {
+            const centerX = (attacker.sprite.x + target.sprite.x) / 2;
+            const centerY = (attacker.sprite.y + target.sprite.y) / 2;
+
+            this.originalZoom = this.scene.cameras.main.zoom;
+
+            // 동시에 pan과 zoom
+            this.scene.cameras.main.pan(centerX, centerY, 200, 'Power2');
+            this.scene.cameras.main.zoomTo(1.3, 200, 'Power2', false, (camera, progress) => {
+                if (progress === 1) resolve();
+            });
+        });
+    }
+
+    // Phase 4.75: 카메라 복귀
+    async cameraReset() {
+        return new Promise((resolve) => {
+            this.scene.cameras.main.pan(640, 360, 300, 'Power2');
+            this.scene.cameras.main.zoomTo(this.originalZoom, 300, 'Power2', false, (camera, progress) => {
+                if (progress === 1) resolve();
+            });
+        });
+    }
+
+    // Phase 4.75: 히트 스탑 (타격 시 잠시 멈춤)
+    playHitStop(apCost, isCritical = false) {
+        // AP 소모량에 따른 히트스탑 강도
+        const baseStopTime = 30;
+        const stopTime = baseStopTime + (apCost * 5) + (isCritical ? 30 : 0);
+
+        // 시간 스케일 멈춤
+        const originalTimeScale = this.scene.time.timeScale;
+        this.scene.time.timeScale = 0;
+
+        // 화면 흔들림 (AP에 비례)
+        const shakeIntensity = 0.005 + (apCost * 0.002) + (isCritical ? 0.01 : 0);
+        this.scene.cameras.main.shake(100, shakeIntensity);
+
+        // 히트스탑 후 복귀
+        setTimeout(() => {
+            this.scene.time.timeScale = originalTimeScale;
+        }, stopTime);
+    }
+
+    // Phase 4.75: 데미지 숫자 표시 (크리티컬 구분)
+    showDamageNumber(target, damage, isCritical = false) {
+        if (!target.sprite) return;
+
+        const fontSize = isCritical ? '42px' : '28px';
+        const color = isCritical ? '#ffff00' : '#ff4444';
+        const yOffset = -80;
+
+        const text = this.scene.add.text(
+            target.sprite.x,
+            target.sprite.y + yOffset,
+            `-${damage}`,
+            {
+                fontSize: fontSize,
+                fill: color,
+                fontFamily: 'Arial',
+                fontStyle: 'bold',
+                stroke: isCritical ? '#ff6600' : '#000000',
+                strokeThickness: isCritical ? 6 : 4
+            }
+        ).setOrigin(0.5).setDepth(2000);
+
+        // 크리티컬 시 추가 텍스트
+        if (isCritical) {
+            const critLabel = this.scene.add.text(
+                target.sprite.x,
+                target.sprite.y + yOffset - 35,
+                'CRITICAL!',
+                {
+                    fontSize: '18px',
+                    fill: '#ffcc00',
+                    fontFamily: 'Arial',
+                    fontStyle: 'bold',
+                    stroke: '#ff6600',
+                    strokeThickness: 3
+                }
+            ).setOrigin(0.5).setDepth(2000);
+
+            this.scene.tweens.add({
+                targets: critLabel,
+                y: critLabel.y - 30,
+                alpha: 0,
+                scaleX: 1.3,
+                scaleY: 1.3,
+                duration: 800,
+                ease: 'Power2.easeOut',
+                onComplete: () => critLabel.destroy()
+            });
+        }
+
+        // 위로 솟구치며 사라지는 연출
+        this.scene.tweens.add({
+            targets: text,
+            y: text.y - 50,
+            alpha: 0,
+            scaleX: isCritical ? 1.3 : 1.2,
+            scaleY: isCritical ? 1.3 : 1.2,
+            duration: 800,
+            ease: 'Power2.easeOut',
+            onComplete: () => text.destroy()
+        });
     }
 
     // 치유 실행 (비동기)
@@ -409,6 +640,9 @@ export default class BattleManager {
         healer.consumeAp(skill.apCost);
         healer.showFloatingAp(this.scene, skill.apCost, false);
 
+        // 스킬 배너 표시
+        this.showSkillBanner(skill.name);
+
         // 회복량 계산 (power가 음수이므로 절댓값)
         const healAmount = Math.abs(skill.power);
         const actualHeal = target.heal(healAmount);
@@ -418,8 +652,8 @@ export default class BattleManager {
             'heal'
         );
 
-        // 치유 연출
-        await healer.performHeal(target, actualHeal, this.scene);
+        // 치유 연출 (파티클 효과 포함)
+        await healer.performHeal(target, actualHeal, this.scene, this.particleEffects);
 
         this.log(
             `→ ${target.name} HP ${actualHeal} 회복!`,
@@ -433,6 +667,9 @@ export default class BattleManager {
         unit.consumeAp(skill.apCost);
         unit.showFloatingAp(this.scene, skill.apCost, false);
 
+        // 스킬 배너 표시
+        this.showSkillBanner(skill.name);
+
         // 방어 태세
         unit.defend();
 
@@ -441,8 +678,8 @@ export default class BattleManager {
             'info'
         );
 
-        // 방어 연출
-        await unit.performDefend(this.scene);
+        // 방어 연출 (파티클 효과 포함)
+        await unit.performDefend(this.scene, this.particleEffects);
     }
 
     // 사망 애니메이션
@@ -530,10 +767,11 @@ export default class BattleManager {
         // HP 감소
         const result = target.takeDamage(damage);
         target.showFloatingDamage(this.scene, damage);
-        this.log(`테스트: ${target.name}이(가) ${damage} 피해! (HP: ${result.remainingHp})`, 'damage');
 
-        // 화면 흔들림
-        this.scene.cameras.main.shake(80, 0.005);
+        // 파티클 효과
+        this.particleEffects.playAttackHitEffect(target.sprite.x, target.sprite.y, 3);
+
+        this.log(`테스트: ${target.name}이(가) ${damage} 피해! (HP: ${result.remainingHp})`, 'damage');
 
         // AP 감소
         target.consumeAp(apCost);
@@ -561,6 +799,7 @@ export default class BattleManager {
         if (result.isDead) {
             this.log(`${target.name}이(가) 쓰러졌다!`, 'system');
             this.playDeathAnimation(target);
+            this.particleEffects.playDeathEffect(target.sprite.x, target.sprite.y, target.isEnemy);
         }
 
         this.scene.logWindow.endBatch();
