@@ -13,6 +13,7 @@ export default class StatusBar {
         // 행동 게이지 (가득 차면 행동)
         this.maxAction = 100;
         this.currentAction = 0;
+        this.wasReady = false;  // 이전 프레임에서 100%였는지
 
         // 바 크기 설정 (좌우 길이 줄임)
         this.barWidth = config.barWidth || 100;
@@ -28,6 +29,7 @@ export default class StatusBar {
         this.apText = null;
         this.actionBarBg = null;
         this.actionBarFill = null;
+        this.shineEffect = null;
 
         this.create();
     }
@@ -98,6 +100,8 @@ export default class StatusBar {
 
         // 행동 바 (Action Bar) - AP 바 아래
         const actionBarY = apBarY + this.barHeight + 2;
+        this.actionBarY = actionBarY;  // 저장해두기
+
         this.actionBarBg = this.scene.add.rectangle(
             0, actionBarY,
             this.barWidth + 4, 6,
@@ -117,6 +121,14 @@ export default class StatusBar {
             0x44ccff
         ).setOrigin(0, 0.5);
 
+        // Shine 효과용 그래픽 (초기에는 숨김)
+        this.shineEffect = this.scene.add.rectangle(
+            -this.barWidth / 2, actionBarY,
+            20, 3,
+            0xffffff,
+            0.8
+        ).setOrigin(0, 0.5).setVisible(false);
+
         // 컨테이너에 추가
         this.container.add([
             this.hpBarBg,
@@ -128,7 +140,8 @@ export default class StatusBar {
             this.apText,
             this.actionBarBg,
             this.actionBarInnerBg,
-            this.actionBarFill
+            this.actionBarFill,
+            this.shineEffect
         ]);
 
         // depth 설정 (캐릭터보다 위에)
@@ -145,8 +158,10 @@ export default class StatusBar {
 
     // 행동 게이지 설정
     setAction(value, animate = true) {
+        const wasFullBefore = this.currentAction >= this.maxAction;
         this.currentAction = Math.max(0, Math.min(this.maxAction, value));
         const targetWidth = (this.currentAction / this.maxAction) * this.barWidth;
+        const isFullNow = this.currentAction >= this.maxAction;
 
         if (animate) {
             this.scene.tweens.add({
@@ -159,11 +174,57 @@ export default class StatusBar {
             this.actionBarFill.width = targetWidth;
         }
 
-        // 가득 차면 색상 변경
-        if (this.currentAction >= this.maxAction) {
+        // 가득 차면 색상 변경 + Shine 효과
+        if (isFullNow) {
             this.actionBarFill.setFillStyle(0xffff44); // 노란색으로 반짝
+
+            // 처음 100%가 되었을 때만 Shine 효과 재생
+            if (!wasFullBefore) {
+                this.playShineEffect();
+                this.triggerReadyMotion();
+            }
         } else {
             this.actionBarFill.setFillStyle(0x44ccff);
+            this.wasReady = false;
+        }
+    }
+
+    // Shine 효과 (게이지 위를 빛이 흐르는 효과)
+    playShineEffect() {
+        if (!this.shineEffect) return;
+
+        this.shineEffect.setVisible(true);
+        this.shineEffect.x = -this.barWidth / 2;
+        this.shineEffect.alpha = 0.8;
+
+        // 좌에서 우로 흐르는 빛
+        this.scene.tweens.add({
+            targets: this.shineEffect,
+            x: this.barWidth / 2,
+            duration: 300,
+            ease: 'Power1.easeInOut',
+            onComplete: () => {
+                this.shineEffect.setVisible(false);
+            }
+        });
+
+        // 테두리 빛 효과 (행동 바 배경 펄스)
+        this.scene.tweens.add({
+            targets: this.actionBarBg,
+            scaleX: 1.1,
+            scaleY: 1.5,
+            duration: 150,
+            yoyo: true,
+            ease: 'Power2.easeOut'
+        });
+    }
+
+    // Ready Motion 트리거 (Unit에 알림)
+    triggerReadyMotion() {
+        if (this.unit && this.unit.sprite && !this.wasReady) {
+            this.wasReady = true;
+            // Unit의 playReadyMotion 호출
+            this.unit.playReadyMotion(this.scene);
         }
     }
 
@@ -175,6 +236,7 @@ export default class StatusBar {
 
     // 행동 게이지 리셋
     resetAction() {
+        this.wasReady = false;
         this.setAction(0, false);
     }
 
@@ -230,6 +292,7 @@ export default class StatusBar {
     }
 
     setAp(value, animate = true) {
+        const oldAp = this.currentAp;
         this.currentAp = Math.max(0, Math.min(this.maxAp, value));
         const targetWidth = (this.currentAp / this.maxAp) * this.barWidth;
 
@@ -240,6 +303,23 @@ export default class StatusBar {
                 duration: 200,
                 ease: 'Power2'
             });
+
+            // AP 변화 시 바 색상 펄스
+            if (value < oldAp) {
+                // AP 소모 시 빨간색 펄스
+                this.scene.tweens.add({
+                    targets: this.apBarFill,
+                    fillColor: { from: 0xff6600, to: 0xffcc00 },
+                    duration: 200
+                });
+            } else if (value > oldAp) {
+                // AP 회복 시 밝은 노란색 펄스
+                this.scene.tweens.add({
+                    targets: this.apBarFill,
+                    fillColor: { from: 0xffff88, to: 0xffcc00 },
+                    duration: 200
+                });
+            }
         } else {
             this.apBarFill.width = targetWidth;
         }

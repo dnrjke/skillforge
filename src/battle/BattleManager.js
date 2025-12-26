@@ -1,5 +1,6 @@
 // 키워드 기반 전투 시스템 - 전투 매니저
 // 턴 시스템, 행동 결정, 타겟팅, 전투 진행 관리
+// Phase 4: 비동기 공격 시퀀스 및 시각적 연출
 
 import Unit from './Unit.js';
 import { SkillSets } from '../data/Skills.js';
@@ -230,8 +231,8 @@ export default class BattleManager {
         this.executeAction(currentUnit);
     }
 
-    // 행동 실행
-    executeAction(unit) {
+    // 행동 실행 (비동기)
+    async executeAction(unit) {
         const skill = unit.selectSkill();
         this.currentTurn++;
 
@@ -242,36 +243,36 @@ export default class BattleManager {
 
         if (skill.type === 'wait' || skill.id === 'WAIT') {
             // 대기: AP 부족으로 휴식하여 AP 회복
-            const beforeAp = unit.currentAp;
-            const recovered = unit.recoverAp();
-            this.log(`${unit.name}이(가) 휴식 (AP ${beforeAp} → ${unit.currentAp})`, 'info');
+            await this.executeRest(unit);
         } else if (skill.type === 'heal') {
             // 치유
-            this.executeHeal(unit, skill);
+            await this.executeHeal(unit, skill);
         } else if (skill.type === 'defend') {
             // 방어
-            this.executeDefend(unit, skill);
+            await this.executeDefend(unit, skill);
         } else {
             // 공격
-            this.executeAttack(unit, skill);
+            await this.executeAttack(unit, skill);
         }
 
         this.scene.logWindow.endBatch();
 
-        // 행동 후 처리
-        const actionDelay = this.turnDelay / this.scene.battleControlUI.getSpeedMultiplier();
-        this.scene.time.delayedCall(actionDelay, () => {
-            // 스포트라이트 해제
-            this.hideSpotlight(unit);
+        // 행동 후 처리 - 연출이 끝난 후 즉시 게이지 리셋
+        this.finishAction(unit);
+    }
 
-            // 행동 게이지 리셋
-            if (unit.sprite && unit.sprite.statusBar) {
-                unit.sprite.statusBar.resetAction();
-            }
+    // 행동 완료 처리
+    finishAction(unit) {
+        // 스포트라이트 해제
+        this.hideSpotlight(unit);
 
-            // 행동 처리 완료 - 틱 재개
-            this.isProcessingAction = false;
-        });
+        // 행동 게이지 리셋
+        if (unit.sprite && unit.sprite.statusBar) {
+            unit.sprite.statusBar.resetAction();
+        }
+
+        // 행동 처리 완료 - 틱 재개
+        this.isProcessingAction = false;
     }
 
     // 스포트라이트 효과 표시
@@ -325,18 +326,31 @@ export default class BattleManager {
         }
     }
 
-    // 공격 실행
-    executeAttack(attacker, skill) {
+    // 휴식 실행 (AP 부족 시)
+    async executeRest(unit) {
+        const beforeAp = unit.currentAp;
+        const recovered = unit.recoverAp();
+
+        this.log(`${unit.name}이(가) 휴식 (AP ${beforeAp} → ${unit.currentAp})`, 'info');
+
+        // 휴식 연출 (기력 부족 텍스트 + 회복 이펙트)
+        await unit.performRest(this.scene, recovered);
+    }
+
+    // 공격 실행 (비동기 시퀀스)
+    async executeAttack(attacker, skill) {
         const target = this.selectTarget(attacker);
         if (!target) {
             this.log(`${attacker.name}: 대상 없음`, 'info');
             return;
         }
 
-        // AP 소모
-        attacker.consumeAp(skill.apCost);
+        // AP 소모 연출
+        const apCost = skill.apCost;
+        attacker.consumeAp(apCost);
+        attacker.showFloatingAp(this.scene, apCost, false);
 
-        // 데미지 계산 (키워드 기반)
+        // 데미지 계산 준비
         let damage = skill.power;
         let hits = 1;
         let ignoreDefense = false;
@@ -350,33 +364,41 @@ export default class BattleManager {
             }
         });
 
-        // 다중 타격 처리
-        let totalDamage = 0;
-        for (let i = 0; i < hits; i++) {
-            const result = target.takeDamage(Math.floor(damage / hits));
-            totalDamage += result.damage;
-        }
-
-        // 로그 출력
+        // 로그 출력 (공격 시작)
         this.log(
-            `${attacker.name}이(가) ${skill.toString()} 스킬 사용 (AP ${skill.apCost} 소모), ` +
-            `${target.name}에게 ${totalDamage} 데미지`,
+            `${attacker.name}이(가) ${skill.toString()} 사용! (AP ${apCost} 소모)`,
             'skill'
         );
 
-        // 피격 애니메이션
-        this.playHitAnimation(target);
+        // 비동기 공격 시퀀스 실행
+        let totalDamage = 0;
+
+        await attacker.performAttack(target, skill, this.scene, () => {
+            // 타격 프레임에서 실행되는 데미지 콜백
+            for (let i = 0; i < hits; i++) {
+                const result = target.takeDamage(Math.floor(damage / hits));
+                totalDamage += result.damage;
+            }
+
+            // 플로팅 데미지 표시
+            target.showFloatingDamage(this.scene, totalDamage);
+        });
+
+        // 데미지 로그
+        this.log(
+            `→ ${target.name}에게 ${totalDamage} 데미지!`,
+            'damage'
+        );
 
         // 사망 체크
         if (target.isDead) {
             this.log(`${target.name}이(가) 쓰러졌다!`, 'system');
             this.playDeathAnimation(target);
         }
-        // AP 회복은 대기 행동에서만 발생
     }
 
-    // 치유 실행
-    executeHeal(healer, skill) {
+    // 치유 실행 (비동기)
+    async executeHeal(healer, skill) {
         const target = this.selectHealTarget(healer);
         if (!target) {
             this.log(`${healer.name}: 치유 대상 없음`, 'info');
@@ -385,22 +407,31 @@ export default class BattleManager {
 
         // AP 소모
         healer.consumeAp(skill.apCost);
+        healer.showFloatingAp(this.scene, skill.apCost, false);
 
         // 회복량 계산 (power가 음수이므로 절댓값)
         const healAmount = Math.abs(skill.power);
         const actualHeal = target.heal(healAmount);
 
         this.log(
-            `${healer.name}이(가) ${skill.toString()} 스킬 사용 (AP ${skill.apCost} 소모), ` +
-            `${target.name} HP ${actualHeal} 회복`,
+            `${healer.name}이(가) ${skill.toString()} 스킬 사용 (AP ${skill.apCost} 소모)`,
+            'heal'
+        );
+
+        // 치유 연출
+        await healer.performHeal(target, actualHeal, this.scene);
+
+        this.log(
+            `→ ${target.name} HP ${actualHeal} 회복!`,
             'heal'
         );
     }
 
-    // 방어 실행
-    executeDefend(unit, skill) {
+    // 방어 실행 (비동기)
+    async executeDefend(unit, skill) {
         // AP 소모
         unit.consumeAp(skill.apCost);
+        unit.showFloatingAp(this.scene, skill.apCost, false);
 
         // 방어 태세
         unit.defend();
@@ -409,18 +440,9 @@ export default class BattleManager {
             `${unit.name}이(가) ${skill.toString()} (AP ${skill.apCost} 소모) - 방어 태세`,
             'info'
         );
-    }
 
-    // 피격 애니메이션
-    playHitAnimation(unit) {
-        if (!unit.sprite) return;
-
-        unit.sprite.play('knight_hit');
-        unit.sprite.once('animationcomplete', () => {
-            if (unit.isAlive) {
-                unit.sprite.play('knight_idle');
-            }
-        });
+        // 방어 연출
+        await unit.performDefend(this.scene);
     }
 
     // 사망 애니메이션
@@ -507,14 +529,34 @@ export default class BattleManager {
 
         // HP 감소
         const result = target.takeDamage(damage);
+        target.showFloatingDamage(this.scene, damage);
         this.log(`테스트: ${target.name}이(가) ${damage} 피해! (HP: ${result.remainingHp})`, 'damage');
+
+        // 화면 흔들림
+        this.scene.cameras.main.shake(80, 0.005);
 
         // AP 감소
         target.consumeAp(apCost);
+        target.showFloatingAp(this.scene, apCost, false);
         this.log(`테스트: ${target.name} AP ${apCost} 감소 (AP: ${target.currentAp})`, 'info');
 
         // 피격 애니메이션
-        this.playHitAnimation(target);
+        if (target.isAlive) {
+            const originalTint = target.isEnemy ? 0xff8888 : 0xffffff;
+            target.sprite.setTint(0xff0000);
+            this.scene.time.delayedCall(100, () => {
+                if (target.sprite && target.sprite.active) {
+                    target.sprite.setTint(originalTint);
+                }
+            });
+
+            target.sprite.play('knight_hit');
+            target.sprite.once('animationcomplete', () => {
+                if (target.isAlive) {
+                    target.sprite.play('knight_idle');
+                }
+            });
+        }
 
         if (result.isDead) {
             this.log(`${target.name}이(가) 쓰러졌다!`, 'system');
