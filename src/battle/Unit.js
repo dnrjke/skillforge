@@ -38,6 +38,11 @@ export default class Unit {
         this.sprite = null;
         this.statusBar = null;
 
+        // 지속 이펙트 (방어 태세 등)
+        this.defenseShield = null;
+        this.defenseParticles = null;
+        this.defenseTimer = null;
+
         // 원래 위치 저장 (돌진 후 복귀용)
         this.originalX = 0;
         this.originalY = 0;
@@ -106,12 +111,16 @@ export default class Unit {
     }
 
     // 데미지 받기
-    takeDamage(damage) {
+    takeDamage(damage, scene = null) {
         // 방어 중이면 데미지 감소
         let finalDamage = damage;
+        let wasDefending = false;
         if (this.isDefending) {
             finalDamage = Math.max(1, Math.floor(damage * 0.5));
             this.isDefending = false;  // 방어 해제
+            wasDefending = true;
+            // 방어 이펙트 제거
+            this.removeDefenseEffect(scene);
         }
 
         // 방어력 적용
@@ -130,8 +139,45 @@ export default class Unit {
         return {
             damage: finalDamage,
             remainingHp: this.currentHp,
-            isDead: !this.isAlive
+            isDead: !this.isAlive,
+            wasDefending: wasDefending
         };
+    }
+
+    // 방어 이펙트 제거
+    removeDefenseEffect(scene) {
+        if (this.defenseShield) {
+            if (scene) {
+                // 깨지는 애니메이션
+                scene.tweens.add({
+                    targets: this.defenseShield,
+                    alpha: 0,
+                    scaleX: 1.5,
+                    scaleY: 1.5,
+                    duration: 200,
+                    ease: 'Power2.easeOut',
+                    onComplete: () => {
+                        if (this.defenseShield) {
+                            this.defenseShield.destroy();
+                            this.defenseShield = null;
+                        }
+                    }
+                });
+            } else {
+                this.defenseShield.destroy();
+                this.defenseShield = null;
+            }
+        }
+        if (this.defenseTimer) {
+            this.defenseTimer.remove();
+            this.defenseTimer = null;
+        }
+        if (this.defenseParticles) {
+            this.defenseParticles.forEach(p => {
+                if (p.obj) p.obj.destroy();
+            });
+            this.defenseParticles = null;
+        }
     }
 
     // 회복
@@ -536,37 +582,41 @@ export default class Unit {
         target.showFloatingDamage(scene, healAmount, true);
     }
 
-    // 방어 스킬 연출 (파티클 연동)
+    // 방어 스킬 연출 (파티클 연동) + 지속 이펙트
     async performDefend(scene, particleEffects = null) {
         if (!this.sprite) return;
+
+        // 기존 방어 이펙트 제거
+        this.removeDefenseEffect(scene);
 
         // 파티클 효과 (Phase 4.5)
         if (particleEffects) {
             particleEffects.playDefenseEffect(this.sprite.x, this.sprite.y);
         }
 
-        // 기존 방어 이펙트 (파란 방패 느낌)
-        const shield = scene.add.ellipse(
+        // 초기 폭발 이펙트 (파란 방패 느낌)
+        const burstShield = scene.add.ellipse(
             this.sprite.x,
             this.sprite.y,
             100, 120,
             0x4488ff,
-            0.4
+            0.6
         ).setDepth(this.sprite.depth + 0.5);
-        shield.setBlendMode(Phaser.BlendModes.ADD);
+        burstShield.setBlendMode(Phaser.BlendModes.ADD);
 
         // 펄스 후 사라짐
         scene.tweens.add({
-            targets: shield,
-            scaleX: 1.2,
-            scaleY: 1.2,
+            targets: burstShield,
+            scaleX: 1.3,
+            scaleY: 1.3,
             alpha: 0,
-            duration: 500,
+            duration: 400,
             ease: 'Power2.easeOut',
-            onComplete: () => {
-                shield.destroy();
-            }
+            onComplete: () => burstShield.destroy()
         });
+
+        // 지속 방어막 이펙트 생성
+        this.createPersistentDefenseEffect(scene);
 
         // 캐릭터 파란색 빛남
         const originalTint = this.isEnemy ? 0xff8888 : 0xffffff;
@@ -575,6 +625,104 @@ export default class Unit {
             if (this.sprite && this.sprite.active) {
                 this.sprite.setTint(originalTint);
             }
+        });
+    }
+
+    // 지속 방어막 이펙트 생성
+    createPersistentDefenseEffect(scene) {
+        if (!this.sprite) return;
+
+        // 육각형 방어막 (지속)
+        const graphics = scene.add.graphics();
+        graphics.setDepth(this.sprite.depth + 0.3);
+        graphics.setBlendMode(Phaser.BlendModes.ADD);
+
+        const drawHexagon = () => {
+            if (!this.sprite || !this.isDefending) {
+                graphics.destroy();
+                return;
+            }
+
+            graphics.clear();
+            graphics.lineStyle(2, 0x66aaff, 0.6);
+
+            const x = this.sprite.x;
+            const y = this.sprite.y;
+            const sides = 6;
+            const radius = 55;
+
+            graphics.beginPath();
+            for (let i = 0; i <= sides; i++) {
+                const angle = (Math.PI * 2 / sides) * i - Math.PI / 2;
+                const px = x + Math.cos(angle) * radius;
+                const py = y + Math.sin(angle) * radius;
+                if (i === 0) graphics.moveTo(px, py);
+                else graphics.lineTo(px, py);
+            }
+            graphics.strokePath();
+
+            // 내부 글로우
+            graphics.fillStyle(0x4488ff, 0.15);
+            graphics.beginPath();
+            for (let i = 0; i <= sides; i++) {
+                const angle = (Math.PI * 2 / sides) * i - Math.PI / 2;
+                const px = x + Math.cos(angle) * radius;
+                const py = y + Math.sin(angle) * radius;
+                if (i === 0) graphics.moveTo(px, py);
+                else graphics.lineTo(px, py);
+            }
+            graphics.closePath();
+            graphics.fill();
+        };
+
+        this.defenseShield = graphics;
+
+        // 회전하는 작은 파티클들
+        this.defenseParticles = [];
+        const particleCount = 6;
+        for (let i = 0; i < particleCount; i++) {
+            const particle = scene.add.rectangle(
+                this.sprite.x,
+                this.sprite.y,
+                6, 6,
+                0x88ccff
+            );
+            particle.setDepth(this.sprite.depth + 0.4);
+            particle.setBlendMode(Phaser.BlendModes.ADD);
+            particle.setAlpha(0.7);
+            this.defenseParticles.push({
+                obj: particle,
+                angle: (Math.PI * 2 / particleCount) * i,
+                radius: 50
+            });
+        }
+
+        // 지속적인 업데이트
+        let elapsed = 0;
+        this.defenseTimer = scene.time.addEvent({
+            delay: 16,
+            callback: () => {
+                if (!this.isDefending || !this.sprite) {
+                    this.removeDefenseEffect(scene);
+                    return;
+                }
+
+                elapsed += 16;
+                const pulse = 0.9 + Math.sin(elapsed * 0.005) * 0.1;
+
+                drawHexagon();
+
+                // 파티클 회전
+                this.defenseParticles.forEach((p, idx) => {
+                    const angle = p.angle + elapsed * 0.002;
+                    const radius = p.radius * pulse;
+                    p.obj.x = this.sprite.x + Math.cos(angle) * radius;
+                    p.obj.y = this.sprite.y + Math.sin(angle) * radius;
+                    p.obj.setRotation(angle);
+                    p.obj.setAlpha(0.5 + Math.sin(elapsed * 0.01 + idx) * 0.3);
+                });
+            },
+            loop: true
         });
     }
 }

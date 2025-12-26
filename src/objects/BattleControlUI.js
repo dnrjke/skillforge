@@ -7,7 +7,11 @@ export default class BattleControlUI {
         this.scene = scene;
         this.battleManager = battleManager;
         this.currentSpeedIndex = 0;
-        this.speedOptions = [1, 2, 4, 8];
+        // 내부 배율: 0.5를 1x로 표시, 16x 추가
+        // 표시: 1x, 2x, 4x, 8x, 16x
+        // 실제: 0.5, 1, 2, 4, 8
+        this.speedOptions = [0.5, 1, 2, 4, 8];
+        this.speedLabels = ['1x', '2x', '4x', '8x', '16x'];
 
         this.speedBadge = null;
         this.controlPanel = null;
@@ -61,6 +65,10 @@ export default class BattleControlUI {
                 #speed-badge.fast {
                     border-color: #ff9900;
                     background: rgba(255, 150, 50, 0.9);
+                }
+                #speed-badge.superfast {
+                    border-color: #ff3300;
+                    background: rgba(255, 80, 30, 0.95);
                 }
             </style>
             <div id="speed-badge">1x</div>
@@ -179,36 +187,39 @@ export default class BattleControlUI {
         container.addEventListener('keyup', (e) => e.stopPropagation());
     }
 
-    // 배속 순환 (1x -> 2x -> 4x -> 8x -> 1x)
+    // 배속 순환 (1x -> 2x -> 4x -> 8x -> 16x -> 1x)
     cycleSpeed() {
         this.currentSpeedIndex = (this.currentSpeedIndex + 1) % this.speedOptions.length;
-        const speed = this.speedOptions[this.currentSpeedIndex];
-        this.applySpeed(speed);
+        this.applySpeed();
     }
 
-    // 배속 직접 설정
-    setSpeed(speed) {
-        const index = this.speedOptions.indexOf(speed);
+    // 배속 직접 설정 (표시 배속 기준)
+    setSpeed(displaySpeed) {
+        const index = this.speedLabels.indexOf(`${displaySpeed}x`);
         if (index !== -1) {
             this.currentSpeedIndex = index;
-            this.applySpeed(speed);
+            this.applySpeed();
         }
     }
 
-    applySpeed(speed) {
+    applySpeed() {
         const badge = this.speedBadge.node.querySelector('#speed-badge');
-        badge.textContent = `${speed}x`;
+        const label = this.speedLabels[this.currentSpeedIndex];
+        const actualSpeed = this.speedOptions[this.currentSpeedIndex];
 
-        // 2배 이상이면 강조
-        if (speed > 1) {
+        badge.textContent = label;
+
+        // 스타일 업데이트
+        badge.classList.remove('fast', 'superfast');
+        if (actualSpeed >= 4) {
+            badge.classList.add('superfast');
+        } else if (actualSpeed > 0.5) {
             badge.classList.add('fast');
-        } else {
-            badge.classList.remove('fast');
         }
 
         // BattleManager 딜레이 조정
         if (this.battleManager) {
-            this.battleManager.turnDelay = 1500 / speed;
+            this.battleManager.turnDelay = 1500 / actualSpeed;
         }
 
         this.updateStatus();
@@ -247,7 +258,7 @@ export default class BattleControlUI {
         this.updateStatus();
     }
 
-    // 현재 배속 배율 반환
+    // 현재 배속 배율 반환 (실제 내부 값)
     getSpeedMultiplier() {
         return this.speedOptions[this.currentSpeedIndex];
     }
@@ -259,14 +270,14 @@ export default class BattleControlUI {
             return;
         }
 
-        const speed = this.speedOptions[this.currentSpeedIndex];
+        const label = this.speedLabels[this.currentSpeedIndex];
         let status = '';
         if (!this.battleManager.isRunning) {
             status = '대기 중';
         } else if (this.battleManager.isPaused) {
             status = '⏸ 일시정지';
         } else if (this.battleManager.autoMode) {
-            status = `▶ 자동 (${speed}x)`;
+            status = `▶ 자동 (${label})`;
         } else {
             status = '수동 모드';
         }
