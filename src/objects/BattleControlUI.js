@@ -247,6 +247,11 @@ export default class BattleControlUI {
         this.updateStatus();
     }
 
+    // 현재 배속 배율 반환
+    getSpeedMultiplier() {
+        return this.speedOptions[this.currentSpeedIndex];
+    }
+
     updateStatus() {
         const statusEl = this.controlPanel.node.querySelector('#battle-status');
         if (!this.battleManager) {

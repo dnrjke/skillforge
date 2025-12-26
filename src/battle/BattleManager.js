@@ -19,6 +19,11 @@ export default class BattleManager {
         // 전투 설정
         this.turnDelay = 1500;  // 턴 간 딜레이 (ms)
         this.autoMode = false;  // 자동 전투 모드
+
+        // 행동 게이지 시스템
+        this.actionTickRate = 100;  // 틱 간격 (ms)
+        this.actionTickTimer = null;
+        this.isProcessingAction = false;  // 행동 처리 중 여부
     }
 
     // 유닛 초기화 (스프라이트와 연결)
@@ -70,26 +75,7 @@ export default class BattleManager {
         // 초기 턴 대기열 생성
         this.buildTurnQueue();
 
-        // 초기 행동 게이지 설정 (속도 기반)
-        this.initializeActionBars();
-    }
-
-    // 초기 행동 게이지 설정
-    initializeActionBars() {
-        const allUnits = this.getAllAliveUnits();
-        // 속도 기준 최대/최소 찾기
-        const maxSpeed = Math.max(...allUnits.map(u => u.speed));
-        const minSpeed = Math.min(...allUnits.map(u => u.speed));
-
-        allUnits.forEach(unit => {
-            if (unit.sprite && unit.sprite.statusBar) {
-                // 속도가 빠를수록 행동 게이지가 더 차 있음 (30~80% 범위)
-                const speedRatio = maxSpeed === minSpeed ? 0.5 :
-                    (unit.speed - minSpeed) / (maxSpeed - minSpeed);
-                const initialAction = 30 + Math.floor(speedRatio * 50);
-                unit.sprite.statusBar.setAction(initialAction, false);
-            }
-        });
+        // 행동 게이지는 0부터 시작 (따로 초기화 불필요)
     }
 
     // Speed 기준으로 턴 대기열 생성
@@ -139,6 +125,7 @@ export default class BattleManager {
         this.isRunning = true;
         this.isPaused = false;
         this.currentTurn = 0;
+        this.isProcessingAction = false;
 
         this.log('═══════════════════════════════════', 'system');
         this.log('전투 시작!', 'system');
@@ -149,8 +136,71 @@ export default class BattleManager {
             unit.recoverAp(3);
         });
 
-        if (this.autoMode) {
-            this.runNextTurn();
+        // 행동 게이지 틱 시작
+        this.startActionTick();
+    }
+
+    // 행동 게이지 틱 시작
+    startActionTick() {
+        if (this.actionTickTimer) {
+            this.actionTickTimer.remove();
+        }
+
+        this.actionTickTimer = this.scene.time.addEvent({
+            delay: this.actionTickRate,
+            callback: this.onActionTick,
+            callbackScope: this,
+            loop: true
+        });
+    }
+
+    // 행동 게이지 틱 정지
+    stopActionTick() {
+        if (this.actionTickTimer) {
+            this.actionTickTimer.remove();
+            this.actionTickTimer = null;
+        }
+    }
+
+    // 매 틱마다 호출 - 행동 게이지 증가 및 100% 도달 체크
+    onActionTick() {
+        if (!this.isRunning || this.isPaused || this.isProcessingAction) return;
+
+        // 전투 종료 체크
+        if (this.checkBattleEnd()) {
+            this.stopActionTick();
+            return;
+        }
+
+        const allUnits = this.getAllAliveUnits();
+        if (allUnits.length === 0) return;
+
+        // 배속에 따라 증가량 조절
+        const speedMultiplier = this.scene.battleControlUI ?
+            this.scene.battleControlUI.getSpeedMultiplier() : 1;
+
+        // 각 유닛의 행동 게이지 증가 (속도에 비례)
+        let readyUnit = null;
+
+        for (const unit of allUnits) {
+            if (!unit.sprite || !unit.sprite.statusBar) continue;
+
+            const statusBar = unit.sprite.statusBar;
+            // 속도에 비례하여 증가 (speed * 0.5 * speedMultiplier per tick)
+            const increase = unit.speed * 0.5 * speedMultiplier;
+            statusBar.currentAction = Math.min(100, statusBar.currentAction + increase);
+            statusBar.setAction(statusBar.currentAction, false);
+
+            // 100% 도달한 첫 번째 유닛 찾기
+            if (!readyUnit && statusBar.currentAction >= 100) {
+                readyUnit = unit;
+            }
+        }
+
+        // 행동 준비된 유닛이 있으면 즉시 행동 실행
+        if (readyUnit) {
+            this.isProcessingAction = true;
+            this.executeAction(readyUnit);
         }
     }
 
@@ -186,12 +236,10 @@ export default class BattleManager {
     // 행동 실행
     executeAction(unit) {
         const skill = unit.selectSkill();
+        this.currentTurn++;
 
-        // 현재 행동 유닛 표시 (행동 게이지 100%)
-        if (unit.sprite && unit.sprite.statusBar) {
-            unit.sprite.statusBar.setAction(100);
-            unit.sprite.statusBar.setCurrentTurn(true);
-        }
+        // 현재 행동 유닛 표시 - 스포트라이트 효과
+        this.showSpotlight(unit);
 
         this.scene.logWindow.startBatch();
 
@@ -212,31 +260,71 @@ export default class BattleManager {
 
         this.scene.logWindow.endBatch();
 
-        // 행동 후 게이지 리셋 및 턴 표시 해제
-        this.scene.time.delayedCall(300, () => {
+        // 행동 후 처리
+        const actionDelay = this.turnDelay / this.scene.battleControlUI.getSpeedMultiplier();
+        this.scene.time.delayedCall(actionDelay, () => {
+            // 스포트라이트 해제
+            this.hideSpotlight(unit);
+
+            // 행동 게이지 리셋
             if (unit.sprite && unit.sprite.statusBar) {
                 unit.sprite.statusBar.resetAction();
-                unit.sprite.statusBar.setCurrentTurn(false);
             }
-            // 다른 유닛들 행동 게이지 증가
-            this.updateActionBars(unit);
-        });
 
-        // 다음 턴 예약
-        if (this.autoMode && this.isRunning) {
-            this.scene.time.delayedCall(this.turnDelay, () => this.runNextTurn());
-        }
+            // 행동 처리 완료 - 틱 재개
+            this.isProcessingAction = false;
+        });
     }
 
-    // 다른 유닛들의 행동 게이지 업데이트
-    updateActionBars(actedUnit) {
-        this.getAllAliveUnits().forEach(unit => {
-            if (unit !== actedUnit && unit.sprite && unit.sprite.statusBar) {
-                // 속도에 비례하여 행동 게이지 증가
-                const increase = Math.floor(unit.speed * 3);
-                unit.sprite.statusBar.addAction(increase);
-            }
+    // 스포트라이트 효과 표시
+    showSpotlight(unit) {
+        if (!unit.sprite) return;
+
+        // 기존 스포트라이트 제거
+        if (unit.sprite.spotlight) {
+            unit.sprite.spotlight.destroy();
+        }
+
+        // 연한 원형 스포트라이트 생성 (캐릭터 뒤)
+        const spotlight = this.scene.add.ellipse(
+            unit.sprite.x,
+            unit.sprite.y + 40,  // 발 밑 위치
+            120, 60,             // 타원 크기
+            0xffff88,            // 연한 노란색
+            0.4                  // 투명도
+        );
+        spotlight.setDepth(unit.sprite.depth - 0.5);
+
+        // 펄스 애니메이션
+        this.scene.tweens.add({
+            targets: spotlight,
+            scaleX: 1.1,
+            scaleY: 1.1,
+            alpha: 0.6,
+            duration: 400,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
         });
+
+        unit.sprite.spotlight = spotlight;
+    }
+
+    // 스포트라이트 효과 해제
+    hideSpotlight(unit) {
+        if (unit.sprite && unit.sprite.spotlight) {
+            this.scene.tweens.add({
+                targets: unit.sprite.spotlight,
+                alpha: 0,
+                duration: 200,
+                onComplete: () => {
+                    if (unit.sprite.spotlight) {
+                        unit.sprite.spotlight.destroy();
+                        unit.sprite.spotlight = null;
+                    }
+                }
+            });
+        }
     }
 
     // 공격 실행
@@ -366,29 +454,27 @@ export default class BattleManager {
     // 전투 종료
     endBattle(result) {
         this.isRunning = false;
+        this.stopActionTick();
         this.log('═══════════════════════════════════', 'system');
         this.log(`전투 종료: ${result}!`, 'system');
         this.log('═══════════════════════════════════', 'system');
+
+        // UI 업데이트
+        if (this.scene.battleControlUI) {
+            this.scene.battleControlUI.onBattleEnd(result);
+        }
     }
 
     // 일시 정지/재개
     togglePause() {
         this.isPaused = !this.isPaused;
-        if (!this.isPaused && this.autoMode) {
-            this.runNextTurn();
-        }
         return this.isPaused;
     }
 
-    // 수동 다음 턴 (스페이스바용)
+    // 수동 다음 턴 (M키용) - 틱 기반 시스템에서는 전투 시작만 처리
     manualNextTurn() {
         if (!this.isRunning) {
             this.startBattle();
-            if (!this.autoMode) {
-                this.runNextTurn();
-            }
-        } else if (!this.autoMode && !this.isPaused) {
-            this.runNextTurn();
         }
     }
 
@@ -396,9 +482,6 @@ export default class BattleManager {
     toggleAutoMode() {
         this.autoMode = !this.autoMode;
         this.log(`자동 전투 ${this.autoMode ? '활성화' : '비활성화'}`, 'system');
-        if (this.autoMode && this.isRunning && !this.isPaused) {
-            this.runNextTurn();
-        }
         return this.autoMode;
     }
 
