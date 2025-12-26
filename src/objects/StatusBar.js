@@ -180,6 +180,11 @@ export default class StatusBar {
         this.setAp(this.currentAp + amount);
     }
 
+    consumeAp(amount) {
+        this.setAp(this.currentAp - amount);
+        return this.currentAp;
+    }
+
     damage(amount) {
         this.setHp(this.currentHp - amount);
         return this.currentHp;

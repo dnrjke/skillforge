@@ -55,6 +55,7 @@ export default class LogWindow {
                 box-sizing: border-box;
                 background: linear-gradient(to bottom, rgba(0,0,0,0.7), rgba(0,0,0,0.9));
                 border-radius: 8px 8px 0 0;
+                touch-action: pan-y;
             ">
                 <!-- 드래그 핸들 영역 (투명, 상단) -->
                 <div id="log-drag-handle" style="
@@ -64,6 +65,7 @@ export default class LogWindow {
                     justify-content: center;
                     align-items: center;
                     flex-shrink: 0;
+                    touch-action: none;
                 ">
                     <div style="
                         width: 40px;
@@ -107,6 +109,7 @@ export default class LogWindow {
                         font-size: 13px;
                         line-height: 1.5;
                         overscroll-behavior: contain;
+                        touch-action: none;
                     "></div>
                 </div>
             </div>
@@ -135,6 +138,25 @@ export default class LogWindow {
             this.toggleBtn.style.background = 'rgba(255,255,255,0.1)';
             this.toggleBtn.style.color = 'rgba(255,255,255,0.5)';
         });
+
+        // 로그 콘텐츠 터치 스크롤 직접 처리
+        this.setupContentTouchScroll();
+    }
+
+    setupContentTouchScroll() {
+        let touchStartY = 0;
+        let scrollStartY = 0;
+
+        this.content.addEventListener('touchstart', (e) => {
+            touchStartY = e.touches[0].clientY;
+            scrollStartY = this.content.scrollTop;
+        }, { passive: true });
+
+        this.content.addEventListener('touchmove', (e) => {
+            const touchY = e.touches[0].clientY;
+            const deltaY = touchStartY - touchY;
+            this.content.scrollTop = scrollStartY + deltaY;
+        }, { passive: true });
     }
 
     setupDragHandle() {
@@ -291,7 +313,7 @@ export default class LogWindow {
         logEntry.style.color = colors[type] || colors.info;
         logEntry.style.marginBottom = '2px';
         logEntry.style.lineHeight = '1.4';
-        logEntry.innerHTML = `<span style="color: #666;">[${timestamp}]</span> ${formattedMessage}`;
+        logEntry.innerHTML = `<span style="color: #888;">[${timestamp}]</span> ${formattedMessage}`;
 
         if (this.currentBatch) {
             this.currentBatch.appendChild(logEntry);
@@ -319,10 +341,16 @@ export default class LogWindow {
     }
 
     getTimestamp() {
+        // 한국 시간 (KST = UTC+9) 기준
         const now = new Date();
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const seconds = String(now.getSeconds()).padStart(2, '0');
-        return `${minutes}:${seconds}`;
+        const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+        const kst = new Date(utc + (9 * 60 * 60 * 1000));
+
+        const hours = String(kst.getHours()).padStart(2, '0');
+        const minutes = String(kst.getMinutes()).padStart(2, '0');
+        const seconds = String(kst.getSeconds()).padStart(2, '0');
+
+        return `${hours}:${minutes}:${seconds}`;
     }
 
     clear() {
