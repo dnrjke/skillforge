@@ -1,7 +1,9 @@
 // 키워드 기반 전투 시스템 - 유닛 클래스
 // Unit: HP, AP, Speed, Position, Skills[] 보유
+// Phase 4.5: 파티클 효과 연동
 
 import { SkillSets, SkillPresets } from '../data/Skills.js';
+import Phaser from 'phaser';
 
 export default class Unit {
     constructor(config) {
@@ -163,7 +165,7 @@ export default class Unit {
     // Phase 4: 시각적 연출 (Juice)
     // ==========================================
 
-    // 턴 획득 시 Ready Motion (살짝 점프)
+    // 턴 획득 시 Ready Motion (더 눈에 띄게)
     playReadyMotion(scene) {
         return new Promise((resolve) => {
             if (!this.sprite) {
@@ -171,22 +173,44 @@ export default class Unit {
                 return;
             }
 
-            // 살짝 위로 점프
+            // 더 눈에 띄는 점프 + 스케일 효과
             scene.tweens.add({
                 targets: this.sprite,
-                y: this.sprite.y - 20,
-                duration: 100,
+                y: this.sprite.y - 25,
+                scaleX: this.sprite.scaleX * 1.1,
+                scaleY: this.sprite.scaleY * 1.1,
+                duration: 120,
                 ease: 'Power2.easeOut',
                 yoyo: true,
                 onComplete: () => {
                     resolve();
                 }
             });
+
+            // 발밑에 작은 이펙트
+            const readyRing = scene.add.ellipse(
+                this.sprite.x,
+                this.sprite.y + 60,
+                60, 20,
+                0xffff88, 0.6
+            );
+            readyRing.setDepth(this.sprite.depth - 0.5);
+            readyRing.setBlendMode(Phaser.BlendModes.ADD);
+
+            scene.tweens.add({
+                targets: readyRing,
+                scaleX: 1.5,
+                scaleY: 1.5,
+                alpha: 0,
+                duration: 300,
+                ease: 'Power1.easeOut',
+                onComplete: () => readyRing.destroy()
+            });
         });
     }
 
     // 공격 시퀀스: Dash -> Attack -> 피격 판정 -> 복귀
-    async performAttack(target, skill, scene, damageCallback) {
+    async performAttack(target, skill, scene, damageCallback, particleEffects = null) {
         if (!this.sprite || !target.sprite) {
             damageCallback();
             return;
@@ -211,7 +235,7 @@ export default class Unit {
         await this.dashTo(scene, targetX, targetY);
 
         // 4. Attack 애니메이션 재생 + 타격 프레임에서 데미지
-        await this.playAttackAnimation(scene, target, damageCallback);
+        await this.playAttackAnimation(scene, target, damageCallback, skill, particleEffects);
 
         // 5. 원래 자리로 복귀
         await this.dashTo(scene, startX, startY, true);
@@ -243,7 +267,7 @@ export default class Unit {
     }
 
     // Attack 애니메이션 + 타격 프레임에서 데미지 판정
-    playAttackAnimation(scene, target, damageCallback) {
+    playAttackAnimation(scene, target, damageCallback, skill = null, particleEffects = null) {
         return new Promise((resolve) => {
             // attack 애니메이션 재생 (없으면 idle 사용)
             const hasAttackAnim = scene.anims.exists('knight_attack');
@@ -260,7 +284,7 @@ export default class Unit {
                 damageCallback();
 
                 // 피격 효과
-                this.applyHitFeedback(scene, target);
+                this.applyHitFeedback(scene, target, skill, particleEffects);
             });
 
             // 애니메이션 완료 대기
@@ -274,8 +298,8 @@ export default class Unit {
         });
     }
 
-    // 피격 피드백 (타격감 극대화)
-    applyHitFeedback(scene, target) {
+    // 피격 피드백 (타격감 극대화) + 파티클 효과
+    applyHitFeedback(scene, target, skill = null, particleEffects = null) {
         if (!target.sprite) return;
 
         // 1. 붉은색 깜빡임 (0.1초)
@@ -287,10 +311,19 @@ export default class Unit {
             }
         });
 
-        // 2. 화면 흔들림 (짧게)
-        scene.cameras.main.shake(80, 0.005);
+        // 2. 파티클 효과 (Phase 4.5)
+        if (particleEffects) {
+            const apCost = skill ? skill.apCost : 3;
+            particleEffects.playAttackHitEffect(target.sprite.x, target.sprite.y, apCost);
+        }
 
-        // 3. 피격 애니메이션
+        // 3. 화면 흔들림 (AP 소모에 따라 강도 조절)
+        const apCost = skill ? skill.apCost : 3;
+        const shakeIntensity = 0.003 + (apCost / 100);
+        const shakeDuration = 60 + apCost * 10;
+        scene.cameras.main.shake(shakeDuration, shakeIntensity);
+
+        // 4. 피격 애니메이션
         if (target.isAlive) {
             target.sprite.play('knight_hit');
             target.sprite.once('animationcomplete', () => {
@@ -314,7 +347,7 @@ export default class Unit {
             this.sprite.y + yOffset,
             `${prefix}${damage}`,
             {
-                fontSize: '28px',
+                fontSize: isHeal ? '26px' : '28px',
                 fill: color,
                 fontFamily: 'Arial',
                 fontStyle: 'bold',
@@ -328,6 +361,8 @@ export default class Unit {
             targets: text,
             y: text.y - 50,
             alpha: 0,
+            scaleX: isHeal ? 1 : 1.2,
+            scaleY: isHeal ? 1 : 1.2,
             duration: 800,
             ease: 'Power2.easeOut',
             onComplete: () => {
@@ -372,7 +407,7 @@ export default class Unit {
     }
 
     // AP 부족 시 휴식 연출
-    async performRest(scene, recoveredAp) {
+    async performRest(scene, recoveredAp, particleEffects = null) {
         if (!this.sprite) return;
 
         // 1. "기력 부족" 또는 "..." 텍스트
@@ -401,10 +436,15 @@ export default class Unit {
             }
         });
 
-        // 2. 반짝이는 회복 이펙트
+        // 2. 파티클 효과 (Phase 4.5)
+        if (particleEffects) {
+            particleEffects.playRestEffect(this.sprite.x, this.sprite.y);
+        }
+
+        // 3. 반짝이는 회복 이펙트
         await this.playRecoveryEffect(scene);
 
-        // 3. 파란색 AP 회복 숫자
+        // 4. 파란색 AP 회복 숫자
         this.showFloatingAp(scene, recoveredAp, true);
     }
 
@@ -424,6 +464,7 @@ export default class Unit {
                 0x44ccff,
                 0.5
             ).setDepth(this.sprite.depth - 0.5);
+            glow.setBlendMode(Phaser.BlendModes.ADD);
 
             // 확장되며 사라지는 연출
             scene.tweens.add({
@@ -450,11 +491,16 @@ export default class Unit {
         });
     }
 
-    // 치유 스킬 연출
-    async performHeal(target, healAmount, scene) {
+    // 치유 스킬 연출 (파티클 연동)
+    async performHeal(target, healAmount, scene, particleEffects = null) {
         if (!this.sprite || !target.sprite) return;
 
-        // 치유 이펙트
+        // 파티클 효과 (Phase 4.5)
+        if (particleEffects) {
+            particleEffects.playHealEffect(target.sprite.x, target.sprite.y, healAmount);
+        }
+
+        // 기존 치유 이펙트
         const healGlow = scene.add.ellipse(
             target.sprite.x,
             target.sprite.y,
@@ -462,6 +508,7 @@ export default class Unit {
             0x44ff44,
             0.6
         ).setDepth(target.sprite.depth - 0.5);
+        healGlow.setBlendMode(Phaser.BlendModes.ADD);
 
         // 확장되며 사라지는 연출
         scene.tweens.add({
@@ -476,15 +523,29 @@ export default class Unit {
             }
         });
 
-        // 회복 숫자 표시
+        // 대상 캐릭터 녹색 빛남
+        const originalTint = target.isEnemy ? 0xff8888 : 0xffffff;
+        target.sprite.setTint(0x88ff88);
+        scene.time.delayedCall(300, () => {
+            if (target.sprite && target.sprite.active) {
+                target.sprite.setTint(originalTint);
+            }
+        });
+
+        // 회복 숫자 표시 (초록색)
         target.showFloatingDamage(scene, healAmount, true);
     }
 
-    // 방어 스킬 연출
-    async performDefend(scene) {
+    // 방어 스킬 연출 (파티클 연동)
+    async performDefend(scene, particleEffects = null) {
         if (!this.sprite) return;
 
-        // 방어 이펙트 (파란 방패 느낌)
+        // 파티클 효과 (Phase 4.5)
+        if (particleEffects) {
+            particleEffects.playDefenseEffect(this.sprite.x, this.sprite.y);
+        }
+
+        // 기존 방어 이펙트 (파란 방패 느낌)
         const shield = scene.add.ellipse(
             this.sprite.x,
             this.sprite.y,
@@ -492,6 +553,7 @@ export default class Unit {
             0x4488ff,
             0.4
         ).setDepth(this.sprite.depth + 0.5);
+        shield.setBlendMode(Phaser.BlendModes.ADD);
 
         // 펄스 후 사라짐
         scene.tweens.add({
@@ -503,6 +565,15 @@ export default class Unit {
             ease: 'Power2.easeOut',
             onComplete: () => {
                 shield.destroy();
+            }
+        });
+
+        // 캐릭터 파란색 빛남
+        const originalTint = this.isEnemy ? 0xff8888 : 0xffffff;
+        this.sprite.setTint(0x88aaff);
+        scene.time.delayedCall(400, () => {
+            if (this.sprite && this.sprite.active) {
+                this.sprite.setTint(originalTint);
             }
         });
     }

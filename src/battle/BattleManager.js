@@ -1,10 +1,12 @@
 // 키워드 기반 전투 시스템 - 전투 매니저
 // 턴 시스템, 행동 결정, 타겟팅, 전투 진행 관리
 // Phase 4: 비동기 공격 시퀀스 및 시각적 연출
+// Phase 4.5: 파티클 효과 연동
 
 import Unit from './Unit.js';
 import { SkillSets } from '../data/Skills.js';
 import { getKeyword } from '../data/Keywords.js';
+import ParticleEffects from '../effects/ParticleEffects.js';
 
 export default class BattleManager {
     constructor(scene) {
@@ -25,6 +27,9 @@ export default class BattleManager {
         this.actionTickRate = 100;  // 틱 간격 (ms)
         this.actionTickTimer = null;
         this.isProcessingAction = false;  // 행동 처리 중 여부
+
+        // Phase 4.5: 파티클 효과 시스템
+        this.particleEffects = new ParticleEffects(scene);
     }
 
     // 유닛 초기화 (스프라이트와 연결)
@@ -333,8 +338,8 @@ export default class BattleManager {
 
         this.log(`${unit.name}이(가) 휴식 (AP ${beforeAp} → ${unit.currentAp})`, 'info');
 
-        // 휴식 연출 (기력 부족 텍스트 + 회복 이펙트)
-        await unit.performRest(this.scene, recovered);
+        // 휴식 연출 (기력 부족 텍스트 + 회복 이펙트 + 파티클)
+        await unit.performRest(this.scene, recovered, this.particleEffects);
     }
 
     // 공격 실행 (비동기 시퀀스)
@@ -370,19 +375,21 @@ export default class BattleManager {
             'skill'
         );
 
-        // 비동기 공격 시퀀스 실행
+        // 비동기 공격 시퀀스 실행 (파티클 효과 포함)
         let totalDamage = 0;
+        let targetDied = false;
 
         await attacker.performAttack(target, skill, this.scene, () => {
             // 타격 프레임에서 실행되는 데미지 콜백
             for (let i = 0; i < hits; i++) {
                 const result = target.takeDamage(Math.floor(damage / hits));
                 totalDamage += result.damage;
+                if (result.isDead) targetDied = true;
             }
 
             // 플로팅 데미지 표시
             target.showFloatingDamage(this.scene, totalDamage);
-        });
+        }, this.particleEffects);
 
         // 데미지 로그
         this.log(
@@ -391,9 +398,17 @@ export default class BattleManager {
         );
 
         // 사망 체크
-        if (target.isDead) {
+        if (targetDied) {
             this.log(`${target.name}이(가) 쓰러졌다!`, 'system');
             this.playDeathAnimation(target);
+
+            // 마지막 일격 효과 (적군이 전멸했을 때)
+            const remainingEnemies = attacker.isEnemy ? this.getAliveAllies() : this.getAliveEnemies();
+            if (remainingEnemies.length === 0) {
+                this.particleEffects.playKOEffect(target.sprite.x, target.sprite.y);
+            } else {
+                this.particleEffects.playDeathEffect(target.sprite.x, target.sprite.y, target.isEnemy);
+            }
         }
     }
 
@@ -418,8 +433,8 @@ export default class BattleManager {
             'heal'
         );
 
-        // 치유 연출
-        await healer.performHeal(target, actualHeal, this.scene);
+        // 치유 연출 (파티클 효과 포함)
+        await healer.performHeal(target, actualHeal, this.scene, this.particleEffects);
 
         this.log(
             `→ ${target.name} HP ${actualHeal} 회복!`,
@@ -441,8 +456,8 @@ export default class BattleManager {
             'info'
         );
 
-        // 방어 연출
-        await unit.performDefend(this.scene);
+        // 방어 연출 (파티클 효과 포함)
+        await unit.performDefend(this.scene, this.particleEffects);
     }
 
     // 사망 애니메이션
@@ -530,10 +545,11 @@ export default class BattleManager {
         // HP 감소
         const result = target.takeDamage(damage);
         target.showFloatingDamage(this.scene, damage);
-        this.log(`테스트: ${target.name}이(가) ${damage} 피해! (HP: ${result.remainingHp})`, 'damage');
 
-        // 화면 흔들림
-        this.scene.cameras.main.shake(80, 0.005);
+        // 파티클 효과
+        this.particleEffects.playAttackHitEffect(target.sprite.x, target.sprite.y, 3);
+
+        this.log(`테스트: ${target.name}이(가) ${damage} 피해! (HP: ${result.remainingHp})`, 'damage');
 
         // AP 감소
         target.consumeAp(apCost);
@@ -561,6 +577,7 @@ export default class BattleManager {
         if (result.isDead) {
             this.log(`${target.name}이(가) 쓰러졌다!`, 'system');
             this.playDeathAnimation(target);
+            this.particleEffects.playDeathEffect(target.sprite.x, target.sprite.y, target.isEnemy);
         }
 
         this.scene.logWindow.endBatch();
