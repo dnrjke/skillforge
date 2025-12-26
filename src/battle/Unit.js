@@ -3,6 +3,7 @@
 // Phase 4.5: 파티클 효과 연동
 
 import { SkillSets, SkillPresets } from '../data/Skills.js';
+import { PassiveSets } from '../data/PassiveSkills.js';
 import Phaser from 'phaser';
 
 export default class Unit {
@@ -27,12 +28,20 @@ export default class Unit {
         // 스킬 (우선순위 순으로 정렬됨)
         this.skills = this.initializeSkills(config.skills || config.skillSet);
 
+        // 패시브 스킬
+        this.passives = this.initializePassives(config.passives || config.skillSet);
+
+        // PP(Passive Point) 시스템
+        this.maxPp = config.maxPp || 2;
+        this.currentPp = config.currentPp ?? this.maxPp;
+
         // AP 회복량 (대기 시)
         this.apRecovery = config.apRecovery || 3;
 
         // 상태
         this.isAlive = true;
         this.isDefending = false;
+        this.passiveCooldowns = {};  // 패시브 쿨다운 추적
 
         // 시각적 연결 (Phaser 스프라이트)
         this.sprite = null;
@@ -61,6 +70,52 @@ export default class Unit {
         return [...SkillSets.WARRIOR].sort((a, b) => a.priority - b.priority);
     }
 
+    initializePassives(passivesOrSet) {
+        if (Array.isArray(passivesOrSet)) {
+            return [...passivesOrSet];
+        } else if (typeof passivesOrSet === 'string' && PassiveSets[passivesOrSet]) {
+            return [...PassiveSets[passivesOrSet]];
+        }
+        // 기본 패시브셋
+        return PassiveSets.WARRIOR ? [...PassiveSets.WARRIOR] : [];
+    }
+
+    // PP 소모
+    consumePp(amount) {
+        this.currentPp = Math.max(0, this.currentPp - amount);
+        if (this.statusBar) {
+            this.statusBar.setPp(this.currentPp);
+        }
+    }
+
+    // PP 회복
+    recoverPp(amount = 1) {
+        const oldPp = this.currentPp;
+        this.currentPp = Math.min(this.maxPp, this.currentPp + amount);
+        if (this.statusBar) {
+            this.statusBar.setPp(this.currentPp);
+        }
+        return this.currentPp - oldPp;
+    }
+
+    // 특정 트리거에 해당하는 패시브 스킬 목록 반환
+    getPassivesForTrigger(trigger) {
+        return this.passives.filter(p => p.trigger === trigger);
+    }
+
+    // 패시브 발동 시도 (BattleManager에서 호출)
+    tryActivatePassive(trigger, context) {
+        const matchingPassives = this.getPassivesForTrigger(trigger);
+
+        for (const passive of matchingPassives) {
+            if (passive.canActivate(this)) {
+                const result = passive.activate(this, context);
+                return { passive, result };
+            }
+        }
+        return null;
+    }
+
     // Phaser 스프라이트 연결
     linkSprite(sprite) {
         this.sprite = sprite;
@@ -77,7 +132,62 @@ export default class Unit {
             this.statusBar.maxAp = this.maxAp;
             this.statusBar.currentAp = this.currentAp;
             this.statusBar.setAp(this.currentAp, false);
+            // PP 연결
+            this.statusBar.maxPp = this.maxPp;
+            this.statusBar.currentPp = this.currentPp;
+            this.statusBar.setPp(this.currentPp, false);
         }
+    }
+
+    // 패시브 발동 연출 (머리 위에 텍스트)
+    showPassiveActivation(scene, passive) {
+        if (!this.sprite) return;
+
+        const text = scene.add.text(
+            this.sprite.x,
+            this.sprite.y - 120,
+            passive.displayName,
+            {
+                fontSize: '22px',
+                fill: passive.color,
+                fontFamily: 'Arial',
+                fontStyle: 'bold',
+                stroke: '#000000',
+                strokeThickness: 4
+            }
+        ).setOrigin(0.5).setDepth(2500);
+
+        // 반짝이는 효과
+        scene.tweens.add({
+            targets: text,
+            y: text.y - 40,
+            alpha: { from: 1, to: 0 },
+            scaleX: { from: 0.8, to: 1.2 },
+            scaleY: { from: 0.8, to: 1.2 },
+            duration: 800,
+            ease: 'Power2.easeOut',
+            onComplete: () => text.destroy()
+        });
+
+        // 캐릭터 주위에 빛 효과
+        const glow = scene.add.ellipse(
+            this.sprite.x,
+            this.sprite.y,
+            80, 100,
+            parseInt(passive.color.replace('#', '0x')),
+            0.4
+        ).setDepth(this.sprite.depth - 0.5);
+        glow.setBlendMode(Phaser.BlendModes.ADD);
+
+        scene.tweens.add({
+            targets: glow,
+            scaleX: 1.5,
+            scaleY: 1.5,
+            alpha: 0,
+            duration: 400,
+            ease: 'Power2.easeOut',
+            onComplete: () => glow.destroy()
+        });
     }
 
     // 현재 AP로 사용 가능한 최우선순위 스킬 선택
@@ -325,22 +435,23 @@ export default class Unit {
             // 타격 타이밍 (애니메이션 중간 지점)
             const hitDelay = hasAttackAnim ? 150 : 100;
 
-            scene.time.delayedCall(hitDelay, () => {
+            // 히트스탑 영향 안 받도록 setTimeout 사용
+            setTimeout(() => {
                 // 데미지 판정 콜백
                 damageCallback();
 
                 // 피격 효과
                 this.applyHitFeedback(scene, target, skill, particleEffects);
-            });
+            }, hitDelay);
 
-            // 애니메이션 완료 대기
+            // 애니메이션 완료 대기 - 히트스탑 영향 안 받도록 setTimeout 사용
             const animDuration = hasAttackAnim ? 400 : 200;
-            scene.time.delayedCall(animDuration, () => {
-                if (this.isAlive) {
+            setTimeout(() => {
+                if (this.isAlive && this.sprite && this.sprite.active) {
                     this.sprite.play('knight_idle');
                 }
                 resolve();
-            });
+            }, animDuration);
         });
     }
 
@@ -449,6 +560,34 @@ export default class Unit {
             onComplete: () => {
                 text.destroy();
             }
+        });
+    }
+
+    // PP 변화 플로팅 텍스트
+    showFloatingPp(scene, amount) {
+        if (!this.sprite) return;
+
+        const text = scene.add.text(
+            this.sprite.x - 40,
+            this.sprite.y - 60,
+            `PP +${amount}`,
+            {
+                fontSize: '16px',
+                fill: '#aa66ff',
+                fontFamily: 'Arial',
+                fontStyle: 'bold',
+                stroke: '#000000',
+                strokeThickness: 3
+            }
+        ).setOrigin(0.5).setDepth(2000);
+
+        scene.tweens.add({
+            targets: text,
+            y: text.y - 25,
+            alpha: 0,
+            duration: 500,
+            ease: 'Power2.easeOut',
+            onComplete: () => text.destroy()
         });
     }
 

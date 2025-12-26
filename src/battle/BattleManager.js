@@ -280,6 +280,14 @@ export default class BattleManager {
             unit.sprite.statusBar.resetAction();
         }
 
+        // PP 회복 (매 턴 종료 시 1 PP 회복, 최대치 이하일 때만)
+        if (unit.currentPp < unit.maxPp) {
+            const recovered = unit.recoverPp(1);
+            if (recovered > 0) {
+                unit.showFloatingPp(this.scene, recovered);  // PP 회복 표시
+            }
+        }
+
         // 행동 처리 완료 - 틱 재개
         this.isProcessingAction = false;
     }
@@ -399,9 +407,35 @@ export default class BattleManager {
         let wasDefending = false;
 
         await attacker.performAttack(target, skill, this.scene, () => {
+            // 패시브 발동 컨텍스트
+            const passiveContext = {
+                attacker: attacker,
+                target: target,
+                skill: skill,
+                damage: damage,
+                damageMultiplier: 1,
+                dodged: false
+            };
+
+            // 피격자의 onBeingHit 패시브 체크
+            const passiveResult = target.tryActivatePassive('onBeingHit', passiveContext);
+            if (passiveResult) {
+                target.showPassiveActivation(this.scene, passiveResult.passive);
+                this.log(`${target.name}: ${passiveResult.passive.displayName} 발동!`, 'skill');
+
+                if (passiveContext.dodged) {
+                    // 완전 회피
+                    this.showDamageNumber(target, 0, false, 'MISS');
+                    return; // 데미지 없음
+                }
+            }
+
+            // 최종 데미지 계산
+            const finalDamage = Math.floor(damage * passiveContext.damageMultiplier);
+
             // 타격 프레임에서 실행되는 데미지 콜백
             for (let i = 0; i < hits; i++) {
-                const result = target.takeDamage(Math.floor(damage / hits), this.scene);
+                const result = target.takeDamage(Math.floor(finalDamage / hits), this.scene);
                 totalDamage += result.damage;
                 if (result.isDead) targetDied = true;
                 if (result.wasDefending) wasDefending = true;
@@ -416,6 +450,20 @@ export default class BattleManager {
             // 크리티컬 시 불꽃 파티클
             if (isCritical) {
                 this.particleEffects.playCriticalHitEffect(target.sprite.x, target.sprite.y);
+            }
+
+            // 피격 후 패시브 (반격 등)
+            if (target.isAlive && !passiveContext.dodged) {
+                const afterHitResult = target.tryActivatePassive('onAfterHit', passiveContext);
+                if (afterHitResult && afterHitResult.result.type === 'counterAttack') {
+                    target.showPassiveActivation(this.scene, afterHitResult.passive);
+                    this.log(`${target.name}: ${afterHitResult.passive.displayName}!`, 'skill');
+                    // 반격 데미지
+                    const counterDamage = afterHitResult.result.damage;
+                    attacker.takeDamage(counterDamage, this.scene);
+                    attacker.showFloatingDamage(this.scene, counterDamage);
+                    this.log(`→ ${attacker.name}에게 ${counterDamage} 반격 데미지!`, 'damage');
+                }
             }
         }, this.particleEffects);
 
@@ -566,8 +614,35 @@ export default class BattleManager {
     }
 
     // Phase 4.75: 데미지 숫자 표시 (크리티컬 구분)
-    showDamageNumber(target, damage, isCritical = false) {
+    showDamageNumber(target, damage, isCritical = false, customText = null) {
         if (!target.sprite) return;
+
+        // MISS나 커스텀 텍스트 처리
+        if (customText === 'MISS') {
+            const missText = this.scene.add.text(
+                target.sprite.x,
+                target.sprite.y - 80,
+                'MISS!',
+                {
+                    fontSize: '28px',
+                    fill: '#aaaaaa',
+                    fontFamily: 'Arial',
+                    fontStyle: 'italic',
+                    stroke: '#000000',
+                    strokeThickness: 3
+                }
+            ).setOrigin(0.5).setDepth(2000);
+
+            this.scene.tweens.add({
+                targets: missText,
+                y: missText.y - 40,
+                alpha: 0,
+                duration: 600,
+                ease: 'Power2.easeOut',
+                onComplete: () => missText.destroy()
+            });
+            return;
+        }
 
         const fontSize = isCritical ? '42px' : '28px';
         const color = isCritical ? '#ffff00' : '#ff4444';

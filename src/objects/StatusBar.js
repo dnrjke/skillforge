@@ -10,6 +10,8 @@ export default class StatusBar {
         this.currentHp = config.currentHp || this.maxHp;
         this.maxAp = config.maxAp || 10;
         this.currentAp = config.currentAp || 0;
+        this.maxPp = config.maxPp || 2;
+        this.currentPp = config.currentPp ?? this.maxPp;
         this.speed = config.speed || 10;
 
         // 행동 게이지 (가득 차면 행동)
@@ -33,6 +35,7 @@ export default class StatusBar {
         this.actionBarFill = null;
         this.shineEffect = null;
         this.glowEffect = null;
+        this.ppIndicators = [];  // PP 아이콘 배열
 
         this.create();
     }
@@ -140,6 +143,19 @@ export default class StatusBar {
             1
         ).setOrigin(0, 0.5).setVisible(false).setBlendMode(Phaser.BlendModes.ADD);
 
+        // PP 아이콘 (HP 바 왼쪽에 작은 다이아몬드) - 행동 바 아래
+        const ppY = actionBarY + 12;
+        this.ppIndicators = [];
+        for (let i = 0; i < this.maxPp; i++) {
+            const ppIcon = this.scene.add.polygon(
+                -this.barWidth / 2 + 8 + i * 14, ppY,
+                [0, -5, 5, 0, 0, 5, -5, 0],  // 다이아몬드 모양
+                i < this.currentPp ? 0xaa66ff : 0x333333
+            );
+            ppIcon.setStrokeStyle(1, 0x000000);
+            this.ppIndicators.push(ppIcon);
+        }
+
         // 컨테이너에 추가
         this.container.add([
             this.hpBarBg,
@@ -153,11 +169,36 @@ export default class StatusBar {
             this.actionBarInnerBg,
             this.actionBarFill,
             this.glowEffect,
-            this.shineEffect
+            this.shineEffect,
+            ...this.ppIndicators
         ]);
 
         // depth 설정 (캐릭터보다 위에)
         this.container.setDepth(1000);
+    }
+
+    // PP 설정
+    setPp(value, animate = true) {
+        this.currentPp = Math.max(0, Math.min(this.maxPp, value));
+
+        this.ppIndicators.forEach((icon, i) => {
+            const isFilled = i < this.currentPp;
+            const targetColor = isFilled ? 0xaa66ff : 0x333333;
+
+            if (animate && isFilled) {
+                // PP 회복 시 반짝임 효과
+                this.scene.tweens.add({
+                    targets: icon,
+                    scaleX: 1.3,
+                    scaleY: 1.3,
+                    duration: 150,
+                    yoyo: true,
+                    ease: 'Power2.easeOut'
+                });
+            }
+
+            icon.setFillStyle(targetColor);
+        });
     }
 
     update() {
