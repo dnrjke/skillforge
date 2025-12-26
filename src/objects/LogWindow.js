@@ -109,6 +109,7 @@ export default class LogWindow {
                         font-size: 13px;
                         line-height: 1.5;
                         overscroll-behavior: contain;
+                        touch-action: pan-y;
                     "></div>
                 </div>
             </div>
@@ -321,10 +322,17 @@ export default class LogWindow {
     }
 
     getTimestamp() {
+        // 한국 시간 (KST) 기준
         const now = new Date();
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const seconds = String(now.getSeconds()).padStart(2, '0');
-        return `${minutes}:${seconds}`;
+        const kstTime = now.toLocaleTimeString('ko-KR', {
+            timeZone: 'Asia/Seoul',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        });
+        // HH:MM:SS 형식에서 MM:SS만 추출
+        return kstTime.slice(-5);
     }
 
     clear() {
