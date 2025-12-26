@@ -109,7 +109,7 @@ export default class LogWindow {
                         font-size: 13px;
                         line-height: 1.5;
                         overscroll-behavior: contain;
-                        touch-action: pan-y;
+                        touch-action: none;
                     "></div>
                 </div>
             </div>
@@ -138,6 +138,25 @@ export default class LogWindow {
             this.toggleBtn.style.background = 'rgba(255,255,255,0.1)';
             this.toggleBtn.style.color = 'rgba(255,255,255,0.5)';
         });
+
+        // 로그 콘텐츠 터치 스크롤 직접 처리
+        this.setupContentTouchScroll();
+    }
+
+    setupContentTouchScroll() {
+        let touchStartY = 0;
+        let scrollStartY = 0;
+
+        this.content.addEventListener('touchstart', (e) => {
+            touchStartY = e.touches[0].clientY;
+            scrollStartY = this.content.scrollTop;
+        }, { passive: true });
+
+        this.content.addEventListener('touchmove', (e) => {
+            const touchY = e.touches[0].clientY;
+            const deltaY = touchStartY - touchY;
+            this.content.scrollTop = scrollStartY + deltaY;
+        }, { passive: true });
     }
 
     setupDragHandle() {
@@ -322,17 +341,16 @@ export default class LogWindow {
     }
 
     getTimestamp() {
-        // 한국 시간 (KST) 기준
+        // 한국 시간 (KST = UTC+9) 기준
         const now = new Date();
-        const kstTime = now.toLocaleTimeString('ko-KR', {
-            timeZone: 'Asia/Seoul',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false
-        });
-        // HH:MM:SS 형식에서 MM:SS만 추출
-        return kstTime.slice(-5);
+        const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+        const kst = new Date(utc + (9 * 60 * 60 * 1000));
+
+        const hours = String(kst.getHours()).padStart(2, '0');
+        const minutes = String(kst.getMinutes()).padStart(2, '0');
+        const seconds = String(kst.getSeconds()).padStart(2, '0');
+
+        return `${hours}:${minutes}:${seconds}`;
     }
 
     clear() {
