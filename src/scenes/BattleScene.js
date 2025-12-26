@@ -1,30 +1,37 @@
 import Phaser from 'phaser';
 import LogWindow from '../objects/LogWindow.js';
 import StatusBar from '../objects/StatusBar.js';
+import BattleControlUI from '../objects/BattleControlUI.js';
 import BattleManager from '../battle/BattleManager.js';
 
-// 캐릭터 배치 좌표 상수
+// 캐릭터 배치 좌표 상수 (전열2/중열2/후열2 - 가로 화면 최적화)
 const FORMATION = {
     ALLY: [
-        { id: 0, row: 'back',  x: 150, y: 220 },  // 후열 상
-        { id: 1, row: 'back',  x: 180, y: 360 },  // 후열 중
-        { id: 2, row: 'back',  x: 210, y: 500 },  // 후열 하
-        { id: 3, row: 'front', x: 350, y: 240 },  // 전열 상
-        { id: 4, row: 'front', x: 380, y: 380 },  // 전열 중
-        { id: 5, row: 'front', x: 410, y: 520 }   // 전열 하
+        // 후열 (Back) - 가장 왼쪽
+        { id: 0, row: 'back',   x: 120, y: 260 },  // 후열 상
+        { id: 1, row: 'back',   x: 150, y: 460 },  // 후열 하
+        // 중열 (Middle)
+        { id: 2, row: 'middle', x: 260, y: 280 },  // 중열 상
+        { id: 3, row: 'middle', x: 290, y: 480 },  // 중열 하
+        // 전열 (Front) - 가장 오른쪽
+        { id: 4, row: 'front',  x: 400, y: 300 },  // 전열 상
+        { id: 5, row: 'front',  x: 430, y: 500 }   // 전열 하
     ],
     ENEMY: [
-        { id: 0, row: 'back',  x: 1130, y: 220 }, // 후열 상 (1280 - 150)
-        { id: 1, row: 'back',  x: 1100, y: 360 }, // 후열 중 (1280 - 180)
-        { id: 2, row: 'back',  x: 1070, y: 500 }, // 후열 하 (1280 - 210)
-        { id: 3, row: 'front', x: 930, y: 240 },  // 전열 상 (1280 - 350)
-        { id: 4, row: 'front', x: 900, y: 380 },  // 전열 중 (1280 - 380)
-        { id: 5, row: 'front', x: 870, y: 520 }   // 전열 하 (1280 - 410)
+        // 후열 (Back) - 가장 오른쪽
+        { id: 0, row: 'back',   x: 1160, y: 260 }, // 후열 상
+        { id: 1, row: 'back',   x: 1130, y: 460 }, // 후열 하
+        // 중열 (Middle)
+        { id: 2, row: 'middle', x: 1020, y: 280 }, // 중열 상
+        { id: 3, row: 'middle', x: 990, y: 480 },  // 중열 하
+        // 전열 (Front) - 가장 왼쪽
+        { id: 4, row: 'front',  x: 880, y: 300 },  // 전열 상
+        { id: 5, row: 'front',  x: 850, y: 500 }   // 전열 하
     ]
 };
 
-// 3vs3 전투에서 사용할 슬롯 인덱스
-const ACTIVE_SLOTS = [1, 3, 4]; // 후열 중, 전열 상, 전열 중
+// 3vs3 전투에서 사용할 슬롯 인덱스 (각 열에서 1명씩)
+const ACTIVE_SLOTS = [1, 2, 4]; // 후열 하, 중열 상, 전열 상
 
 export default class BattleScene extends Phaser.Scene {
     constructor() {
@@ -34,6 +41,7 @@ export default class BattleScene extends Phaser.Scene {
         this.statusBars = [];
         this.logWindow = null;
         this.battleManager = null;
+        this.battleControlUI = null;
     }
 
     create() {
@@ -48,6 +56,9 @@ export default class BattleScene extends Phaser.Scene {
 
         // 전투 매니저 초기화
         this.setupBattleManager();
+
+        // 전투 컨트롤 UI 설정
+        this.battleControlUI = new BattleControlUI(this, this.battleManager);
 
         // 입력 설정
         this.setupInput();
@@ -76,14 +87,14 @@ export default class BattleScene extends Phaser.Scene {
         // 아군 배치 (3명)
         ACTIVE_SLOTS.forEach((slotIndex, index) => {
             const slot = FORMATION.ALLY[slotIndex];
-            const ally = this.createCharacter(slot.x, slot.y, false, `아군${index + 1}`);
+            const ally = this.createCharacter(slot.x, slot.y, false, `아군${index + 1}`, slot.row);
             this.allies.push(ally);
         });
 
         // 적군 배치 (3명)
         ACTIVE_SLOTS.forEach((slotIndex, index) => {
             const slot = FORMATION.ENEMY[slotIndex];
-            const enemy = this.createCharacter(slot.x, slot.y, true, `적군${index + 1}`);
+            const enemy = this.createCharacter(slot.x, slot.y, true, `적군${index + 1}`, slot.row);
             this.enemies.push(enemy);
         });
 
@@ -91,16 +102,17 @@ export default class BattleScene extends Phaser.Scene {
         this.sortCharactersByDepth();
     }
 
-    createCharacter(x, y, isEnemy, name) {
+    createCharacter(x, y, isEnemy, name, row) {
         const character = this.add.sprite(x, y, 'knight');
 
-        // 스케일 조정 (32x32가 작으므로 확대)
-        character.setScale(3);
+        // 스케일 조정 (2배 확대: 3 -> 6)
+        character.setScale(6);
 
         // 캐릭터 메타 정보
         character.data = {
             name: name,
-            isEnemy: isEnemy
+            isEnemy: isEnemy,
+            row: row
         };
 
         // 적군 설정
@@ -112,13 +124,14 @@ export default class BattleScene extends Phaser.Scene {
         // idle 애니메이션 재생
         character.play('knight_idle');
 
-        // 상태바 생성 (캐릭터 머리 위로 충분히 올림)
+        // 상태바 생성 (캐릭터 머리 위로 충분히 올림 - 2배 확대에 맞춤)
         const statusBar = new StatusBar(this, character, {
             maxHp: 100,
             currentHp: 100,
             maxAp: 10,
             currentAp: 0,
-            offsetY: -70
+            offsetY: -130,
+            speed: 10
         });
         character.statusBar = statusBar;
         this.statusBars.push(statusBar);
@@ -144,6 +157,21 @@ export default class BattleScene extends Phaser.Scene {
         // 전투 매니저 생성 및 유닛 초기화
         this.battleManager = new BattleManager(this);
         this.battleManager.initializeUnits(this.allies, this.enemies);
+
+        // 턴 순서 표시 업데이트
+        this.updateTurnOrderDisplay();
+    }
+
+    updateTurnOrderDisplay() {
+        if (!this.battleManager) return;
+
+        const queue = this.battleManager.turnQueue;
+        queue.forEach((unit, index) => {
+            if (unit.statusBar) {
+                unit.statusBar.setTurnOrder(index + 1);
+                unit.statusBar.setSpeed(unit.speed);
+            }
+        });
     }
 
     setupInput() {
@@ -157,17 +185,18 @@ export default class BattleScene extends Phaser.Scene {
             if (!this.battleManager.isRunning) {
                 this.battleManager.autoMode = true;
                 this.battleManager.startBattle();
+                this.battleControlUI.updateStatus();
             } else {
-                const isAuto = this.battleManager.toggleAutoMode();
-                this.addLog(`자동 전투 ${isAuto ? 'ON' : 'OFF'}`, 'system');
+                this.battleManager.toggleAutoMode();
+                this.battleControlUI.updateStatus();
             }
         });
 
         // P: 일시정지/재개
         this.input.keyboard.on('keydown-P', () => {
             if (this.battleManager.isRunning) {
-                const isPaused = this.battleManager.togglePause();
-                this.addLog(`전투 ${isPaused ? '일시정지' : '재개'}`, 'system');
+                this.battleManager.togglePause();
+                this.battleControlUI.updateStatus();
             }
         });
 
@@ -176,6 +205,14 @@ export default class BattleScene extends Phaser.Scene {
             if (!this.battleManager.autoMode) {
                 this.battleManager.manualNextTurn();
             }
+        });
+
+        // 1-4: 배속 단축키
+        ['ONE', 'TWO', 'THREE', 'FOUR'].forEach((key, index) => {
+            this.input.keyboard.on(`keydown-${key}`, () => {
+                const speeds = [1, 2, 4, 8];
+                this.battleControlUI.setSpeed(speeds[index]);
+            });
         });
     }
 

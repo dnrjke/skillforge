@@ -8,11 +8,13 @@ export default class StatusBar {
         this.currentHp = config.currentHp || this.maxHp;
         this.maxAp = config.maxAp || 10;
         this.currentAp = config.currentAp || 0;
+        this.speed = config.speed || 10;
+        this.turnOrder = config.turnOrder || 0;
 
-        // 바 크기 설정
-        this.barWidth = config.barWidth || 70;
-        this.barHeight = config.barHeight || 8;
-        this.offsetY = config.offsetY || -70;
+        // 바 크기 설정 (2배 확대)
+        this.barWidth = config.barWidth || 140;
+        this.barHeight = config.barHeight || 14;
+        this.offsetY = config.offsetY || -140;
 
         // 그래픽 요소
         this.container = null;
@@ -21,6 +23,10 @@ export default class StatusBar {
         this.apBarBg = null;
         this.apBarFill = null;
         this.apText = null;
+        this.speedBadge = null;
+        this.speedText = null;
+        this.orderBadge = null;
+        this.orderText = null;
 
         this.create();
     }
@@ -32,10 +38,30 @@ export default class StatusBar {
             this.character.y + this.offsetY
         );
 
+        // 턴 순서 뱃지 (좌측 상단)
+        this.orderBadge = this.scene.add.circle(
+            -this.barWidth / 2 - 20, -2,
+            14, 0x4488ff
+        );
+        this.orderBadge.setStrokeStyle(2, 0x000000);
+
+        this.orderText = this.scene.add.text(
+            -this.barWidth / 2 - 20, -2,
+            '-',
+            {
+                fontSize: '14px',
+                fill: '#ffffff',
+                fontFamily: 'Arial',
+                fontStyle: 'bold',
+                stroke: '#000000',
+                strokeThickness: 2
+            }
+        ).setOrigin(0.5);
+
         // HP 바 배경 (테두리)
         this.hpBarBg = this.scene.add.rectangle(
             0, 0,
-            this.barWidth + 2, this.barHeight + 2,
+            this.barWidth + 4, this.barHeight + 4,
             0x000000
         ).setOrigin(0.5);
 
@@ -54,33 +80,33 @@ export default class StatusBar {
         ).setOrigin(0, 0.5);
 
         // AP 바 배경 (테두리)
-        const apBarY = this.barHeight + 4;
+        const apBarY = this.barHeight + 6;
         this.apBarBg = this.scene.add.rectangle(
             0, apBarY,
-            this.barWidth + 2, this.barHeight,
+            this.barWidth + 4, this.barHeight,
             0x000000
         ).setOrigin(0.5);
 
         // AP 바 내부 배경
         this.apBarInnerBg = this.scene.add.rectangle(
             0, apBarY,
-            this.barWidth, this.barHeight - 2,
+            this.barWidth, this.barHeight - 4,
             0x222222
         ).setOrigin(0.5);
 
         // AP 바 채움 (황색)
         this.apBarFill = this.scene.add.rectangle(
             -this.barWidth / 2, apBarY,
-            0, this.barHeight - 4,
+            0, this.barHeight - 6,
             0xffcc00
         ).setOrigin(0, 0.5);
 
         // AP 수치 텍스트
         this.apText = this.scene.add.text(
-            this.barWidth / 2 + 5, apBarY,
+            this.barWidth / 2 + 8, apBarY,
             `${this.currentAp}/${this.maxAp}`,
             {
-                fontSize: '11px',
+                fontSize: '14px',
                 fill: '#ffcc00',
                 fontFamily: 'Arial',
                 fontStyle: 'bold',
@@ -89,15 +115,40 @@ export default class StatusBar {
             }
         ).setOrigin(0, 0.5);
 
+        // Speed 뱃지 (우측 상단)
+        this.speedBadge = this.scene.add.rectangle(
+            this.barWidth / 2 + 30, -2,
+            36, 18,
+            0x333333
+        ).setOrigin(0.5);
+        this.speedBadge.setStrokeStyle(2, 0x666666);
+
+        this.speedText = this.scene.add.text(
+            this.barWidth / 2 + 30, -2,
+            `⚡${this.speed}`,
+            {
+                fontSize: '12px',
+                fill: '#88ccff',
+                fontFamily: 'Arial',
+                fontStyle: 'bold',
+                stroke: '#000000',
+                strokeThickness: 2
+            }
+        ).setOrigin(0.5);
+
         // 컨테이너에 추가
         this.container.add([
+            this.orderBadge,
+            this.orderText,
             this.hpBarBg,
             this.hpBarInnerBg,
             this.hpBarFill,
             this.apBarBg,
             this.apBarInnerBg,
             this.apBarFill,
-            this.apText
+            this.apText,
+            this.speedBadge,
+            this.speedText
         ]);
 
         // depth 설정 (캐릭터보다 위에)
@@ -110,6 +161,34 @@ export default class StatusBar {
             this.character.x,
             this.character.y + this.offsetY
         );
+    }
+
+    // 턴 순서 업데이트
+    setTurnOrder(order) {
+        this.turnOrder = order;
+        if (order > 0) {
+            this.orderText.setText(order.toString());
+            this.orderBadge.setFillStyle(order === 1 ? 0xff8844 : 0x4488ff);
+        } else {
+            this.orderText.setText('-');
+            this.orderBadge.setFillStyle(0x444444);
+        }
+    }
+
+    // 현재 턴 하이라이트
+    setCurrentTurn(isCurrent) {
+        if (isCurrent) {
+            this.orderBadge.setFillStyle(0xff4444);
+            this.orderBadge.setStrokeStyle(3, 0xffff00);
+        } else {
+            this.orderBadge.setStrokeStyle(2, 0x000000);
+            this.setTurnOrder(this.turnOrder);
+        }
+    }
+
+    setSpeed(value) {
+        this.speed = value;
+        this.speedText.setText(`⚡${this.speed}`);
     }
 
     setHp(value, animate = true) {
