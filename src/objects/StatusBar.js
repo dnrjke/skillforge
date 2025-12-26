@@ -9,10 +9,10 @@ export default class StatusBar {
         this.maxAp = config.maxAp || 10;
         this.currentAp = config.currentAp || 0;
 
-        // 바 크기 설정 (확대됨)
-        this.barWidth = config.barWidth || 80;
-        this.barHeight = config.barHeight || 10;
-        this.offsetY = config.offsetY || -60; // 캐릭터 위 오프셋
+        // 바 크기 설정
+        this.barWidth = config.barWidth || 70;
+        this.barHeight = config.barHeight || 8;
+        this.offsetY = config.offsetY || -70;
 
         // 그래픽 요소
         this.container = null;
@@ -32,10 +32,10 @@ export default class StatusBar {
             this.character.y + this.offsetY
         );
 
-        // HP 바 배경 (테두리 포함)
+        // HP 바 배경 (테두리)
         this.hpBarBg = this.scene.add.rectangle(
             0, 0,
-            this.barWidth + 4, this.barHeight + 4,
+            this.barWidth + 2, this.barHeight + 2,
             0x000000
         ).setOrigin(0.5);
 
@@ -43,7 +43,7 @@ export default class StatusBar {
         this.hpBarInnerBg = this.scene.add.rectangle(
             0, 0,
             this.barWidth, this.barHeight,
-            0x333333
+            0x222222
         ).setOrigin(0.5);
 
         // HP 바 채움 (녹색)
@@ -53,39 +53,39 @@ export default class StatusBar {
             0x44ff44
         ).setOrigin(0, 0.5);
 
-        // AP 바 배경 (테두리 포함)
-        const apBarY = this.barHeight + 6;
+        // AP 바 배경 (테두리)
+        const apBarY = this.barHeight + 4;
         this.apBarBg = this.scene.add.rectangle(
             0, apBarY,
-            this.barWidth + 4, this.barHeight,
+            this.barWidth + 2, this.barHeight,
             0x000000
         ).setOrigin(0.5);
 
         // AP 바 내부 배경
         this.apBarInnerBg = this.scene.add.rectangle(
             0, apBarY,
-            this.barWidth, this.barHeight - 4,
-            0x333333
+            this.barWidth, this.barHeight - 2,
+            0x222222
         ).setOrigin(0.5);
 
         // AP 바 채움 (황색)
         this.apBarFill = this.scene.add.rectangle(
             -this.barWidth / 2, apBarY,
-            0, this.barHeight - 6,
+            0, this.barHeight - 4,
             0xffcc00
         ).setOrigin(0, 0.5);
 
-        // AP 수치 텍스트 (확대됨)
+        // AP 수치 텍스트
         this.apText = this.scene.add.text(
-            this.barWidth / 2 + 8, apBarY,
+            this.barWidth / 2 + 5, apBarY,
             `${this.currentAp}/${this.maxAp}`,
             {
-                fontSize: '14px',
+                fontSize: '11px',
                 fill: '#ffcc00',
                 fontFamily: 'Arial',
                 fontStyle: 'bold',
                 stroke: '#000000',
-                strokeThickness: 2
+                strokeThickness: 3
             }
         ).setOrigin(0, 0.5);
 
@@ -118,7 +118,6 @@ export default class StatusBar {
         const targetWidth = (this.currentHp / this.maxHp) * this.barWidth;
 
         if (animate) {
-            // HP 감소 시 빨간색 플래시
             if (value < oldHp) {
                 this.scene.tweens.add({
                     targets: this.hpBarFill,
@@ -137,7 +136,6 @@ export default class StatusBar {
             this.hpBarFill.width = targetWidth;
         }
 
-        // HP에 따른 색상 변경
         this.updateHpColor();
     }
 
@@ -146,14 +144,13 @@ export default class StatusBar {
         let color;
 
         if (ratio > 0.6) {
-            color = 0x44ff44; // 녹색
+            color = 0x44ff44;
         } else if (ratio > 0.3) {
-            color = 0xffaa00; // 주황색
+            color = 0xffaa00;
         } else {
-            color = 0xff4444; // 빨간색
+            color = 0xff4444;
         }
 
-        // 애니메이션 완료 후 색상 적용
         this.scene.time.delayedCall(300, () => {
             if (this.hpBarFill && this.hpBarFill.active) {
                 this.hpBarFill.setFillStyle(color);
