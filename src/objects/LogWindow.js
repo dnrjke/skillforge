@@ -55,6 +55,7 @@ export default class LogWindow {
                 box-sizing: border-box;
                 background: linear-gradient(to bottom, rgba(0,0,0,0.7), rgba(0,0,0,0.9));
                 border-radius: 8px 8px 0 0;
+                touch-action: pan-y;
             ">
                 <!-- 드래그 핸들 영역 (투명, 상단) -->
                 <div id="log-drag-handle" style="
@@ -64,6 +65,7 @@ export default class LogWindow {
                     justify-content: center;
                     align-items: center;
                     flex-shrink: 0;
+                    touch-action: none;
                 ">
                     <div style="
                         width: 40px;
@@ -291,7 +293,7 @@ export default class LogWindow {
         logEntry.style.color = colors[type] || colors.info;
         logEntry.style.marginBottom = '2px';
         logEntry.style.lineHeight = '1.4';
-        logEntry.innerHTML = `<span style="color: #666;">[${timestamp}]</span> ${formattedMessage}`;
+        logEntry.innerHTML = `<span style="color: #888;">[${timestamp}]</span> ${formattedMessage}`;
 
         if (this.currentBatch) {
             this.currentBatch.appendChild(logEntry);
