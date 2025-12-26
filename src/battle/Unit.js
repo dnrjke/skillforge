@@ -459,14 +459,14 @@ export default class Unit {
     applyHitFeedback(scene, target, skill = null, particleEffects = null) {
         if (!target.sprite) return;
 
-        // 1. 붉은색 깜빡임 (0.1초)
+        // 1. 붉은색 깜빡임 (0.1초) - setTimeout 사용 (히트스탑 영향 안받음)
         const originalTint = target.isEnemy ? 0xff8888 : 0xffffff;
         target.sprite.setTint(0xff0000);
-        scene.time.delayedCall(100, () => {
+        setTimeout(() => {
             if (target.sprite && target.sprite.active) {
                 target.sprite.setTint(originalTint);
             }
-        });
+        }, 100);
 
         // 2. 파티클 효과 (Phase 4.5)
         if (particleEffects) {
