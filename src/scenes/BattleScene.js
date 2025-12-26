@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import LogWindow from '../objects/LogWindow.js';
 import StatusBar from '../objects/StatusBar.js';
+import BattleManager from '../battle/BattleManager.js';
 
 // 캐릭터 배치 좌표 상수
 const FORMATION = {
@@ -32,6 +33,7 @@ export default class BattleScene extends Phaser.Scene {
         this.enemies = [];
         this.statusBars = [];
         this.logWindow = null;
+        this.battleManager = null;
     }
 
     create() {
@@ -44,12 +46,19 @@ export default class BattleScene extends Phaser.Scene {
         // UI 설정
         this.setupUI();
 
+        // 전투 매니저 초기화
+        this.setupBattleManager();
+
         // 입력 설정
         this.setupInput();
 
         // 시작 로그
-        this.addLog('전투 시작!', 'system');
-        this.addLog('스페이스바를 눌러 랜덤 데미지 테스트', 'info');
+        this.addLog('═══════════════════════════════════', 'system');
+        this.addLog('SkillForge - 키워드 기반 3vs3 RPG', 'system');
+        this.addLog('═══════════════════════════════════', 'system');
+        this.addLog('스페이스바: 테스트 (HP-10, AP-5)', 'info');
+        this.addLog('Enter: 자동 전투 시작/토글', 'info');
+        this.addLog('P: 일시정지/재개', 'info');
     }
 
     update() {
@@ -131,10 +140,42 @@ export default class BattleScene extends Phaser.Scene {
         this.logWindow = new LogWindow(this);
     }
 
+    setupBattleManager() {
+        // 전투 매니저 생성 및 유닛 초기화
+        this.battleManager = new BattleManager(this);
+        this.battleManager.initializeUnits(this.allies, this.enemies);
+    }
+
     setupInput() {
-        // 스페이스바 테스트 입력
+        // 스페이스바: Phase 2 테스트 (HP 10 감소, AP 5 감소)
         this.input.keyboard.on('keydown-SPACE', () => {
-            this.testRandomDamage();
+            this.battleManager.testRandomDamage();
+        });
+
+        // Enter: 자동 전투 시작/토글
+        this.input.keyboard.on('keydown-ENTER', () => {
+            if (!this.battleManager.isRunning) {
+                this.battleManager.autoMode = true;
+                this.battleManager.startBattle();
+            } else {
+                const isAuto = this.battleManager.toggleAutoMode();
+                this.addLog(`자동 전투 ${isAuto ? 'ON' : 'OFF'}`, 'system');
+            }
+        });
+
+        // P: 일시정지/재개
+        this.input.keyboard.on('keydown-P', () => {
+            if (this.battleManager.isRunning) {
+                const isPaused = this.battleManager.togglePause();
+                this.addLog(`전투 ${isPaused ? '일시정지' : '재개'}`, 'system');
+            }
+        });
+
+        // M: 수동 턴 진행 (자동 모드 OFF 시)
+        this.input.keyboard.on('keydown-M', () => {
+            if (!this.battleManager.autoMode) {
+                this.battleManager.manualNextTurn();
+            }
         });
     }
 
@@ -143,46 +184,5 @@ export default class BattleScene extends Phaser.Scene {
         if (this.logWindow) {
             this.logWindow.addLog(message, type);
         }
-    }
-
-    // 테스트: 랜덤 캐릭터에게 데미지
-    testRandomDamage() {
-        const allCharacters = [...this.allies, ...this.enemies];
-        const aliveCharacters = allCharacters.filter(c => c.statusBar.currentHp > 0);
-
-        if (aliveCharacters.length === 0) {
-            this.addLog('모든 캐릭터가 쓰러졌습니다!', 'system');
-            return;
-        }
-
-        // 랜덤 캐릭터 선택
-        const target = Phaser.Utils.Array.GetRandom(aliveCharacters);
-        const damage = 10;
-
-        // 데미지 적용
-        const remainingHp = target.statusBar.damage(damage);
-
-        // AP 증가 (피격 시)
-        target.statusBar.addAp(2);
-
-        // 피격 애니메이션 재생
-        target.play('knight_hit');
-        target.once('animationcomplete', () => {
-            if (remainingHp > 0) {
-                target.play('knight_idle');
-            } else {
-                target.play('knight_death');
-            }
-        });
-
-        // 로그 추가 (같은 타이밍의 로그를 배치로 묶음)
-        const name = target.data.name;
-        this.logWindow.startBatch();
-        this.addLog(`${name}이(가) ${damage} 데미지를 받았다! (HP: ${remainingHp})`, 'damage');
-
-        if (remainingHp <= 0) {
-            this.addLog(`${name}이(가) 쓰러졌다!`, 'system');
-        }
-        this.logWindow.endBatch();
     }
 }
