@@ -40,6 +40,10 @@ export default class LogWindow {
                 #log-window *::-webkit-scrollbar-thumb:hover {
                     background: rgba(255, 255, 255, 0.25);
                 }
+                #log-content {
+                    overscroll-behavior: contain;
+                    -webkit-overflow-scrolling: auto;
+                }
             </style>
             <div id="log-window" style="
                 position: relative;
@@ -102,6 +106,7 @@ export default class LogWindow {
                         color: #ddd;
                         font-size: 13px;
                         line-height: 1.5;
+                        overscroll-behavior: contain;
                     "></div>
                 </div>
             </div>
@@ -133,7 +138,15 @@ export default class LogWindow {
     }
 
     setupDragHandle() {
+        // 클릭으로 최소화 상태 해제
+        this.dragHandle.addEventListener('click', (e) => {
+            if (this.isMinimized) {
+                this.toggle();
+            }
+        });
+
         this.dragHandle.addEventListener('mousedown', (e) => {
+            // 최소화 상태에서는 클릭만 처리 (드래그 X)
             if (this.isMinimized) return;
 
             this.isDragging = true;
@@ -143,32 +156,57 @@ export default class LogWindow {
             e.stopPropagation();
         });
 
+        // 터치 지원
+        this.dragHandle.addEventListener('touchstart', (e) => {
+            if (this.isMinimized) {
+                this.toggle();
+                return;
+            }
+
+            this.isDragging = true;
+            this.dragStartY = e.touches[0].clientY;
+            this.dragStartTop = this.topY;
+            e.preventDefault();
+        }, { passive: false });
+
         document.addEventListener('mousemove', (e) => {
             if (!this.isDragging) return;
-
-            const gameContainer = document.getElementById('game-container');
-            const canvas = gameContainer.querySelector('canvas');
-            const scaleY = 720 / canvas.clientHeight;
-
-            const deltaY = (e.clientY - this.dragStartY) * scaleY;
-            let newTop = this.dragStartTop + deltaY;
-
-            const minTop = 720 - this.maxHeight;
-            const maxTop = 720 - this.minHeight;
-            newTop = Math.max(minTop, Math.min(maxTop, newTop));
-
-            const newHeight = 720 - newTop;
-
-            this.topY = newTop;
-            this.currentHeight = newHeight;
-
-            this.domElement.setY(this.topY);
-            this.window.style.height = `${newHeight}px`;
+            this.handleDrag(e.clientY);
         });
+
+        document.addEventListener('touchmove', (e) => {
+            if (!this.isDragging) return;
+            this.handleDrag(e.touches[0].clientY);
+        }, { passive: false });
 
         document.addEventListener('mouseup', () => {
             this.isDragging = false;
         });
+
+        document.addEventListener('touchend', () => {
+            this.isDragging = false;
+        });
+    }
+
+    handleDrag(clientY) {
+        const gameContainer = document.getElementById('game-container');
+        const canvas = gameContainer.querySelector('canvas');
+        const scaleY = 720 / canvas.clientHeight;
+
+        const deltaY = (clientY - this.dragStartY) * scaleY;
+        let newTop = this.dragStartTop + deltaY;
+
+        const minTop = 720 - this.maxHeight;
+        const maxTop = 720 - this.minHeight;
+        newTop = Math.max(minTop, Math.min(maxTop, newTop));
+
+        const newHeight = 720 - newTop;
+
+        this.topY = newTop;
+        this.currentHeight = newHeight;
+
+        this.domElement.setY(this.topY);
+        this.window.style.height = `${newHeight}px`;
     }
 
     setupToggleButton() {
@@ -253,7 +291,7 @@ export default class LogWindow {
         logEntry.style.color = colors[type] || colors.info;
         logEntry.style.marginBottom = '2px';
         logEntry.style.lineHeight = '1.4';
-        logEntry.innerHTML = `<span style="color: #444;">[${timestamp}]</span> ${formattedMessage}`;
+        logEntry.innerHTML = `<span style="color: #666;">[${timestamp}]</span> ${formattedMessage}`;
 
         if (this.currentBatch) {
             this.currentBatch.appendChild(logEntry);
