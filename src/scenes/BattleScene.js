@@ -5,28 +5,29 @@ import BattleControlUI from '../objects/BattleControlUI.js';
 import BattleManager from '../battle/BattleManager.js';
 
 // 캐릭터 배치 좌표 상수 (전열2/중열2/후열2 - 가로 화면 최적화)
+// Y 좌표를 위로 이동 (-60)
 const FORMATION = {
     ALLY: [
         // 후열 (Back) - 가장 왼쪽
-        { id: 0, row: 'back',   x: 120, y: 260 },  // 후열 상
-        { id: 1, row: 'back',   x: 150, y: 460 },  // 후열 하
+        { id: 0, row: 'back',   x: 120, y: 200 },  // 후열 상
+        { id: 1, row: 'back',   x: 150, y: 380 },  // 후열 하
         // 중열 (Middle)
-        { id: 2, row: 'middle', x: 260, y: 280 },  // 중열 상
-        { id: 3, row: 'middle', x: 290, y: 480 },  // 중열 하
+        { id: 2, row: 'middle', x: 260, y: 220 },  // 중열 상
+        { id: 3, row: 'middle', x: 290, y: 400 },  // 중열 하
         // 전열 (Front) - 가장 오른쪽
-        { id: 4, row: 'front',  x: 400, y: 300 },  // 전열 상
-        { id: 5, row: 'front',  x: 430, y: 500 }   // 전열 하
+        { id: 4, row: 'front',  x: 400, y: 240 },  // 전열 상
+        { id: 5, row: 'front',  x: 430, y: 420 }   // 전열 하
     ],
     ENEMY: [
         // 후열 (Back) - 가장 오른쪽
-        { id: 0, row: 'back',   x: 1160, y: 260 }, // 후열 상
-        { id: 1, row: 'back',   x: 1130, y: 460 }, // 후열 하
+        { id: 0, row: 'back',   x: 1160, y: 200 }, // 후열 상
+        { id: 1, row: 'back',   x: 1130, y: 380 }, // 후열 하
         // 중열 (Middle)
-        { id: 2, row: 'middle', x: 1020, y: 280 }, // 중열 상
-        { id: 3, row: 'middle', x: 990, y: 480 },  // 중열 하
+        { id: 2, row: 'middle', x: 1020, y: 220 }, // 중열 상
+        { id: 3, row: 'middle', x: 990, y: 400 },  // 중열 하
         // 전열 (Front) - 가장 왼쪽
-        { id: 4, row: 'front',  x: 880, y: 300 },  // 전열 상
-        { id: 5, row: 'front',  x: 850, y: 500 }   // 전열 하
+        { id: 4, row: 'front',  x: 880, y: 240 },  // 전열 상
+        { id: 5, row: 'front',  x: 850, y: 420 }   // 전열 하
     ]
 };
 
@@ -64,12 +65,8 @@ export default class BattleScene extends Phaser.Scene {
         this.setupInput();
 
         // 시작 로그
-        this.addLog('═══════════════════════════════════', 'system');
         this.addLog('SkillForge - 키워드 기반 3vs3 RPG', 'system');
-        this.addLog('═══════════════════════════════════', 'system');
-        this.addLog('스페이스바: 테스트 (HP-10, AP-5)', 'info');
-        this.addLog('Enter: 자동 전투 시작/토글', 'info');
-        this.addLog('P: 일시정지/재개', 'info');
+        this.addLog('스페이스바: 테스트 | Enter: 자동전투', 'info');
     }
 
     update() {
@@ -124,13 +121,13 @@ export default class BattleScene extends Phaser.Scene {
         // idle 애니메이션 재생
         character.play('knight_idle');
 
-        // 상태바 생성 (캐릭터 머리 위로 충분히 올림 - 2배 확대에 맞춤)
+        // 상태바 생성 (캐릭터 머리 위)
         const statusBar = new StatusBar(this, character, {
             maxHp: 100,
             currentHp: 100,
             maxAp: 10,
             currentAp: 0,
-            offsetY: -130,
+            offsetY: -110,
             speed: 10
         });
         character.statusBar = statusBar;
@@ -157,21 +154,6 @@ export default class BattleScene extends Phaser.Scene {
         // 전투 매니저 생성 및 유닛 초기화
         this.battleManager = new BattleManager(this);
         this.battleManager.initializeUnits(this.allies, this.enemies);
-
-        // 턴 순서 표시 업데이트
-        this.updateTurnOrderDisplay();
-    }
-
-    updateTurnOrderDisplay() {
-        if (!this.battleManager) return;
-
-        const queue = this.battleManager.turnQueue;
-        queue.forEach((unit, index) => {
-            if (unit.statusBar) {
-                unit.statusBar.setTurnOrder(index + 1);
-                unit.statusBar.setSpeed(unit.speed);
-            }
-        });
     }
 
     setupInput() {

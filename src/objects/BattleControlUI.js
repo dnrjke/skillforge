@@ -1,57 +1,101 @@
-// 전투 컨트롤 UI (우상단)
-// 배속 버튼 (1x, 2x, 4x, 8x), 자동전투 토글, 일시정지 버튼
+// 전투 컨트롤 UI
+// 우상단: 배속 뱃지 (여러 번 눌러서 변경)
+// 우하단: 자동전투/일시정지 버튼
 
 export default class BattleControlUI {
     constructor(scene, battleManager) {
         this.scene = scene;
         this.battleManager = battleManager;
-        this.currentSpeed = 1;
+        this.currentSpeedIndex = 0;
         this.speedOptions = [1, 2, 4, 8];
-        this.domElement = null;
 
-        this.create();
+        this.speedBadge = null;
+        this.controlPanel = null;
+
+        this.createSpeedBadge();
+        this.createControlPanel();
     }
 
-    create() {
+    // 우상단 배속 뱃지
+    createSpeedBadge() {
         const html = `
             <style>
-                #battle-control {
+                #speed-badge {
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 50%;
+                    background: rgba(50, 50, 50, 0.9);
+                    border: 3px solid #666;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    cursor: pointer;
+                    user-select: none;
+                    font-family: Arial, sans-serif;
+                    font-size: 16px;
+                    font-weight: bold;
+                    color: #fff;
+                    transition: all 0.15s;
+                    touch-action: manipulation;
+                }
+                #speed-badge:hover {
+                    transform: scale(1.1);
+                    border-color: #ff9900;
+                }
+                #speed-badge:active {
+                    transform: scale(0.95);
+                }
+                #speed-badge.fast {
+                    border-color: #ff9900;
+                    background: rgba(255, 150, 50, 0.9);
+                }
+            </style>
+            <div id="speed-badge">1x</div>
+        `;
+
+        this.speedBadge = this.scene.add.dom(1240, 40).createFromHTML(html);
+        this.speedBadge.setOrigin(0.5, 0.5);
+        this.speedBadge.setDepth(2000);
+
+        const badge = this.speedBadge.node.querySelector('#speed-badge');
+
+        // 클릭으로 배속 순환
+        badge.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.cycleSpeed();
+        });
+
+        badge.addEventListener('touchstart', (e) => {
+            e.stopPropagation();
+        }, { passive: true });
+
+        // 키보드 이벤트 방지
+        badge.addEventListener('keydown', (e) => e.stopPropagation());
+    }
+
+    // 우하단 컨트롤 패널
+    createControlPanel() {
+        const html = `
+            <style>
+                #control-panel {
                     display: flex;
                     flex-direction: column;
                     gap: 8px;
                     font-family: Arial, sans-serif;
                 }
-                #battle-control button {
-                    padding: 8px 12px;
+                #control-panel button {
+                    padding: 10px 16px;
                     border: none;
-                    border-radius: 4px;
+                    border-radius: 6px;
                     cursor: pointer;
                     font-size: 14px;
                     font-weight: bold;
                     transition: all 0.2s;
-                    min-width: 80px;
+                    min-width: 90px;
+                    touch-action: manipulation;
                 }
-                #battle-control button:hover {
-                    transform: scale(1.05);
-                }
-                #battle-control button:active {
+                #control-panel button:active {
                     transform: scale(0.95);
-                }
-                .speed-buttons {
-                    display: flex;
-                    gap: 4px;
-                }
-                .speed-btn {
-                    background: rgba(50, 50, 50, 0.9);
-                    color: #aaa;
-                    border: 2px solid #444 !important;
-                    padding: 6px 10px !important;
-                    min-width: 45px !important;
-                }
-                .speed-btn.active {
-                    background: rgba(255, 150, 50, 0.9);
-                    color: #fff;
-                    border-color: #ff9900 !important;
                 }
                 .control-btn {
                     background: rgba(50, 100, 150, 0.9);
@@ -64,7 +108,7 @@ export default class BattleControlUI {
                     background: rgba(150, 50, 50, 0.9);
                 }
                 #battle-status {
-                    font-size: 12px;
+                    font-size: 11px;
                     color: #aaa;
                     text-align: center;
                     padding: 4px;
@@ -72,39 +116,23 @@ export default class BattleControlUI {
                     border-radius: 4px;
                 }
             </style>
-            <div id="battle-control">
-                <div class="speed-buttons">
-                    <button class="speed-btn active" data-speed="1">1x</button>
-                    <button class="speed-btn" data-speed="2">2x</button>
-                    <button class="speed-btn" data-speed="4">4x</button>
-                    <button class="speed-btn" data-speed="8">8x</button>
-                </div>
+            <div id="control-panel">
                 <button id="auto-btn" class="control-btn">▶ AUTO</button>
                 <button id="pause-btn" class="control-btn">⏸ PAUSE</button>
                 <div id="battle-status">대기 중</div>
             </div>
         `;
 
-        // 우상단 배치
-        this.domElement = this.scene.add.dom(1200, 20).createFromHTML(html);
-        this.domElement.setOrigin(0.5, 0);
-        this.domElement.setDepth(2000);
+        // 우하단 배치
+        this.controlPanel = this.scene.add.dom(1230, 580).createFromHTML(html);
+        this.controlPanel.setOrigin(1, 0);
+        this.controlPanel.setDepth(2000);
 
-        this.setupEventListeners();
+        this.setupControlEvents();
     }
 
-    setupEventListeners() {
-        const container = this.domElement.node;
-
-        // 배속 버튼들
-        const speedBtns = container.querySelectorAll('.speed-btn');
-        speedBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const speed = parseInt(btn.dataset.speed);
-                this.setSpeed(speed);
-            });
-        });
+    setupControlEvents() {
+        const container = this.controlPanel.node;
 
         // 자동 전투 버튼
         const autoBtn = container.querySelector('#auto-btn');
@@ -125,15 +153,32 @@ export default class BattleControlUI {
         container.addEventListener('keyup', (e) => e.stopPropagation());
     }
 
-    setSpeed(speed) {
-        this.currentSpeed = speed;
+    // 배속 순환 (1x -> 2x -> 4x -> 8x -> 1x)
+    cycleSpeed() {
+        this.currentSpeedIndex = (this.currentSpeedIndex + 1) % this.speedOptions.length;
+        const speed = this.speedOptions[this.currentSpeedIndex];
+        this.applySpeed(speed);
+    }
 
-        // 버튼 UI 업데이트
-        const speedBtns = this.domElement.node.querySelectorAll('.speed-btn');
-        speedBtns.forEach(btn => {
-            const btnSpeed = parseInt(btn.dataset.speed);
-            btn.classList.toggle('active', btnSpeed === speed);
-        });
+    // 배속 직접 설정
+    setSpeed(speed) {
+        const index = this.speedOptions.indexOf(speed);
+        if (index !== -1) {
+            this.currentSpeedIndex = index;
+            this.applySpeed(speed);
+        }
+    }
+
+    applySpeed(speed) {
+        const badge = this.speedBadge.node.querySelector('#speed-badge');
+        badge.textContent = `${speed}x`;
+
+        // 2배 이상이면 강조
+        if (speed > 1) {
+            badge.classList.add('fast');
+        } else {
+            badge.classList.remove('fast');
+        }
 
         // BattleManager 딜레이 조정
         if (this.battleManager) {
@@ -146,7 +191,7 @@ export default class BattleControlUI {
     toggleAuto() {
         if (!this.battleManager) return;
 
-        const autoBtn = this.domElement.node.querySelector('#auto-btn');
+        const autoBtn = this.controlPanel.node.querySelector('#auto-btn');
 
         if (!this.battleManager.isRunning) {
             // 전투 시작
@@ -167,7 +212,7 @@ export default class BattleControlUI {
     togglePause() {
         if (!this.battleManager || !this.battleManager.isRunning) return;
 
-        const pauseBtn = this.domElement.node.querySelector('#pause-btn');
+        const pauseBtn = this.controlPanel.node.querySelector('#pause-btn');
         const isPaused = this.battleManager.togglePause();
 
         pauseBtn.classList.toggle('paused', isPaused);
@@ -177,19 +222,20 @@ export default class BattleControlUI {
     }
 
     updateStatus() {
-        const statusEl = this.domElement.node.querySelector('#battle-status');
+        const statusEl = this.controlPanel.node.querySelector('#battle-status');
         if (!this.battleManager) {
             statusEl.textContent = '대기 중';
             return;
         }
 
+        const speed = this.speedOptions[this.currentSpeedIndex];
         let status = '';
         if (!this.battleManager.isRunning) {
             status = '대기 중';
         } else if (this.battleManager.isPaused) {
             status = '⏸ 일시정지';
         } else if (this.battleManager.autoMode) {
-            status = `▶ 자동 전투 (${this.currentSpeed}x)`;
+            status = `▶ 자동 (${speed}x)`;
         } else {
             status = '수동 모드';
         }
@@ -199,15 +245,15 @@ export default class BattleControlUI {
 
     // 전투 종료 시 호출
     onBattleEnd(result) {
-        const autoBtn = this.domElement.node.querySelector('#auto-btn');
-        const pauseBtn = this.domElement.node.querySelector('#pause-btn');
+        const autoBtn = this.controlPanel.node.querySelector('#auto-btn');
+        const pauseBtn = this.controlPanel.node.querySelector('#pause-btn');
 
         autoBtn.classList.remove('active');
         autoBtn.textContent = '▶ AUTO';
         pauseBtn.classList.remove('paused');
         pauseBtn.textContent = '⏸ PAUSE';
 
-        const statusEl = this.domElement.node.querySelector('#battle-status');
-        statusEl.textContent = `전투 종료: ${result}`;
+        const statusEl = this.controlPanel.node.querySelector('#battle-status');
+        statusEl.textContent = `종료: ${result}`;
     }
 }

@@ -6,11 +6,12 @@ export default class LogWindow {
         this.minHeight = 80;
         this.maxHeight = 350;
         this.dragHandleHeight = 28;
+        this.minimizedHandleHeight = 50; // 접힌 상태에서 더 넓은 터치 영역
         this.windowWidth = 700;
         this.isDragging = false;
         this.dragStartY = 0;
         this.dragStartTop = 0;
-        this.lastClickTime = 0;
+        this.hasDragged = false; // 드래그 여부 추적
 
         // 상단 가장자리의 Y 위치
         this.topY = 720 - this.currentHeight;
@@ -18,6 +19,9 @@ export default class LogWindow {
         // 로그 배치 관리
         this.currentBatch = null;
         this.batchIndex = 0;
+
+        // 로그 번호 카운터
+        this.logCount = 0;
 
         // 모바일 감지
         this.isMobile = this.detectMobile();
@@ -35,7 +39,6 @@ export default class LogWindow {
     createDOM() {
         // 모바일에서 폰트 크기 2배
         const baseFontSize = this.isMobile ? 22 : 13;
-        const timestampFontSize = this.isMobile ? 20 : 12;
 
         const html = `
             <style>
@@ -75,7 +78,7 @@ export default class LogWindow {
                 border-radius: 8px 8px 0 0;
                 touch-action: pan-y;
             ">
-                <!-- 드래그 핸들 영역 (투명, 상단) -->
+                <!-- 드래그 핸들 영역 -->
                 <div id="log-drag-handle" style="
                     height: ${this.dragHandleHeight}px;
                     cursor: ns-resize;
@@ -180,66 +183,16 @@ export default class LogWindow {
     }
 
     setupDragHandle() {
-        // 더블클릭으로 토글 (최소화 상태에서 확장)
-        this.dragHandle.addEventListener('dblclick', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (this.isMinimized) {
-                this.toggle();
-            }
-        });
-
-        // 마우스 다운 - 드래그 시작 또는 클릭
+        // 마우스 다운 - 드래그 시작
         this.dragHandle.addEventListener('mousedown', (e) => {
-            const now = Date.now();
-
-            // 더블클릭 감지
-            if (now - this.lastClickTime < 300) {
-                if (this.isMinimized) {
-                    this.toggle();
-                }
-                this.lastClickTime = 0;
-                return;
-            }
-            this.lastClickTime = now;
-
-            // 드래그 시작 (최소화 상태에서도 드래그로 확장 가능)
-            this.isDragging = true;
-            this.dragStartY = e.clientY;
-            this.dragStartTop = this.isMinimized ? (720 - this.currentHeight) : this.topY;
-
-            // 최소화 상태에서 드래그 시작하면 미리 확장
-            if (this.isMinimized) {
-                this.expandForDrag();
-            }
-
+            this.startDrag(e.clientY);
             e.preventDefault();
             e.stopPropagation();
         });
 
-        // 터치 지원 - 드래그로 확장 가능
+        // 터치 시작 - 드래그로만 확장 (1회 터치로 열리지 않음)
         this.dragHandle.addEventListener('touchstart', (e) => {
-            const now = Date.now();
-
-            // 더블탭 감지
-            if (now - this.lastClickTime < 300) {
-                if (this.isMinimized) {
-                    this.toggle();
-                }
-                this.lastClickTime = 0;
-                return;
-            }
-            this.lastClickTime = now;
-
-            // 드래그 시작
-            this.isDragging = true;
-            this.dragStartY = e.touches[0].clientY;
-            this.dragStartTop = this.isMinimized ? (720 - this.currentHeight) : this.topY;
-
-            if (this.isMinimized) {
-                this.expandForDrag();
-            }
-
+            this.startDrag(e.touches[0].clientY);
             e.preventDefault();
         }, { passive: false });
 
@@ -254,11 +207,11 @@ export default class LogWindow {
         }, { passive: false });
 
         document.addEventListener('mouseup', () => {
-            this.isDragging = false;
+            this.endDrag();
         });
 
         document.addEventListener('touchend', () => {
-            this.isDragging = false;
+            this.endDrag();
         });
 
         // 드래그 핸들 호버 효과
@@ -270,6 +223,62 @@ export default class LogWindow {
         });
     }
 
+    startDrag(clientY) {
+        this.isDragging = true;
+        this.hasDragged = false;
+        this.dragStartY = clientY;
+
+        if (this.isMinimized) {
+            // 접힌 상태에서는 위로 드래그해야만 확장
+            this.dragStartTop = 720 - this.currentHeight;
+        } else {
+            this.dragStartTop = this.topY;
+        }
+    }
+
+    endDrag() {
+        // 접힌 상태에서 실제로 드래그했으면 확장 유지, 아니면 원래 상태
+        if (this.isMinimized && !this.hasDragged) {
+            // 드래그 없이 터치만 했으면 아무것도 안함
+        }
+        this.isDragging = false;
+        this.hasDragged = false;
+    }
+
+    handleDrag(clientY) {
+        const gameContainer = document.getElementById('game-container');
+        const canvas = gameContainer.querySelector('canvas');
+        const scaleY = 720 / canvas.clientHeight;
+
+        const deltaY = (clientY - this.dragStartY) * scaleY;
+
+        // 드래그 감지 (5px 이상 이동)
+        if (Math.abs(deltaY) > 5) {
+            this.hasDragged = true;
+        }
+
+        // 접힌 상태에서 위로 드래그하면 확장
+        if (this.isMinimized && deltaY < -10) {
+            this.expandForDrag();
+        }
+
+        if (!this.isMinimized) {
+            let newTop = this.dragStartTop + deltaY;
+
+            const minTop = 720 - this.maxHeight;
+            const maxTop = 720 - this.minHeight;
+            newTop = Math.max(minTop, Math.min(maxTop, newTop));
+
+            const newHeight = 720 - newTop;
+
+            this.topY = newTop;
+            this.currentHeight = newHeight;
+
+            this.domElement.setY(this.topY);
+            this.window.style.height = `${newHeight}px`;
+        }
+    }
+
     // 드래그로 확장 시 미리 펼치기
     expandForDrag() {
         this.isMinimized = false;
@@ -279,28 +288,8 @@ export default class LogWindow {
         this.domElement.setY(this.topY);
         this.toggleBtn.textContent = '▼';
         this.dragHandle.style.cursor = 'ns-resize';
+        this.dragHandle.style.height = `${this.dragHandleHeight}px`;
         this.window.style.borderRadius = '8px 8px 0 0';
-    }
-
-    handleDrag(clientY) {
-        const gameContainer = document.getElementById('game-container');
-        const canvas = gameContainer.querySelector('canvas');
-        const scaleY = 720 / canvas.clientHeight;
-
-        const deltaY = (clientY - this.dragStartY) * scaleY;
-        let newTop = this.dragStartTop + deltaY;
-
-        const minTop = 720 - this.maxHeight;
-        const maxTop = 720 - this.minHeight;
-        newTop = Math.max(minTop, Math.min(maxTop, newTop));
-
-        const newHeight = 720 - newTop;
-
-        this.topY = newTop;
-        this.currentHeight = newHeight;
-
-        this.domElement.setY(this.topY);
-        this.window.style.height = `${newHeight}px`;
     }
 
     setupToggleButton() {
@@ -321,11 +310,12 @@ export default class LogWindow {
         this.isMinimized = !this.isMinimized;
 
         if (this.isMinimized) {
-            // 최소화: 드래그 핸들만 보임
+            // 최소화: 드래그 핸들만 보임 (모바일에서 더 큰 터치 영역)
             this.body.style.display = 'none';
-            const minHeight = this.dragHandleHeight;
-            this.window.style.height = `${minHeight}px`;
-            this.topY = 720 - minHeight;
+            const handleHeight = this.isMobile ? this.minimizedHandleHeight : this.dragHandleHeight;
+            this.dragHandle.style.height = `${handleHeight}px`;
+            this.window.style.height = `${handleHeight}px`;
+            this.topY = 720 - handleHeight;
             this.domElement.setY(this.topY);
             this.toggleBtn.textContent = '▲';
             this.dragHandle.style.cursor = 'pointer';
@@ -333,6 +323,7 @@ export default class LogWindow {
         } else {
             // 복구
             this.body.style.display = 'block';
+            this.dragHandle.style.height = `${this.dragHandleHeight}px`;
             this.window.style.height = `${this.currentHeight}px`;
             this.topY = 720 - this.currentHeight;
             this.domElement.setY(this.topY);
@@ -370,6 +361,8 @@ export default class LogWindow {
     }
 
     addLog(message, type = 'info') {
+        this.logCount++;
+
         const colors = {
             info: '#999',
             damage: '#ff8080',
@@ -378,14 +371,13 @@ export default class LogWindow {
             skill: '#ffb080'
         };
 
-        const timestamp = this.getTimestamp();
         const formattedMessage = this.formatMessage(message);
 
         const logEntry = document.createElement('div');
         logEntry.style.color = colors[type] || colors.info;
         logEntry.style.marginBottom = this.isMobile ? '4px' : '2px';
         logEntry.style.lineHeight = this.isMobile ? '1.6' : '1.4';
-        logEntry.innerHTML = `<span style="color: #888;">[${timestamp}]</span> ${formattedMessage}`;
+        logEntry.innerHTML = `<span style="color: #666; font-size: 0.85em;">#${this.logCount}</span> ${formattedMessage}`;
 
         if (this.currentBatch) {
             this.currentBatch.appendChild(logEntry);
@@ -412,21 +404,9 @@ export default class LogWindow {
         });
     }
 
-    getTimestamp() {
-        // 한국 시간 (KST = UTC+9) 기준
-        const now = new Date();
-        const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-        const kst = new Date(utc + (9 * 60 * 60 * 1000));
-
-        const hours = String(kst.getHours()).padStart(2, '0');
-        const minutes = String(kst.getMinutes()).padStart(2, '0');
-        const seconds = String(kst.getSeconds()).padStart(2, '0');
-
-        return `${hours}:${minutes}:${seconds}`;
-    }
-
     clear() {
         this.content.innerHTML = '';
         this.batchIndex = 0;
+        this.logCount = 0;
     }
 }
