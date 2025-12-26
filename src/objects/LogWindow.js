@@ -2,16 +2,17 @@ export default class LogWindow {
     constructor(scene) {
         this.scene = scene;
         this.isMinimized = false;
+        this.initialHeight = 180; // 초기 높이
         this.currentHeight = 180;
         this.minHeight = 80;
         this.maxHeight = 350;
         this.dragHandleHeight = 28;
-        this.minimizedHandleHeight = 50; // 접힌 상태에서 더 넓은 터치 영역
+        this.minimizedHandleHeight = 50;
         this.windowWidth = 700;
         this.isDragging = false;
         this.dragStartY = 0;
         this.dragStartTop = 0;
-        this.hasDragged = false; // 드래그 여부 추적
+        this.hasDragged = false;
 
         // 상단 가장자리의 Y 위치
         this.topY = 720 - this.currentHeight;
@@ -37,8 +38,8 @@ export default class LogWindow {
     }
 
     createDOM() {
-        // 모바일에서 폰트 크기 2배
         const baseFontSize = this.isMobile ? 22 : 13;
+        const toggleSize = this.isMobile ? 40 : 28;
 
         const html = `
             <style>
@@ -88,6 +89,7 @@ export default class LogWindow {
                     flex-shrink: 0;
                     touch-action: none;
                     user-select: none;
+                    position: relative;
                 ">
                     <div id="drag-indicator" style="
                         width: 50px;
@@ -95,6 +97,28 @@ export default class LogWindow {
                         background: rgba(255,255,255,0.3);
                         border-radius: 3px;
                     "></div>
+
+                    <!-- 토글 버튼 (상단 바 우측) -->
+                    <button id="log-toggle" style="
+                        position: absolute;
+                        right: 8px;
+                        top: 50%;
+                        transform: translateY(-50%);
+                        width: ${toggleSize}px;
+                        height: ${toggleSize - 4}px;
+                        background: rgba(255,255,255,0.15);
+                        border: none;
+                        border-radius: 4px;
+                        color: rgba(255,255,255,0.7);
+                        font-size: ${this.isMobile ? 18 : 14}px;
+                        cursor: pointer;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        z-index: 10;
+                        transition: background 0.2s;
+                        touch-action: manipulation;
+                    ">▼</button>
                 </div>
 
                 <!-- 로그 콘텐츠 영역 -->
@@ -103,26 +127,6 @@ export default class LogWindow {
                     position: relative;
                     overflow: hidden;
                 ">
-                    <!-- 토글 버튼 (우상단 내부) -->
-                    <button id="log-toggle" style="
-                        position: absolute;
-                        top: 4px;
-                        right: 8px;
-                        width: ${this.isMobile ? 36 : 24}px;
-                        height: ${this.isMobile ? 28 : 20}px;
-                        background: rgba(255,255,255,0.1);
-                        border: none;
-                        border-radius: 3px;
-                        color: rgba(255,255,255,0.5);
-                        font-size: ${this.isMobile ? 16 : 12}px;
-                        cursor: pointer;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        z-index: 10;
-                        transition: background 0.2s;
-                    ">▼</button>
-
                     <div id="log-content" style="
                         height: 100%;
                         overflow-y: auto;
@@ -154,12 +158,10 @@ export default class LogWindow {
 
         // 토글 버튼 호버 효과
         this.toggleBtn.addEventListener('mouseenter', () => {
-            this.toggleBtn.style.background = 'rgba(255,255,255,0.2)';
-            this.toggleBtn.style.color = 'rgba(255,255,255,0.8)';
+            this.toggleBtn.style.background = 'rgba(255,255,255,0.25)';
         });
         this.toggleBtn.addEventListener('mouseleave', () => {
-            this.toggleBtn.style.background = 'rgba(255,255,255,0.1)';
-            this.toggleBtn.style.color = 'rgba(255,255,255,0.5)';
+            this.toggleBtn.style.background = 'rgba(255,255,255,0.15)';
         });
 
         // 로그 콘텐츠 터치 스크롤 직접 처리
@@ -185,13 +187,21 @@ export default class LogWindow {
     setupDragHandle() {
         // 마우스 다운 - 드래그 시작
         this.dragHandle.addEventListener('mousedown', (e) => {
+            // 토글 버튼 클릭은 제외
+            if (e.target === this.toggleBtn || this.toggleBtn.contains(e.target)) {
+                return;
+            }
             this.startDrag(e.clientY);
             e.preventDefault();
             e.stopPropagation();
         });
 
-        // 터치 시작 - 드래그로만 확장 (1회 터치로 열리지 않음)
+        // 터치 시작 - 드래그로만 확장
         this.dragHandle.addEventListener('touchstart', (e) => {
+            // 토글 버튼 터치는 제외
+            if (e.target === this.toggleBtn || this.toggleBtn.contains(e.target)) {
+                return;
+            }
             this.startDrag(e.touches[0].clientY);
             e.preventDefault();
         }, { passive: false });
@@ -227,20 +237,16 @@ export default class LogWindow {
         this.isDragging = true;
         this.hasDragged = false;
         this.dragStartY = clientY;
+        this.dragStartTop = this.topY;
 
+        // 접힌 상태에서 드래그 시작할 때의 초기 위치
         if (this.isMinimized) {
-            // 접힌 상태에서는 위로 드래그해야만 확장
-            this.dragStartTop = 720 - this.currentHeight;
-        } else {
-            this.dragStartTop = this.topY;
+            const handleHeight = this.isMobile ? this.minimizedHandleHeight : this.dragHandleHeight;
+            this.dragStartTop = 720 - handleHeight;
         }
     }
 
     endDrag() {
-        // 접힌 상태에서 실제로 드래그했으면 확장 유지, 아니면 원래 상태
-        if (this.isMinimized && !this.hasDragged) {
-            // 드래그 없이 터치만 했으면 아무것도 안함
-        }
         this.isDragging = false;
         this.hasDragged = false;
     }
@@ -257,9 +263,14 @@ export default class LogWindow {
             this.hasDragged = true;
         }
 
-        // 접힌 상태에서 위로 드래그하면 확장
+        // 접힌 상태에서 위로 드래그하면 점진적으로 확장
         if (this.isMinimized && deltaY < -10) {
-            this.expandForDrag();
+            this.isMinimized = false;
+            this.body.style.display = 'block';
+            this.toggleBtn.textContent = '▼';
+            this.dragHandle.style.cursor = 'ns-resize';
+            this.dragHandle.style.height = `${this.dragHandleHeight}px`;
+            this.window.style.borderRadius = '8px 8px 0 0';
         }
 
         if (!this.isMinimized) {
@@ -279,29 +290,28 @@ export default class LogWindow {
         }
     }
 
-    // 드래그로 확장 시 미리 펼치기
-    expandForDrag() {
-        this.isMinimized = false;
-        this.body.style.display = 'block';
-        this.window.style.height = `${this.currentHeight}px`;
-        this.topY = 720 - this.currentHeight;
-        this.domElement.setY(this.topY);
-        this.toggleBtn.textContent = '▼';
-        this.dragHandle.style.cursor = 'ns-resize';
-        this.dragHandle.style.height = `${this.dragHandleHeight}px`;
-        this.window.style.borderRadius = '8px 8px 0 0';
-    }
-
     setupToggleButton() {
+        // 클릭 이벤트
         this.toggleBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
             this.toggle();
         });
 
+        // 마우스 다운 시 드래그 방지
         this.toggleBtn.addEventListener('mousedown', (e) => {
             e.stopPropagation();
         });
+
+        // 터치 시작 시 드래그 방지
+        this.toggleBtn.addEventListener('touchstart', (e) => {
+            e.stopPropagation();
+        }, { passive: true });
+
+        // 터치 이동 시 전체 창 드래그 방지
+        this.toggleBtn.addEventListener('touchmove', (e) => {
+            e.stopPropagation();
+        }, { passive: true });
 
         this.toggleBtn.setAttribute('tabindex', '-1');
     }
@@ -310,7 +320,7 @@ export default class LogWindow {
         this.isMinimized = !this.isMinimized;
 
         if (this.isMinimized) {
-            // 최소화: 드래그 핸들만 보임 (모바일에서 더 큰 터치 영역)
+            // 최소화
             this.body.style.display = 'none';
             const handleHeight = this.isMobile ? this.minimizedHandleHeight : this.dragHandleHeight;
             this.dragHandle.style.height = `${handleHeight}px`;
@@ -321,9 +331,10 @@ export default class LogWindow {
             this.dragHandle.style.cursor = 'pointer';
             this.window.style.borderRadius = '8px';
         } else {
-            // 복구
+            // 복구 - 초기값만큼만 펼치기
             this.body.style.display = 'block';
             this.dragHandle.style.height = `${this.dragHandleHeight}px`;
+            this.currentHeight = this.initialHeight;
             this.window.style.height = `${this.currentHeight}px`;
             this.topY = 720 - this.currentHeight;
             this.domElement.setY(this.topY);

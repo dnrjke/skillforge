@@ -12,27 +12,40 @@ export default class BattleControlUI {
         this.speedBadge = null;
         this.controlPanel = null;
 
+        // 모바일 감지
+        this.isMobile = this.detectMobile();
+        this.scale = this.isMobile ? 1.5 : 1;
+
         this.createSpeedBadge();
         this.createControlPanel();
     }
 
+    detectMobile() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+               window.innerWidth <= 768;
+    }
+
     // 우상단 배속 뱃지
     createSpeedBadge() {
+        const size = Math.round(50 * this.scale);
+        const fontSize = Math.round(16 * this.scale);
+        const borderWidth = Math.round(3 * this.scale);
+
         const html = `
             <style>
                 #speed-badge {
-                    width: 50px;
-                    height: 50px;
+                    width: ${size}px;
+                    height: ${size}px;
                     border-radius: 50%;
                     background: rgba(50, 50, 50, 0.9);
-                    border: 3px solid #666;
+                    border: ${borderWidth}px solid #666;
                     display: flex;
                     justify-content: center;
                     align-items: center;
                     cursor: pointer;
                     user-select: none;
                     font-family: Arial, sans-serif;
-                    font-size: 16px;
+                    font-size: ${fontSize}px;
                     font-weight: bold;
                     color: #fff;
                     transition: all 0.15s;
@@ -53,7 +66,9 @@ export default class BattleControlUI {
             <div id="speed-badge">1x</div>
         `;
 
-        this.speedBadge = this.scene.add.dom(1240, 40).createFromHTML(html);
+        const posX = this.isMobile ? 1220 : 1240;
+        const posY = this.isMobile ? 50 : 40;
+        this.speedBadge = this.scene.add.dom(posX, posY).createFromHTML(html);
         this.speedBadge.setOrigin(0.5, 0.5);
         this.speedBadge.setDepth(2000);
 
@@ -75,23 +90,32 @@ export default class BattleControlUI {
 
     // 우하단 컨트롤 패널
     createControlPanel() {
+        const gap = Math.round(8 * this.scale);
+        const btnPaddingV = Math.round(10 * this.scale);
+        const btnPaddingH = Math.round(16 * this.scale);
+        const btnFontSize = Math.round(14 * this.scale);
+        const btnRadius = Math.round(6 * this.scale);
+        const minWidth = Math.round(90 * this.scale);
+        const statusFontSize = Math.round(11 * this.scale);
+        const statusPadding = Math.round(4 * this.scale);
+
         const html = `
             <style>
                 #control-panel {
                     display: flex;
                     flex-direction: column;
-                    gap: 8px;
+                    gap: ${gap}px;
                     font-family: Arial, sans-serif;
                 }
                 #control-panel button {
-                    padding: 10px 16px;
+                    padding: ${btnPaddingV}px ${btnPaddingH}px;
                     border: none;
-                    border-radius: 6px;
+                    border-radius: ${btnRadius}px;
                     cursor: pointer;
-                    font-size: 14px;
+                    font-size: ${btnFontSize}px;
                     font-weight: bold;
                     transition: all 0.2s;
-                    min-width: 90px;
+                    min-width: ${minWidth}px;
                     touch-action: manipulation;
                 }
                 #control-panel button:active {
@@ -108,12 +132,12 @@ export default class BattleControlUI {
                     background: rgba(150, 50, 50, 0.9);
                 }
                 #battle-status {
-                    font-size: 11px;
+                    font-size: ${statusFontSize}px;
                     color: #aaa;
                     text-align: center;
-                    padding: 4px;
+                    padding: ${statusPadding}px;
                     background: rgba(0,0,0,0.5);
-                    border-radius: 4px;
+                    border-radius: ${btnRadius}px;
                 }
             </style>
             <div id="control-panel">
@@ -123,8 +147,10 @@ export default class BattleControlUI {
             </div>
         `;
 
-        // 우하단 배치
-        this.controlPanel = this.scene.add.dom(1230, 580).createFromHTML(html);
+        // 우하단 배치 (모바일에서 약간 위로)
+        const posX = this.isMobile ? 1210 : 1230;
+        const posY = this.isMobile ? 540 : 580;
+        this.controlPanel = this.scene.add.dom(posX, posY).createFromHTML(html);
         this.controlPanel.setOrigin(1, 0);
         this.controlPanel.setDepth(2000);
 
@@ -219,6 +245,11 @@ export default class BattleControlUI {
         pauseBtn.textContent = isPaused ? '▶ RESUME' : '⏸ PAUSE';
 
         this.updateStatus();
+    }
+
+    // 현재 배속 배율 반환
+    getSpeedMultiplier() {
+        return this.speedOptions[this.currentSpeedIndex];
     }
 
     updateStatus() {
