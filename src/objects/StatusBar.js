@@ -178,18 +178,9 @@ export default class StatusBar {
         this.setAction(0, false);
     }
 
-    // 현재 턴 하이라이트
+    // 현재 턴 하이라이트 (스포트라이트로 대체되어 미사용)
     setCurrentTurn(isCurrent) {
-        if (isCurrent) {
-            // 현재 턴 - 테두리 강조
-            this.hpBarBg.setStrokeStyle(2, 0xffff00);
-            this.actionBarFill.setFillStyle(0xffff44);
-        } else {
-            this.hpBarBg.setStrokeStyle(0);
-            if (this.currentAction < this.maxAction) {
-                this.actionBarFill.setFillStyle(0x44ccff);
-            }
-        }
+        // 스포트라이트 효과가 BattleManager에서 처리됨
     }
 
     setHp(value, animate = true) {
