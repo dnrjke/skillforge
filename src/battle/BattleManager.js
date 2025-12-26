@@ -69,6 +69,27 @@ export default class BattleManager {
 
         // 초기 턴 대기열 생성
         this.buildTurnQueue();
+
+        // 초기 행동 게이지 설정 (속도 기반)
+        this.initializeActionBars();
+    }
+
+    // 초기 행동 게이지 설정
+    initializeActionBars() {
+        const allUnits = this.getAllAliveUnits();
+        // 속도 기준 최대/최소 찾기
+        const maxSpeed = Math.max(...allUnits.map(u => u.speed));
+        const minSpeed = Math.min(...allUnits.map(u => u.speed));
+
+        allUnits.forEach(unit => {
+            if (unit.sprite && unit.sprite.statusBar) {
+                // 속도가 빠를수록 행동 게이지가 더 차 있음 (30~80% 범위)
+                const speedRatio = maxSpeed === minSpeed ? 0.5 :
+                    (unit.speed - minSpeed) / (maxSpeed - minSpeed);
+                const initialAction = 30 + Math.floor(speedRatio * 50);
+                unit.sprite.statusBar.setAction(initialAction, false);
+            }
+        });
     }
 
     // Speed 기준으로 턴 대기열 생성
@@ -166,6 +187,12 @@ export default class BattleManager {
     executeAction(unit) {
         const skill = unit.selectSkill();
 
+        // 현재 행동 유닛 표시 (행동 게이지 100%)
+        if (unit.sprite && unit.sprite.statusBar) {
+            unit.sprite.statusBar.setAction(100);
+            unit.sprite.statusBar.setCurrentTurn(true);
+        }
+
         this.scene.logWindow.startBatch();
 
         if (skill.type === 'wait' || skill.id === 'WAIT') {
@@ -185,10 +212,31 @@ export default class BattleManager {
 
         this.scene.logWindow.endBatch();
 
+        // 행동 후 게이지 리셋 및 턴 표시 해제
+        this.scene.time.delayedCall(300, () => {
+            if (unit.sprite && unit.sprite.statusBar) {
+                unit.sprite.statusBar.resetAction();
+                unit.sprite.statusBar.setCurrentTurn(false);
+            }
+            // 다른 유닛들 행동 게이지 증가
+            this.updateActionBars(unit);
+        });
+
         // 다음 턴 예약
         if (this.autoMode && this.isRunning) {
             this.scene.time.delayedCall(this.turnDelay, () => this.runNextTurn());
         }
+    }
+
+    // 다른 유닛들의 행동 게이지 업데이트
+    updateActionBars(actedUnit) {
+        this.getAllAliveUnits().forEach(unit => {
+            if (unit !== actedUnit && unit.sprite && unit.sprite.statusBar) {
+                // 속도에 비례하여 행동 게이지 증가
+                const increase = Math.floor(unit.speed * 3);
+                unit.sprite.statusBar.addAction(increase);
+            }
+        });
     }
 
     // 공격 실행
