@@ -79,6 +79,7 @@ export default class BattleControlUI {
         this.speedBadge = this.scene.add.dom(posX, posY).createFromHTML(html);
         this.speedBadge.setOrigin(0.5, 0.5);
         this.speedBadge.setDepth(2000);
+        this.speedBadge.setScrollFactor(0);  // 카메라 워킹 영향 안받음
 
         const badge = this.speedBadge.node.querySelector('#speed-badge');
 
@@ -161,6 +162,7 @@ export default class BattleControlUI {
         this.controlPanel = this.scene.add.dom(posX, posY).createFromHTML(html);
         this.controlPanel.setOrigin(1, 0);
         this.controlPanel.setDepth(2000);
+        this.controlPanel.setScrollFactor(0);  // 카메라 워킹 영향 안받음
 
         this.setupControlEvents();
     }

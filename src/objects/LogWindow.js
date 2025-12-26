@@ -162,6 +162,7 @@ export default class LogWindow {
         this.domElement = this.scene.add.dom(640, this.topY).createFromHTML(html);
         this.domElement.setOrigin(0.5, 0);
         this.domElement.setDepth(2000);
+        this.domElement.setScrollFactor(0);  // 카메라 워킹 영향 안받음
 
         this.window = this.domElement.getChildByID('log-window');
         this.dragHandle = this.domElement.getChildByID('log-drag-handle');
