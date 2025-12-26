@@ -103,13 +103,13 @@ export default class BattleScene extends Phaser.Scene {
         // idle 애니메이션 재생
         character.play('knight_idle');
 
-        // 상태바 생성
+        // 상태바 생성 (캐릭터 머리 위로 충분히 올림)
         const statusBar = new StatusBar(this, character, {
             maxHp: 100,
             currentHp: 100,
             maxAp: 10,
             currentAp: 0,
-            offsetY: -55
+            offsetY: -75
         });
         character.statusBar = statusBar;
         this.statusBars.push(statusBar);

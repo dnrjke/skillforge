@@ -8,6 +8,7 @@ const config = {
     height: 720,
     parent: 'game-container',
     backgroundColor: 0x000000,
+    pixelArt: true,
     dom: {
         createContainer: true
     },
