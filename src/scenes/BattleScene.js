@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import LogWindow from '../objects/LogWindow.js';
+import StatusBar from '../objects/StatusBar.js';
 
 // 캐릭터 배치 좌표 상수
 const FORMATION = {
@@ -28,6 +30,8 @@ export default class BattleScene extends Phaser.Scene {
         super({ key: 'BattleScene' });
         this.allies = [];
         this.enemies = [];
+        this.statusBars = [];
+        this.logWindow = null;
     }
 
     create() {
@@ -36,6 +40,21 @@ export default class BattleScene extends Phaser.Scene {
 
         // 캐릭터 배치
         this.setupCharacters();
+
+        // UI 설정
+        this.setupUI();
+
+        // 입력 설정
+        this.setupInput();
+
+        // 시작 로그
+        this.addLog('전투 시작!', 'system');
+        this.addLog('스페이스바를 눌러 랜덤 데미지 테스트', 'info');
+    }
+
+    update() {
+        // 상태바 위치 업데이트
+        this.statusBars.forEach(bar => bar.update());
     }
 
     setupBackground() {
@@ -46,16 +65,16 @@ export default class BattleScene extends Phaser.Scene {
 
     setupCharacters() {
         // 아군 배치 (3명)
-        ACTIVE_SLOTS.forEach((slotIndex) => {
+        ACTIVE_SLOTS.forEach((slotIndex, index) => {
             const slot = FORMATION.ALLY[slotIndex];
-            const ally = this.createCharacter(slot.x, slot.y, false);
+            const ally = this.createCharacter(slot.x, slot.y, false, `아군${index + 1}`);
             this.allies.push(ally);
         });
 
         // 적군 배치 (3명)
-        ACTIVE_SLOTS.forEach((slotIndex) => {
+        ACTIVE_SLOTS.forEach((slotIndex, index) => {
             const slot = FORMATION.ENEMY[slotIndex];
-            const enemy = this.createCharacter(slot.x, slot.y, true);
+            const enemy = this.createCharacter(slot.x, slot.y, true, `적군${index + 1}`);
             this.enemies.push(enemy);
         });
 
@@ -63,11 +82,17 @@ export default class BattleScene extends Phaser.Scene {
         this.sortCharactersByDepth();
     }
 
-    createCharacter(x, y, isEnemy) {
+    createCharacter(x, y, isEnemy, name) {
         const character = this.add.sprite(x, y, 'knight');
 
         // 스케일 조정 (32x32가 작으므로 확대)
         character.setScale(3);
+
+        // 캐릭터 메타 정보
+        character.data = {
+            name: name,
+            isEnemy: isEnemy
+        };
 
         // 적군 설정
         if (isEnemy) {
@@ -77,6 +102,17 @@ export default class BattleScene extends Phaser.Scene {
 
         // idle 애니메이션 재생
         character.play('knight_idle');
+
+        // 상태바 생성
+        const statusBar = new StatusBar(this, character, {
+            maxHp: 100,
+            currentHp: 100,
+            maxAp: 10,
+            currentAp: 0,
+            offsetY: -55
+        });
+        character.statusBar = statusBar;
+        this.statusBars.push(statusBar);
 
         return character;
     }
@@ -88,5 +124,63 @@ export default class BattleScene extends Phaser.Scene {
         allCharacters.forEach((char, index) => {
             char.setDepth(index + 1);
         });
+    }
+
+    setupUI() {
+        // 로그 윈도우 생성
+        this.logWindow = new LogWindow(this);
+    }
+
+    setupInput() {
+        // 스페이스바 테스트 입력
+        this.input.keyboard.on('keydown-SPACE', () => {
+            this.testRandomDamage();
+        });
+    }
+
+    // 로그 추가 헬퍼 함수
+    addLog(message, type = 'info') {
+        if (this.logWindow) {
+            this.logWindow.addLog(message, type);
+        }
+    }
+
+    // 테스트: 랜덤 캐릭터에게 데미지
+    testRandomDamage() {
+        const allCharacters = [...this.allies, ...this.enemies];
+        const aliveCharacters = allCharacters.filter(c => c.statusBar.currentHp > 0);
+
+        if (aliveCharacters.length === 0) {
+            this.addLog('모든 캐릭터가 쓰러졌습니다!', 'system');
+            return;
+        }
+
+        // 랜덤 캐릭터 선택
+        const target = Phaser.Utils.Array.GetRandom(aliveCharacters);
+        const damage = 10;
+
+        // 데미지 적용
+        const remainingHp = target.statusBar.damage(damage);
+
+        // AP 증가 (피격 시)
+        target.statusBar.addAp(2);
+
+        // 피격 애니메이션 재생
+        target.play('knight_hit');
+        target.once('animationcomplete', () => {
+            if (remainingHp > 0) {
+                target.play('knight_idle');
+            } else {
+                target.play('knight_death');
+            }
+        });
+
+        // 로그 추가
+        const name = target.data.name;
+        this.addLog(`${name}이(가) ${damage} 데미지를 받았다! (HP: ${remainingHp})`, 'damage');
+
+        if (remainingHp <= 0) {
+            this.addLog(`${name}이(가) 쓰러졌다!`, 'system');
+        }
     }
 }

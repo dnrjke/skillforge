@@ -8,6 +8,9 @@ const config = {
     height: 720,
     parent: 'game-container',
     backgroundColor: 0x000000,
+    dom: {
+        createContainer: true
+    },
     physics: {
         default: 'arcade',
         arcade: {
