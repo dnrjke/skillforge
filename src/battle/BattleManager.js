@@ -35,6 +35,32 @@ export default class BattleManager {
         this.originalZoom = 1;
         this.skillBanner = null;
         this.passiveBanners = [];  // 패시브 사이드 배너 배열
+
+        // UI 전용 카메라 생성 (줌/패닝 영향 안받음)
+        this.setupUICamera();
+    }
+
+    // UI 전용 카메라 설정
+    setupUICamera() {
+        // 기존 UI 카메라가 있으면 제거
+        if (this.uiCamera) {
+            this.scene.cameras.remove(this.uiCamera);
+        }
+
+        // UI 전용 카메라 생성 (메인 카메라와 동일 뷰포트)
+        this.uiCamera = this.scene.cameras.add(0, 0, 1280, 720);
+        this.uiCamera.setName('uiCamera');
+        this.uiCamera.setScroll(0, 0);  // 고정 위치
+
+        // 메인 카메라의 기본 게임 오브젝트들은 UI 카메라에서 안보이게 할 것이므로
+        // UI 요소 추가 시 메인 카메라에서 제외하고 UI 카메라에만 표시
+    }
+
+    // UI 요소를 UI 카메라에만 표시 (메인 카메라에서 제외)
+    addToUILayer(gameObject) {
+        if (!this.uiCamera) return;
+        // 메인 카메라에서 숨기고 UI 카메라에만 표시
+        this.scene.cameras.main.ignore(gameObject);
     }
 
     // 유닛 초기화 (스프라이트와 연결)
@@ -522,10 +548,11 @@ export default class BattleManager {
             this.skillBanner.destroy();
         }
 
-        // 하단 중앙에 행동 이름 배너
+        // UI 카메라 전용 - 고정 좌표 (1280x720 기준 하단 중앙)
         const banner = this.scene.add.container(640, 580);
         banner.setDepth(3000);
-        banner.setScrollFactor(0);
+        // 메인 카메라에서 숨기고 UI 카메라에만 표시
+        this.addToUILayer(banner);
 
         // 배경 바 (AP 알갱이 포함하도록 세로로 늘림)
         const hasAp = apCost > 0;
@@ -533,11 +560,8 @@ export default class BattleManager {
         const textY = hasAp ? 8 : 0;
 
         const bgGlow = this.scene.add.rectangle(0, 0, 340, bannerHeight + 10, 0xffaa44, 0.25);
-        bgGlow.setScrollFactor(0);
-
         const bg = this.scene.add.rectangle(0, 0, 320, bannerHeight, 0x000000, 0.85);
         bg.setStrokeStyle(2, 0xffaa44);
-        bg.setScrollFactor(0);
 
         // 행동 이름
         const text = this.scene.add.text(0, textY, actionName, {
@@ -547,20 +571,20 @@ export default class BattleManager {
             fontStyle: 'bold',
             stroke: '#000000',
             strokeThickness: 2
-        }).setOrigin(0.5).setScrollFactor(0);
+        }).setOrigin(0.5);
 
         // 좌우 장식
         const leftDeco = this.scene.add.text(-120, textY, '【', {
             fontSize: '26px',
             fill: '#ffaa44',
             fontFamily: 'Arial'
-        }).setOrigin(0.5).setScrollFactor(0);
+        }).setOrigin(0.5);
 
         const rightDeco = this.scene.add.text(120, textY, '】', {
             fontSize: '26px',
             fill: '#ffaa44',
             fontFamily: 'Arial'
-        }).setOrigin(0.5).setScrollFactor(0);
+        }).setOrigin(0.5);
 
         banner.add([bgGlow, bg, leftDeco, text, rightDeco]);
 
@@ -583,7 +607,6 @@ export default class BattleManager {
             for (let i = 0; i < firstGroupCount; i++) {
                 const dotX = startX + i * dotGap;
                 const dot = this.scene.add.circle(dotX, dotY, dotSize / 2, 0xffcc66);
-                dot.setScrollFactor(0);
                 dot.setStrokeStyle(1, 0xffaa44);
                 banner.add(dot);
             }
@@ -594,7 +617,6 @@ export default class BattleManager {
                 for (let i = 0; i < secondGroupCount; i++) {
                     const dotX = secondStartX + i * dotGap;
                     const dot = this.scene.add.circle(dotX, dotY, dotSize / 2, 0xffcc66);
-                    dot.setScrollFactor(0);
                     dot.setStrokeStyle(1, 0xffaa44);
                     banner.add(dot);
                 }
@@ -648,28 +670,26 @@ export default class BattleManager {
         const sameSideBanners = this.passiveBanners.filter(b => b.isLeft === isLeftSide && b.active);
         const stackOffset = sameSideBanners.length * 50;
 
-        // 사이드 배너 위치
+        // UI 카메라 전용 - 고정 좌표 (1280x720 기준)
         const baseX = isLeftSide ? 180 : 1100;
         const baseY = 500 - stackOffset;
 
         const banner = this.scene.add.container(baseX, baseY);
         banner.setDepth(2900);
-        banner.setScrollFactor(0);
         banner.isLeft = isLeftSide;
+        // 메인 카메라에서 숨기고 UI 카메라에만 표시
+        this.addToUILayer(banner);
 
         // 배경 바 (하늘색 기조)
         const bgGlow = this.scene.add.rectangle(0, 0, 260, 45, 0x4488ff, 0.3);
-        bgGlow.setScrollFactor(0);
-
         const bg = this.scene.add.rectangle(0, 0, 240, 38, 0x000000, 0.85);
         bg.setStrokeStyle(2, 0x66aaff);
-        bg.setScrollFactor(0);
 
         // 번개 아이콘
         const icon = this.scene.add.text(isLeftSide ? -100 : 100, 0, '⚡', {
             fontSize: '18px',
             fill: '#88ccff'
-        }).setOrigin(0.5).setScrollFactor(0);
+        }).setOrigin(0.5);
 
         // 패시브 이름
         const text = this.scene.add.text(0, 0, passiveName, {
@@ -679,7 +699,7 @@ export default class BattleManager {
             fontStyle: 'bold',
             stroke: '#000000',
             strokeThickness: 2
-        }).setOrigin(0.5).setScrollFactor(0);
+        }).setOrigin(0.5);
 
         banner.add([bgGlow, bg, icon, text]);
 
@@ -701,9 +721,10 @@ export default class BattleManager {
         // 1초 후 사라짐
         setTimeout(() => {
             if (banner && banner.active) {
+                const exitOffset = isLeftSide ? -100 : 100;
                 this.scene.tweens.add({
                     targets: banner,
-                    x: banner.x + (isLeftSide ? -100 : 100),
+                    x: banner.x + exitOffset,
                     alpha: 0,
                     duration: 250,
                     onComplete: () => {
@@ -771,27 +792,18 @@ export default class BattleManager {
         const stopTime = baseStopTime + (apCost * 5) + (isCritical ? 30 : 0);
 
         // 시간 스케일 멈춤
-        const originalTimeScale = this.scene.time.timeScale;
         this.scene.time.timeScale = 0;
 
         // 화면 흔들림 (AP에 비례)
         const shakeIntensity = 0.005 + (apCost * 0.002) + (isCritical ? 0.01 : 0);
         this.scene.cameras.main.shake(100, shakeIntensity);
 
-        // 히트스탑 후 복귀 (safety timeout 추가)
+        // 히트스탑 후 복귀 - 항상 1로 복구
         setTimeout(() => {
             if (this.scene && this.scene.time) {
-                this.scene.time.timeScale = originalTimeScale;
-            }
-        }, stopTime);
-
-        // 안전장치: 최대 200ms 후 강제 복구
-        setTimeout(() => {
-            if (this.scene && this.scene.time && this.scene.time.timeScale === 0) {
-                console.warn('[Battle] HitStop safety restore triggered');
                 this.scene.time.timeScale = 1;
             }
-        }, 200);
+        }, stopTime);
     }
 
     // Phase 4.75: 데미지 숫자 표시 (크리티컬 구분)

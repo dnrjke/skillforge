@@ -34,6 +34,14 @@ export default class BattleControlUI {
     setupResizeHandler() {
         this.updatePosition();
         window.addEventListener('resize', () => this.updatePosition());
+        // 전체화면 전환 대응
+        document.addEventListener('fullscreenchange', () => {
+            // 전체화면 전환 후 레이아웃 안정화 대기
+            setTimeout(() => this.updatePosition(), 100);
+        });
+        document.addEventListener('webkitfullscreenchange', () => {
+            setTimeout(() => this.updatePosition(), 100);
+        });
     }
 
     // 위치 업데이트 (게임 캔버스 기준)
