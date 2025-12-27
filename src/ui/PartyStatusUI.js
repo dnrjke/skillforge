@@ -114,18 +114,32 @@ export default class PartyStatusUI {
                 height: 70px;
             }
 
-            /* 슬롯 위치 (3x2 그리드, 스프라이트 타일에 맞춤) */
-            .unit-slot[data-pos="0"] { left: 12px; top: 5px; }
-            .unit-slot[data-pos="1"] { left: 70px; top: 0; }
-            .unit-slot[data-pos="2"] { left: 128px; top: 5px; }
-            .unit-slot[data-pos="3"] { left: 12px; top: 40px; }
-            .unit-slot[data-pos="4"] { left: 70px; top: 35px; }
-            .unit-slot[data-pos="5"] { left: 128px; top: 40px; }
+            /* 슬롯 위치 (3x2 그리드, 아이소메트릭 타일에 맞춤) */
+            /* 윗줄 (0, 1, 2) - 뒷쪽 */
+            .unit-slot[data-pos="0"] { left: 18px; top: -15px; }
+            .unit-slot[data-pos="1"] { left: 70px; top: -22px; }
+            .unit-slot[data-pos="2"] { left: 122px; top: -15px; }
+            /* 아랫줄 (3, 4, 5) - 앞쪽 */
+            .unit-slot[data-pos="3"] { left: 18px; top: 18px; }
+            .unit-slot[data-pos="4"] { left: 70px; top: 12px; }
+            .unit-slot[data-pos="5"] { left: 122px; top: 18px; }
 
             /* 중앙 열 슬롯 강조 */
             .unit-slot[data-pos="1"],
             .unit-slot[data-pos="4"] {
                 z-index: 5;
+            }
+
+            /* 윗줄은 아랫줄보다 뒤에 */
+            .unit-slot[data-pos="0"],
+            .unit-slot[data-pos="1"],
+            .unit-slot[data-pos="2"] {
+                z-index: 1;
+            }
+            .unit-slot[data-pos="3"],
+            .unit-slot[data-pos="4"],
+            .unit-slot[data-pos="5"] {
+                z-index: 2;
             }
 
             /* ===== 캐릭터 그림자 (발판 위, 앞쪽) ===== */
@@ -215,17 +229,32 @@ export default class PartyStatusUI {
                 50% { transform: translateX(-50%) scale(1.43) translateY(-2px); }
             }
 
-            /* ===== HP: 큰 숫자 + 작은 바 (발판 앞면에 붙임) ===== */
+            /* ===== HP UI 컨테이너 ===== */
             .unit-hp-container {
                 position: absolute;
-                bottom: 3px;
-                left: 50%;
-                transform: translateX(-50%);
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 gap: 1px;
                 z-index: 10;
+            }
+
+            /* 윗줄 (0, 1, 2): 머리 위 */
+            .unit-slot[data-pos="0"] .unit-hp-container,
+            .unit-slot[data-pos="1"] .unit-hp-container,
+            .unit-slot[data-pos="2"] .unit-hp-container {
+                top: -5px;
+                left: 50%;
+                transform: translateX(-50%);
+            }
+
+            /* 아랫줄 (3, 4, 5): 발 아래, 오른쪽으로 이동 */
+            .unit-slot[data-pos="3"] .unit-hp-container,
+            .unit-slot[data-pos="4"] .unit-hp-container,
+            .unit-slot[data-pos="5"] .unit-hp-container {
+                bottom: -8px;
+                left: 30px;
+                transform: none;
             }
 
             /* 작은 HP바 (숫자 위에) */
@@ -358,12 +387,13 @@ export default class PartyStatusUI {
                     height: 56px;
                 }
 
-                .unit-slot[data-pos="0"] { left: 10px; top: 4px; }
-                .unit-slot[data-pos="1"] { left: 56px; top: 0; }
-                .unit-slot[data-pos="2"] { left: 102px; top: 4px; }
-                .unit-slot[data-pos="3"] { left: 10px; top: 32px; }
-                .unit-slot[data-pos="4"] { left: 56px; top: 28px; }
-                .unit-slot[data-pos="5"] { left: 102px; top: 32px; }
+                /* 모바일 슬롯 위치 */
+                .unit-slot[data-pos="0"] { left: 14px; top: -12px; }
+                .unit-slot[data-pos="1"] { left: 56px; top: -18px; }
+                .unit-slot[data-pos="2"] { left: 98px; top: -12px; }
+                .unit-slot[data-pos="3"] { left: 14px; top: 14px; }
+                .unit-slot[data-pos="4"] { left: 56px; top: 10px; }
+                .unit-slot[data-pos="5"] { left: 98px; top: 14px; }
 
                 .unit-shadow {
                     bottom: 16px;
@@ -381,7 +411,20 @@ export default class PartyStatusUI {
                     transform: translateX(-50%) scale(1.25);
                 }
 
-                .unit-hp-container { bottom: 2px; }
+                /* 모바일 HP UI */
+                .unit-slot[data-pos="0"] .unit-hp-container,
+                .unit-slot[data-pos="1"] .unit-hp-container,
+                .unit-slot[data-pos="2"] .unit-hp-container {
+                    top: -4px;
+                }
+
+                .unit-slot[data-pos="3"] .unit-hp-container,
+                .unit-slot[data-pos="4"] .unit-hp-container,
+                .unit-slot[data-pos="5"] .unit-hp-container {
+                    bottom: -6px;
+                    left: 24px;
+                }
+
                 .mini-hp-bar { width: 38px; height: 3px; }
                 .mini-hp-text { font-size: 10px; }
             }
