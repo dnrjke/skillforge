@@ -85,8 +85,8 @@ export default class PartyStatusUI {
 
             /* ===== 보드 스프라이트 ===== */
             .board-sprite {
-                width: 200px;
-                height: 120px;
+                width: 280px;
+                height: 110px;
                 background-image: url('/assets/ui/UI_Tactical_Block_Stage.webp');
                 background-size: contain;
                 background-repeat: no-repeat;
@@ -102,8 +102,8 @@ export default class PartyStatusUI {
                 position: absolute;
                 top: 0;
                 left: 0;
-                width: 200px;
-                height: 120px;
+                width: 280px;
+                height: 110px;
                 pointer-events: none;
             }
 
@@ -114,23 +114,17 @@ export default class PartyStatusUI {
                 height: 70px;
             }
 
-            /* 슬롯 위치 (3x2 그리드, 아이소메트릭 타일에 맞춤) */
-            /* 윗줄 (0, 1, 2) - 뒷쪽 */
-            .unit-slot[data-pos="0"] { left: 18px; top: -15px; }
-            .unit-slot[data-pos="1"] { left: 70px; top: -22px; }
-            .unit-slot[data-pos="2"] { left: 122px; top: -15px; }
-            /* 아랫줄 (3, 4, 5) - 앞쪽 */
-            .unit-slot[data-pos="3"] { left: 18px; top: 18px; }
-            .unit-slot[data-pos="4"] { left: 70px; top: 12px; }
-            .unit-slot[data-pos="5"] { left: 122px; top: 18px; }
+            /* 슬롯 위치 (3x2 그리드, 대각선 아이소메트릭) */
+            /* 뒷줄 (0, 1, 2) - 오른쪽 위 대각선 */
+            .unit-slot[data-pos="0"] { left: 70px; top: -18px; }
+            .unit-slot[data-pos="1"] { left: 140px; top: -28px; }
+            .unit-slot[data-pos="2"] { left: 210px; top: -18px; }
+            /* 앞줄 (3, 4, 5) - 왼쪽 아래 대각선 */
+            .unit-slot[data-pos="3"] { left: 0px; top: 8px; }
+            .unit-slot[data-pos="4"] { left: 70px; top: 18px; }
+            .unit-slot[data-pos="5"] { left: 140px; top: 8px; }
 
-            /* 중앙 열 슬롯 강조 */
-            .unit-slot[data-pos="1"],
-            .unit-slot[data-pos="4"] {
-                z-index: 5;
-            }
-
-            /* 윗줄은 아랫줄보다 뒤에 */
+            /* 앞줄이 뒷줄보다 위에 */
             .unit-slot[data-pos="0"],
             .unit-slot[data-pos="1"],
             .unit-slot[data-pos="2"] {
@@ -141,6 +135,9 @@ export default class PartyStatusUI {
             .unit-slot[data-pos="5"] {
                 z-index: 2;
             }
+            /* 중앙 열 강조 */
+            .unit-slot[data-pos="1"] { z-index: 3; }
+            .unit-slot[data-pos="4"] { z-index: 4; }
 
             /* ===== 캐릭터 그림자 (발판 위, 앞쪽) ===== */
             .unit-shadow {
@@ -373,13 +370,13 @@ export default class PartyStatusUI {
                 .battlefield-panel.enemy { right: 0.5%; bottom: 1%; }
 
                 .board-sprite {
-                    width: 160px;
-                    height: 96px;
+                    width: 200px;
+                    height: 78px;
                 }
 
                 .units-container {
-                    width: 160px;
-                    height: 96px;
+                    width: 200px;
+                    height: 78px;
                 }
 
                 .unit-slot {
@@ -387,13 +384,13 @@ export default class PartyStatusUI {
                     height: 56px;
                 }
 
-                /* 모바일 슬롯 위치 */
-                .unit-slot[data-pos="0"] { left: 14px; top: -12px; }
-                .unit-slot[data-pos="1"] { left: 56px; top: -18px; }
-                .unit-slot[data-pos="2"] { left: 98px; top: -12px; }
-                .unit-slot[data-pos="3"] { left: 14px; top: 14px; }
-                .unit-slot[data-pos="4"] { left: 56px; top: 10px; }
-                .unit-slot[data-pos="5"] { left: 98px; top: 14px; }
+                /* 모바일 슬롯 위치 (대각선 아이소메트릭) */
+                .unit-slot[data-pos="0"] { left: 50px; top: -14px; }
+                .unit-slot[data-pos="1"] { left: 100px; top: -22px; }
+                .unit-slot[data-pos="2"] { left: 150px; top: -14px; }
+                .unit-slot[data-pos="3"] { left: 0px; top: 4px; }
+                .unit-slot[data-pos="4"] { left: 50px; top: 12px; }
+                .unit-slot[data-pos="5"] { left: 100px; top: 4px; }
 
                 .unit-shadow {
                     bottom: 16px;
