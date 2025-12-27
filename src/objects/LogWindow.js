@@ -14,9 +14,6 @@ export default class LogWindow {
         this.dragStartTop = 0;
         this.hasDragged = false;
 
-        // 상단 가장자리의 Y 위치
-        this.topY = 720 - this.currentHeight;
-
         // 로그 배치 관리
         this.currentBatch = null;
         this.batchIndex = 0;
@@ -43,9 +40,6 @@ export default class LogWindow {
         const handleHeight = this.isMobile ? this.minimizedHandleHeight : this.dragHandleHeight;
         this.dragHandle.style.height = `${handleHeight}px`;
         this.window.style.height = `${handleHeight}px`;
-        const height = this.scene.scale.height;
-        this.topY = height - handleHeight;
-        this.domElement.setY(this.topY);
         this.toggleBtn.textContent = '▲';
         this.dragHandle.style.cursor = 'pointer';
         this.window.style.borderRadius = '8px';
@@ -163,22 +157,28 @@ export default class LogWindow {
             </div>
         `;
 
-        const width = this.scene.scale.width;
-        const height = this.scene.scale.height;
-        const posX = width / 2;
-        const posY = this.topY;
+        // 순수 HTML 엘리먼트 생성 (position:fixed로 뷰포트 고정)
+        const container = document.createElement('div');
+        container.id = 'log-window-container';
+        container.style.cssText = `
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            pointer-events: auto;
+        `;
+        container.innerHTML = html;
 
-        this.domElement = this.scene.add.dom(posX, posY).createFromHTML(html);
-        this.domElement.setOrigin(0.5, 0);
-        this.domElement.setDepth(2000);
-        this.domElement.setScrollFactor(0);  // 카메라 워킹 영향 안받음
+        document.body.appendChild(container);
+        this.containerElement = container;
 
-        this.window = this.domElement.getChildByID('log-window');
-        this.dragHandle = this.domElement.getChildByID('log-drag-handle');
-        this.dragIndicator = this.domElement.getChildByID('drag-indicator');
-        this.body = this.domElement.getChildByID('log-body');
-        this.content = this.domElement.getChildByID('log-content');
-        this.toggleBtn = this.domElement.getChildByID('log-toggle');
+        this.window = container.querySelector('#log-window');
+        this.dragHandle = container.querySelector('#log-drag-handle');
+        this.dragIndicator = container.querySelector('#drag-indicator');
+        this.body = container.querySelector('#log-body');
+        this.content = container.querySelector('#log-content');
+        this.toggleBtn = container.querySelector('#log-toggle');
 
         // 키보드 이벤트 전파 방지
         this.window.addEventListener('keydown', (e) => e.stopPropagation());
@@ -265,14 +265,9 @@ export default class LogWindow {
         this.isDragging = true;
         this.hasDragged = false;
         this.dragStartY = clientY;
-        this.dragStartTop = this.topY;
 
-        // 접힌 상태에서 드래그 시작할 때의 초기 위치
-        if (this.isMinimized) {
-            const handleHeight = this.isMobile ? this.minimizedHandleHeight : this.dragHandleHeight;
-            const height = this.scene.scale.height;
-            this.dragStartTop = height - handleHeight;
-        }
+        // 현재 윈도우 높이 저장
+        this.dragStartHeight = parseInt(this.window.style.height) || this.currentHeight;
     }
 
     endDrag() {
@@ -281,12 +276,7 @@ export default class LogWindow {
     }
 
     handleDrag(clientY) {
-        const gameContainer = document.getElementById('game-container');
-        const canvas = gameContainer.querySelector('canvas');
-        const height = this.scene.scale.height;
-        const scaleY = height / canvas.clientHeight;
-
-        const deltaY = (clientY - this.dragStartY) * scaleY;
+        const deltaY = this.dragStartY - clientY; // 위로 드래그하면 양수
 
         // 드래그 감지 (5px 이상 이동)
         if (Math.abs(deltaY) > 5) {
@@ -294,28 +284,21 @@ export default class LogWindow {
         }
 
         // 접힌 상태에서 위로 드래그하면 점진적으로 확장
-        if (this.isMinimized && deltaY < -10) {
+        if (this.isMinimized && deltaY > 10) {
             this.isMinimized = false;
             this.body.style.display = 'block';
             this.toggleBtn.textContent = '▼';
             this.dragHandle.style.cursor = 'ns-resize';
             this.dragHandle.style.height = `${this.dragHandleHeight}px`;
             this.window.style.borderRadius = '8px 8px 0 0';
+            this.dragStartHeight = this.initialHeight;
         }
 
         if (!this.isMinimized) {
-            let newTop = this.dragStartTop + deltaY;
+            let newHeight = this.dragStartHeight + deltaY;
+            newHeight = Math.max(this.minHeight, Math.min(this.maxHeight, newHeight));
 
-            const minTop = height - this.maxHeight;
-            const maxTop = height - this.minHeight;
-            newTop = Math.max(minTop, Math.min(maxTop, newTop));
-
-            const newHeight = height - newTop;
-
-            this.topY = newTop;
             this.currentHeight = newHeight;
-
-            this.domElement.setY(this.topY);
             this.window.style.height = `${newHeight}px`;
         }
     }
@@ -348,7 +331,6 @@ export default class LogWindow {
 
     toggle() {
         this.isMinimized = !this.isMinimized;
-        const height = this.scene.scale.height;
 
         if (this.isMinimized) {
             // 최소화
@@ -356,8 +338,6 @@ export default class LogWindow {
             const handleHeight = this.isMobile ? this.minimizedHandleHeight : this.dragHandleHeight;
             this.dragHandle.style.height = `${handleHeight}px`;
             this.window.style.height = `${handleHeight}px`;
-            this.topY = height - handleHeight;
-            this.domElement.setY(this.topY);
             this.toggleBtn.textContent = '▲';
             this.dragHandle.style.cursor = 'pointer';
             this.window.style.borderRadius = '8px';
@@ -367,8 +347,6 @@ export default class LogWindow {
             this.dragHandle.style.height = `${this.dragHandleHeight}px`;
             this.currentHeight = this.initialHeight;
             this.window.style.height = `${this.currentHeight}px`;
-            this.topY = height - this.currentHeight;
-            this.domElement.setY(this.topY);
             this.toggleBtn.textContent = '▼';
             this.dragHandle.style.cursor = 'ns-resize';
             this.window.style.borderRadius = '8px 8px 0 0';
@@ -454,19 +432,7 @@ export default class LogWindow {
 
     // 화면 크기 변경 시 UI 재배치
     reposition(width, height) {
-        // 중앙 정렬 유지
-        const posX = width / 2;
-
-        // 현재 높이를 유지하면서 하단에서의 위치 계산
-        let posY;
-        if (this.isMinimized) {
-            const handleHeight = this.isMobile ? this.minimizedHandleHeight : this.dragHandleHeight;
-            posY = height - handleHeight;
-        } else {
-            posY = height - this.currentHeight;
-        }
-
-        this.topY = posY;
-        this.domElement.setPosition(posX, posY);
+        // position: fixed 사용으로 자동 재배치됨
+        // 필요시 여기서 스타일 업데이트 가능
     }
 }
