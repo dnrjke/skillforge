@@ -3,7 +3,7 @@
 // Phase 4: 비동기 공격 시퀀스 및 시각적 연출
 // Phase 4.5: 파티클 효과 연동
 
-import Unit from './Unit.js';
+import Unit from '../entities/Unit.js';
 import { SkillSets } from '../data/Skills.js';
 import { getKeyword } from '../data/Keywords.js';
 import ParticleEffects from '../effects/ParticleEffects.js';

@@ -1,9 +1,9 @@
 import Phaser from 'phaser';
-import LogWindow from '../objects/LogWindow.js';
-import StatusBar from '../objects/StatusBar.js';
-import BattleControlUI from '../objects/BattleControlUI.js';
-import PartyStatusUI from '../objects/PartyStatusUI.js';
-import BattleManager from '../battle/BattleManager.js';
+import LogWindow from '../ui/LogWindow.js';
+import StatusBar from '../ui/StatusBar.js';
+import BattleControlUI from '../ui/BattleControlUI.js';
+import PartyStatusUI from '../ui/PartyStatusUI.js';
+import BattleManager from '../systems/BattleManager.js';
 
 // 캐릭터 배치 좌표 상수 (전열2/중열2/후열2 - 가로 화면 최적화)
 // Y 좌표를 위로 이동 (-60)
