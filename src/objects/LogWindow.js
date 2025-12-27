@@ -43,7 +43,8 @@ export default class LogWindow {
         const handleHeight = this.isMobile ? this.minimizedHandleHeight : this.dragHandleHeight;
         this.dragHandle.style.height = `${handleHeight}px`;
         this.window.style.height = `${handleHeight}px`;
-        this.topY = 720 - handleHeight;
+        const height = this.scene.scale.height;
+        this.topY = height - handleHeight;
         this.domElement.setY(this.topY);
         this.toggleBtn.textContent = '▲';
         this.dragHandle.style.cursor = 'pointer';
@@ -159,7 +160,12 @@ export default class LogWindow {
             </div>
         `;
 
-        this.domElement = this.scene.add.dom(640, this.topY).createFromHTML(html);
+        const width = this.scene.scale.width;
+        const height = this.scene.scale.height;
+        const posX = width / 2;
+        const posY = this.topY;
+
+        this.domElement = this.scene.add.dom(posX, posY).createFromHTML(html);
         this.domElement.setOrigin(0.5, 0);
         this.domElement.setDepth(2000);
         this.domElement.setScrollFactor(0);  // 카메라 워킹 영향 안받음
@@ -261,7 +267,8 @@ export default class LogWindow {
         // 접힌 상태에서 드래그 시작할 때의 초기 위치
         if (this.isMinimized) {
             const handleHeight = this.isMobile ? this.minimizedHandleHeight : this.dragHandleHeight;
-            this.dragStartTop = 720 - handleHeight;
+            const height = this.scene.scale.height;
+            this.dragStartTop = height - handleHeight;
         }
     }
 
@@ -273,7 +280,8 @@ export default class LogWindow {
     handleDrag(clientY) {
         const gameContainer = document.getElementById('game-container');
         const canvas = gameContainer.querySelector('canvas');
-        const scaleY = 720 / canvas.clientHeight;
+        const height = this.scene.scale.height;
+        const scaleY = height / canvas.clientHeight;
 
         const deltaY = (clientY - this.dragStartY) * scaleY;
 
@@ -295,11 +303,11 @@ export default class LogWindow {
         if (!this.isMinimized) {
             let newTop = this.dragStartTop + deltaY;
 
-            const minTop = 720 - this.maxHeight;
-            const maxTop = 720 - this.minHeight;
+            const minTop = height - this.maxHeight;
+            const maxTop = height - this.minHeight;
             newTop = Math.max(minTop, Math.min(maxTop, newTop));
 
-            const newHeight = 720 - newTop;
+            const newHeight = height - newTop;
 
             this.topY = newTop;
             this.currentHeight = newHeight;
@@ -337,6 +345,7 @@ export default class LogWindow {
 
     toggle() {
         this.isMinimized = !this.isMinimized;
+        const height = this.scene.scale.height;
 
         if (this.isMinimized) {
             // 최소화
@@ -344,7 +353,7 @@ export default class LogWindow {
             const handleHeight = this.isMobile ? this.minimizedHandleHeight : this.dragHandleHeight;
             this.dragHandle.style.height = `${handleHeight}px`;
             this.window.style.height = `${handleHeight}px`;
-            this.topY = 720 - handleHeight;
+            this.topY = height - handleHeight;
             this.domElement.setY(this.topY);
             this.toggleBtn.textContent = '▲';
             this.dragHandle.style.cursor = 'pointer';
@@ -355,7 +364,7 @@ export default class LogWindow {
             this.dragHandle.style.height = `${this.dragHandleHeight}px`;
             this.currentHeight = this.initialHeight;
             this.window.style.height = `${this.currentHeight}px`;
-            this.topY = 720 - this.currentHeight;
+            this.topY = height - this.currentHeight;
             this.domElement.setY(this.topY);
             this.toggleBtn.textContent = '▼';
             this.dragHandle.style.cursor = 'ns-resize';
@@ -438,5 +447,23 @@ export default class LogWindow {
         this.content.innerHTML = '';
         this.batchIndex = 0;
         this.logCount = 0;
+    }
+
+    // 화면 크기 변경 시 UI 재배치
+    reposition(width, height) {
+        // 중앙 정렬 유지
+        const posX = width / 2;
+
+        // 현재 높이를 유지하면서 하단에서의 위치 계산
+        let posY;
+        if (this.isMinimized) {
+            const handleHeight = this.isMobile ? this.minimizedHandleHeight : this.dragHandleHeight;
+            posY = height - handleHeight;
+        } else {
+            posY = height - this.currentHeight;
+        }
+
+        this.topY = posY;
+        this.domElement.setPosition(posX, posY);
     }
 }

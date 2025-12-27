@@ -43,9 +43,21 @@ export default class BattleScene extends Phaser.Scene {
         this.logWindow = null;
         this.battleManager = null;
         this.battleControlUI = null;
+
+        // 카메라 레이어 컨테이너
+        this.worldContainer = null;
+        this.uiContainer = null;
+        this.mainCamera = null;
+        this.uiCamera = null;
     }
 
     create() {
+        // 컨테이너 생성
+        this.setupContainers();
+
+        // 카메라 설정
+        this.setupCameras();
+
         // 배경 설정
         this.setupBackground();
 
@@ -64,9 +76,12 @@ export default class BattleScene extends Phaser.Scene {
         // 입력 설정
         this.setupInput();
 
+        // 리사이즈 이벤트 리스너
+        this.scale.on('resize', this.repositionUI, this);
+
         // 시작 로그
         this.addLog('SkillForge - 키워드 기반 3vs3 RPG', 'system');
-        this.addLog('스페이스바: 테스트 | Enter: 자동전투', 'info');
+        this.addLog('스페이스바: 테스트 | Enter: 자동전투 | +/-: 줌', 'info');
     }
 
     update() {
@@ -74,10 +89,35 @@ export default class BattleScene extends Phaser.Scene {
         this.statusBars.forEach(bar => bar.update());
     }
 
+    setupContainers() {
+        // World Container: 게임 월드 객체들 (캐릭터, 배경 등)
+        this.worldContainer = this.add.container(0, 0);
+        this.worldContainer.setDepth(0);
+
+        // UI Container: UI 요소들 (상태바, 로그, 컨트롤 등)
+        this.uiContainer = this.add.container(0, 0);
+        this.uiContainer.setDepth(1000);
+    }
+
+    setupCameras() {
+        // Main Camera: 게임 월드를 비추는 카메라 (줌 가능)
+        this.mainCamera = this.cameras.main;
+        this.mainCamera.setZoom(1.0);
+        this.mainCamera.ignore(this.uiContainer);
+
+        // UI Camera: UI만 비추는 카메라 (줌 불가, 항상 고정)
+        this.uiCamera = this.cameras.add(0, 0, 1280, 720);
+        this.uiCamera.setTransparent(true);
+        this.uiCamera.ignore(this.worldContainer);
+    }
+
     setupBackground() {
         // 배경 이미지를 화면 중앙에 꽉 차게 배치
         const bg = this.add.image(640, 360, 'bg_battle');
         bg.setDisplaySize(1280, 720);
+
+        // 배경을 월드 컨테이너에 추가
+        this.worldContainer.add(bg);
     }
 
     setupCharacters() {
@@ -121,6 +161,9 @@ export default class BattleScene extends Phaser.Scene {
         // idle 애니메이션 재생
         character.play('knight_idle');
 
+        // 캐릭터를 월드 컨테이너에 추가
+        this.worldContainer.add(character);
+
         // 상태바 생성 (캐릭터 머리 위)
         const statusBar = new StatusBar(this, character, {
             maxHp: 100,
@@ -128,7 +171,8 @@ export default class BattleScene extends Phaser.Scene {
             maxAp: 10,
             currentAp: 0,
             offsetY: -110,
-            speed: 10
+            speed: 10,
+            parentContainer: this.worldContainer
         });
         character.statusBar = statusBar;
         this.statusBars.push(statusBar);
@@ -196,6 +240,37 @@ export default class BattleScene extends Phaser.Scene {
                 this.battleControlUI.setSpeed(speeds[index]);
             });
         });
+
+        // +/-: 카메라 줌 조정
+        this.input.keyboard.on('keydown-PLUS', () => {
+            const newZoom = Math.min(this.mainCamera.zoom + 0.1, 2.0);
+            this.mainCamera.setZoom(newZoom);
+        });
+
+        this.input.keyboard.on('keydown-MINUS', () => {
+            const newZoom = Math.max(this.mainCamera.zoom - 0.1, 0.5);
+            this.mainCamera.setZoom(newZoom);
+        });
+
+        // 0: 줌 리셋
+        this.input.keyboard.on('keydown-ZERO', () => {
+            this.mainCamera.setZoom(1.0);
+        });
+    }
+
+    repositionUI() {
+        // 화면 크기 변경 시 UI 재배치
+        const { width, height } = this.scale;
+
+        // BattleControlUI 재배치
+        if (this.battleControlUI) {
+            this.battleControlUI.reposition(width, height);
+        }
+
+        // LogWindow 재배치
+        if (this.logWindow) {
+            this.logWindow.reposition(width, height);
+        }
     }
 
     // 로그 추가 헬퍼 함수

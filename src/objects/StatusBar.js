@@ -13,6 +13,7 @@ export default class StatusBar {
         this.maxPp = config.maxPp || 2;
         this.currentPp = config.currentPp ?? this.maxPp;
         this.speed = config.speed || 10;
+        this.parentContainer = config.parentContainer || null;
 
         // 행동 게이지 (가득 차면 행동)
         this.maxAction = 100;
@@ -46,6 +47,11 @@ export default class StatusBar {
             this.character.x,
             this.character.y + this.offsetY
         );
+
+        // 부모 컨테이너가 있으면 추가
+        if (this.parentContainer) {
+            this.parentContainer.add(this.container);
+        }
 
         // HP 바 배경 (테두리)
         this.hpBarBg = this.scene.add.rectangle(
