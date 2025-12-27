@@ -57,7 +57,7 @@ export default class BattleControlUI {
             align-items: center;
             cursor: pointer;
             user-select: none;
-            font-family: Arial, sans-serif;
+            font-family: 'Alexandria', sans-serif;
             font-size: ${fontSize}px;
             font-weight: bold;
             color: #fff;
@@ -138,7 +138,7 @@ export default class BattleControlUI {
             display: flex;
             flex-direction: column;
             gap: ${gap}px;
-            font-family: Arial, sans-serif;
+            font-family: 'Alexandria', sans-serif;
             pointer-events: auto;
             z-index: 100;
         `;

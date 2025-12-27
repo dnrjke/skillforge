@@ -463,7 +463,7 @@ export default class ParticleEffects {
         const critText = this.scene.add.text(x, y - 50, 'CRITICAL!', {
             fontSize: '24px',
             fill: '#ffff00',
-            fontFamily: 'Arial',
+            fontFamily: 'Almendra',
             fontStyle: 'bold',
             stroke: '#ff6600',
             strokeThickness: 4

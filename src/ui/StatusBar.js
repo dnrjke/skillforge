@@ -101,9 +101,9 @@ export default class StatusBar {
             this.barWidth / 2 + 6, apBarY,
             `${this.currentAp}`,
             {
-                fontSize: '12px',
+                fontSize: '14px',
                 fill: '#ffcc00',
-                fontFamily: 'Arial',
+                fontFamily: 'Alexandria',
                 fontStyle: 'bold',
                 stroke: '#000000',
                 strokeThickness: 3

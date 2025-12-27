@@ -150,7 +150,7 @@ export default class Unit {
             {
                 fontSize: '22px',
                 fill: passive.color,
-                fontFamily: 'Arial',
+                fontFamily: 'Almendra',
                 fontStyle: 'bold',
                 stroke: '#000000',
                 strokeThickness: 4
@@ -506,7 +506,7 @@ export default class Unit {
             {
                 fontSize: isHeal ? '26px' : '28px',
                 fill: color,
-                fontFamily: 'Arial',
+                fontFamily: 'Almendra',
                 fontStyle: 'bold',
                 stroke: '#000000',
                 strokeThickness: 4
@@ -543,7 +543,7 @@ export default class Unit {
             {
                 fontSize: '18px',
                 fill: color,
-                fontFamily: 'Arial',
+                fontFamily: 'Almendra',
                 fontStyle: 'bold',
                 stroke: '#000000',
                 strokeThickness: 3
@@ -574,7 +574,7 @@ export default class Unit {
             {
                 fontSize: '16px',
                 fill: '#aa66ff',
-                fontFamily: 'Arial',
+                fontFamily: 'Almendra',
                 fontStyle: 'bold',
                 stroke: '#000000',
                 strokeThickness: 3
@@ -603,7 +603,7 @@ export default class Unit {
             {
                 fontSize: '16px',
                 fill: '#aaaaaa',
-                fontFamily: 'Arial',
+                fontFamily: 'Almendra',
                 fontStyle: 'italic',
                 stroke: '#000000',
                 strokeThickness: 2

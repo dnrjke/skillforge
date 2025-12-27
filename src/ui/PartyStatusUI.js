@@ -87,7 +87,7 @@ export default class PartyStatusUI {
         style.id = 'battlefield-panel-style';
         style.textContent = `
             /* ===== Google Fonts ===== */
-            @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Almendra:wght@700&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Alexandria:wght@400;700&family=Almendra:wght@400;700&display=swap');
 
             /* ===== 글로벌 데미지 숫자 폰트 ===== */
             .damage-number, .damage-text, [class*="damage-num"] {
@@ -378,8 +378,9 @@ export default class PartyStatusUI {
             }
 
             .mini-hp-text {
-                font-family: 'Press Start 2P', monospace;
-                font-size: 7px;
+                font-family: 'Alexandria', sans-serif;
+                font-size: 9px;
+                font-weight: 700;
                 color: #dfd;
                 text-shadow:
                     1px 0 0 #000, -1px 0 0 #000,
