@@ -21,30 +21,12 @@ function preventOverscroll() {
     }, { passive: false });
 }
 
-// iOS Safari 주소표시줄 숨기기 (스크롤 트릭) - AUTO 버튼 클릭 시 호출
-export function hideAddressBar() {
-    if (!isMobileDevice()) return;
-
-    // 스크롤 가능하게 임시로 설정
-    const originalOverflow = document.body.style.overflow;
-    const originalHeight = document.body.style.height;
-
-    document.body.style.overflow = 'auto';
-    document.body.style.height = (window.innerHeight + 1) + 'px';
-
-    window.scrollTo(0, 1);
-
-    setTimeout(() => {
-        document.body.style.overflow = originalOverflow || 'hidden';
-        document.body.style.height = originalHeight || '100%';
-    }, 100);
-}
-
 // 컨테이너 기반 Fullscreen (Canvas + HTML UI 모두 포함) - PC 전용
 export function requestContainerFullscreen() {
-    // 모바일에서는 Fullscreen API를 사용하지 않음 (오히려 주소표시줄을 나타나게 함)
+    // 모바일에서는 Fullscreen API를 호출하지 않음
+    // (Fullscreen API 호출이 오히려 주소표시줄을 나타나게 함)
+    // 초기 로드 시 이미 주소표시줄이 숨겨진 상태를 유지
     if (isMobileDevice()) {
-        hideAddressBar();
         return;
     }
 
