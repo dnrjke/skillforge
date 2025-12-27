@@ -13,14 +13,33 @@ export function hideAddressBar() {
     }, 50);
 }
 
+// 컨테이너 기반 Fullscreen (Canvas + HTML UI 모두 포함)
+export function requestContainerFullscreen() {
+    const gameContainer = document.getElementById('game-container');
+
+    if (!gameContainer) {
+        console.log('Game container not found');
+        return;
+    }
+
+    if (gameContainer.requestFullscreen) {
+        gameContainer.requestFullscreen().catch(err => {
+            console.log('Fullscreen request failed:', err);
+        });
+    } else if (gameContainer.webkitRequestFullscreen) {
+        // Safari
+        gameContainer.webkitRequestFullscreen();
+    } else if (gameContainer.mozRequestFullScreen) {
+        // Firefox
+        gameContainer.mozRequestFullScreen();
+    } else if (gameContainer.msRequestFullscreen) {
+        // IE/Edge
+        gameContainer.msRequestFullscreen();
+    }
+}
+
 // 모바일 바운싱 방지 (터치 이벤트)
 function preventOverscroll() {
-    let startY = 0;
-
-    document.addEventListener('touchstart', (e) => {
-        startY = e.touches[0].pageY;
-    }, { passive: false });
-
     document.addEventListener('touchmove', (e) => {
         const gameContainer = document.getElementById('game-container');
         // 게임 컨테이너 밖의 스크롤 차단
@@ -30,46 +49,27 @@ function preventOverscroll() {
     }, { passive: false });
 }
 
-// Fullscreen API 헬퍼
-function requestFullscreen() {
-    const elem = document.documentElement;
-
-    if (elem.requestFullscreen) {
-        elem.requestFullscreen().catch(err => {
-            console.log('Fullscreen request failed:', err);
-        });
-    } else if (elem.webkitRequestFullscreen) {
-        // Safari
-        elem.webkitRequestFullscreen();
-    } else if (elem.mozRequestFullScreen) {
-        // Firefox
-        elem.mozRequestFullScreen();
-    } else if (elem.msRequestFullscreen) {
-        // IE/Edge
-        elem.msRequestFullscreen();
+// VisualViewport 대응 - 주소창 변화 시 UI 위치 재계산
+function setupVisualViewportListener() {
+    if (!window.visualViewport) {
+        console.log('VisualViewport API not supported');
+        return;
     }
-}
 
-// 모바일에서 첫 터치 시 Fullscreen 시도
-function setupFullscreenOnFirstTouch() {
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const handleViewportChange = () => {
+        // iOS Safari 주소창이 나타나거나 사라질 때 실행
+        const viewportHeight = window.visualViewport.height;
+        const windowHeight = window.innerHeight;
 
-    if (isMobile) {
-        let firstTouch = true;
+        // UI 요소들의 위치 재계산 (필요 시)
+        // CSS dvh를 사용하므로 대부분 자동 조정되지만,
+        // 필요한 경우 추가 로직 구현 가능
 
-        const handleFirstTouch = () => {
-            if (firstTouch) {
-                firstTouch = false;
-                requestFullscreen();
-                // 한 번만 실행 후 리스너 제거
-                document.removeEventListener('touchstart', handleFirstTouch);
-                document.removeEventListener('click', handleFirstTouch);
-            }
-        };
+        console.log(`Viewport changed: ${viewportHeight}px / ${windowHeight}px`);
+    };
 
-        document.addEventListener('touchstart', handleFirstTouch, { once: true, passive: true });
-        document.addEventListener('click', handleFirstTouch, { once: true, passive: true });
-    }
+    window.visualViewport.addEventListener('resize', handleViewportChange);
+    window.visualViewport.addEventListener('scroll', handleViewportChange);
 }
 
 const config = {
@@ -97,6 +97,6 @@ const config = {
 
 // 모바일 최적화 초기화
 preventOverscroll();
-setupFullscreenOnFirstTouch();
+setupVisualViewportListener();
 
 const game = new Phaser.Game(config);
