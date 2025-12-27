@@ -115,6 +115,11 @@ export default class PartyStatusUI {
                 transform: scaleX(-1);
             }
 
+            /* 적군 슬롯: 컨테이너 반전을 상쇄하여 내용물 정상 표시 */
+            .enemy .unit-slot {
+                transform: scaleX(-1);
+            }
+
             /* ===== 개별 유닛 슬롯 ===== */
             .unit-slot {
                 position: absolute;
