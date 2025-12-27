@@ -110,6 +110,11 @@ export default class PartyStatusUI {
                 z-index: 1;
             }
 
+            /* 적군: 보드와 함께 유닛 컨테이너도 미러링 */
+            .enemy .units-container {
+                transform: scaleX(-1);
+            }
+
             /* ===== 개별 유닛 슬롯 ===== */
             .unit-slot {
                 position: absolute;
@@ -123,21 +128,24 @@ export default class PartyStatusUI {
              * Tile 0: (262, 440)   Tile 1: (572, 328)   Tile 2: (900, 208)
              * Tile 3: (376, 608)   Tile 4: (712, 474)   Tile 5: (1034, 352)
              *
+             * 보정: X축 -20px (원본 기준) 적용
+             * 보정된 좌표: (242, 440), (552, 328), (880, 208), (356, 608), (692, 474), (1014, 352)
+             *
              * 변환 공식:
              *   scale = 110 / 832 = 0.1322
              *   offsetX = (280 - 1280 * scale) / 2 = 55px (중앙 정렬)
-             *   CSS_X = 원본_X * scale + offsetX - 30 (스프라이트 오프셋)
-             *   CSS_Y = 원본_Y * scale - 48 (스프라이트 오프셋)
+             *   CSS_X = (원본_X - 20) * scale + offsetX - 30
+             *   CSS_Y = 원본_Y * scale - 48
              */
 
             /* 뒷줄 (0, 1, 2) */
-            .unit-slot[data-pos="0"] { left: 60px; top: 10px; }
-            .unit-slot[data-pos="1"] { left: 101px; top: -5px; }
-            .unit-slot[data-pos="2"] { left: 144px; top: -20px; }
+            .unit-slot[data-pos="0"] { left: 57px; top: 10px; }
+            .unit-slot[data-pos="1"] { left: 98px; top: -5px; }
+            .unit-slot[data-pos="2"] { left: 141px; top: -20px; }
             /* 앞줄 (3, 4, 5) */
-            .unit-slot[data-pos="3"] { left: 75px; top: 32px; }
-            .unit-slot[data-pos="4"] { left: 119px; top: 15px; }
-            .unit-slot[data-pos="5"] { left: 162px; top: -1px; }
+            .unit-slot[data-pos="3"] { left: 72px; top: 32px; }
+            .unit-slot[data-pos="4"] { left: 116px; top: 15px; }
+            .unit-slot[data-pos="5"] { left: 159px; top: -1px; }
 
             /* z-index: 보드(0) < 뒷줄(1-2) < 앞줄(3-4) */
             .unit-slot[data-pos="0"] { z-index: 1; }
@@ -392,13 +400,13 @@ export default class PartyStatusUI {
                     height: 56px;
                 }
 
-                /* 모바일 타일 좌표 (200x78px, 데스크탑의 0.714배) */
-                .unit-slot[data-pos="0"] { left: 43px; top: 7px; }
-                .unit-slot[data-pos="1"] { left: 72px; top: -4px; }
-                .unit-slot[data-pos="2"] { left: 103px; top: -14px; }
-                .unit-slot[data-pos="3"] { left: 54px; top: 23px; }
-                .unit-slot[data-pos="4"] { left: 85px; top: 11px; }
-                .unit-slot[data-pos="5"] { left: 116px; top: -1px; }
+                /* 모바일 타일 좌표 (200x78px, 데스크탑의 0.714배, X -20px 보정 적용) */
+                .unit-slot[data-pos="0"] { left: 41px; top: 7px; }
+                .unit-slot[data-pos="1"] { left: 70px; top: -4px; }
+                .unit-slot[data-pos="2"] { left: 101px; top: -14px; }
+                .unit-slot[data-pos="3"] { left: 51px; top: 23px; }
+                .unit-slot[data-pos="4"] { left: 83px; top: 11px; }
+                .unit-slot[data-pos="5"] { left: 114px; top: -1px; }
 
                 .unit-shadow {
                     bottom: 16px;

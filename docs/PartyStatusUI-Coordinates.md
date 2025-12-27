@@ -48,30 +48,50 @@ CSS_Y = 원본_Y * scale - 48 (스프라이트 오프셋)
 - **슬롯 크기**: 60 x 70 px (데스크탑), 48 x 56 px (모바일)
 - **스프라이트 위치**: 슬롯 내 `bottom: 22px`, `left: 50%`, `transform: translateX(-50%)`
 
+## 보정 사항
+
+### X축 -20px 보정
+테스트 결과 캐릭터가 전체적으로 우측으로 밀려 있어 **원본 해상도 기준 X축 -20px** 보정 적용.
+
+| 타일 | 원본 좌표 | 보정 후 좌표 |
+|------|----------|-------------|
+| 0 | (262, 440) | (242, 440) |
+| 1 | (572, 328) | (552, 328) |
+| 2 | (900, 208) | (880, 208) |
+| 3 | (376, 608) | (356, 608) |
+| 4 | (712, 474) | (692, 474) |
+| 5 | (1034, 352) | (1014, 352) |
+
+### 적군 보드 미러링 수정
+아이소메트릭 보드를 `scaleX(-1)`로 반전할 때, 유닛 컨테이너도 함께 반전해야 좌표가 맞음.
+```css
+.enemy .units-container { transform: scaleX(-1); }
+```
+
 ## 슬롯 CSS 값 (데스크탑)
 
 ```css
-/* 뒷줄 (0, 1, 2) */
-.unit-slot[data-pos="0"] { left: 60px; top: 10px; }
-.unit-slot[data-pos="1"] { left: 101px; top: -5px; }
-.unit-slot[data-pos="2"] { left: 144px; top: -20px; }
+/* 뒷줄 (0, 1, 2) - X축 -20px 보정 적용 */
+.unit-slot[data-pos="0"] { left: 57px; top: 10px; }
+.unit-slot[data-pos="1"] { left: 98px; top: -5px; }
+.unit-slot[data-pos="2"] { left: 141px; top: -20px; }
 
-/* 앞줄 (3, 4, 5) */
-.unit-slot[data-pos="3"] { left: 75px; top: 32px; }
-.unit-slot[data-pos="4"] { left: 119px; top: 15px; }
-.unit-slot[data-pos="5"] { left: 162px; top: -1px; }
+/* 앞줄 (3, 4, 5) - X축 -20px 보정 적용 */
+.unit-slot[data-pos="3"] { left: 72px; top: 32px; }
+.unit-slot[data-pos="4"] { left: 116px; top: 15px; }
+.unit-slot[data-pos="5"] { left: 159px; top: -1px; }
 ```
 
 ## 슬롯 CSS 값 (모바일)
 
 ```css
-/* 모바일 (데스크탑의 0.714배) */
-.unit-slot[data-pos="0"] { left: 43px; top: 7px; }
-.unit-slot[data-pos="1"] { left: 72px; top: -4px; }
-.unit-slot[data-pos="2"] { left: 103px; top: -14px; }
-.unit-slot[data-pos="3"] { left: 54px; top: 23px; }
-.unit-slot[data-pos="4"] { left: 85px; top: 11px; }
-.unit-slot[data-pos="5"] { left: 116px; top: -1px; }
+/* 모바일 (데스크탑의 0.714배, X축 -20px 보정 적용) */
+.unit-slot[data-pos="0"] { left: 41px; top: 7px; }
+.unit-slot[data-pos="1"] { left: 70px; top: -4px; }
+.unit-slot[data-pos="2"] { left: 101px; top: -14px; }
+.unit-slot[data-pos="3"] { left: 51px; top: 23px; }
+.unit-slot[data-pos="4"] { left: 83px; top: 11px; }
+.unit-slot[data-pos="5"] { left: 114px; top: -1px; }
 ```
 
 ## Z-Index 레이어링
@@ -109,8 +129,12 @@ transform: none;
 
 ## 적군 보드
 
-적군 보드는 `scaleX(-1)`로 좌우 반전됩니다.
-- CSS: `.enemy .board-sprite { transform: scaleX(-1); }`
+적군 보드는 보드 스프라이트와 유닛 컨테이너 모두 `scaleX(-1)`로 좌우 반전됩니다.
+```css
+.enemy .board-sprite { transform: scaleX(-1); }
+.enemy .units-container { transform: scaleX(-1); }
+```
+이렇게 하면 아이소메트릭 보드에서도 아군과 동일한 좌표를 사용할 수 있습니다.
 
 ## 보드 이미지 수정 시 체크리스트
 
