@@ -290,18 +290,18 @@ export default class PartyStatusUI {
                     0 0 8px rgba(150, 80, 80, 0.3);
             }
 
-            /* ===== 캐릭터 그림자 (발밑 타원) ===== */
+            /* ===== 캐릭터 그림자 (앞쪽 모서리) ===== */
             .unit-shadow {
                 position: absolute;
-                bottom: 16px;
+                bottom: 6px;
                 left: 50%;
-                transform: translateX(-50%);
-                width: 32px;
-                height: 10px;
+                transform: translateX(-50%) translateY(8px);
+                width: 34px;
+                height: 12px;
                 background: radial-gradient(
                     ellipse at center,
-                    rgba(0, 0, 0, 0.6) 0%,
-                    rgba(0, 0, 0, 0.25) 50%,
+                    rgba(0, 0, 0, 0.7) 0%,
+                    rgba(0, 0, 0, 0.3) 50%,
                     transparent 70%
                 );
                 border-radius: 50%;
@@ -310,27 +310,27 @@ export default class PartyStatusUI {
 
             /* 중앙 열 그림자 확대 */
             .grid-column.col-1 .unit-shadow {
-                width: 36px;
-                height: 11px;
+                width: 38px;
+                height: 14px;
             }
 
-            /* ===== 유닛 스프라이트 ===== */
+            /* ===== 유닛 스프라이트 (앞쪽 모서리에 피규어처럼) ===== */
             .unit-sprite-wrapper {
                 position: absolute;
-                bottom: 18px;
+                bottom: 8px;
                 left: 50%;
-                transform: translateX(-50%) scale(1.15);
+                transform: translateX(-50%) scale(1.25);
                 transform-origin: center bottom;
                 width: 32px;
                 height: 32px;
                 overflow: visible;
                 animation: spriteFloat 2s ease-in-out infinite;
-                z-index: 2;
+                z-index: 5;
             }
 
-            /* 중앙 열 캐릭터 1.1배 더 크게 (총 1.265배) */
+            /* 중앙 열 캐릭터 1.1배 더 크게 (총 1.375배) */
             .grid-column.col-1 .unit-sprite-wrapper {
-                transform: translateX(-50%) scale(1.265);
+                transform: translateX(-50%) scale(1.375);
             }
 
             .unit-sprite {
@@ -342,12 +342,12 @@ export default class PartyStatusUI {
                 image-rendering: crisp-edges;
                 background-position: 0 -96px;
                 animation: spriteIdle 0.5s steps(1) infinite;
-                filter: drop-shadow(1px 2px 1px rgba(0, 0, 0, 0.9));
+                filter: drop-shadow(2px 3px 2px rgba(0, 0, 0, 0.95));
             }
 
             .unit-sprite.enemy-sprite {
                 transform: scaleX(-1);
-                filter: drop-shadow(-1px 2px 1px rgba(0, 0, 0, 0.9))
+                filter: drop-shadow(-2px 3px 2px rgba(0, 0, 0, 0.95))
                         sepia(0.3) hue-rotate(-30deg) saturate(1.3);
             }
 
@@ -360,8 +360,8 @@ export default class PartyStatusUI {
             }
 
             @keyframes spriteFloat {
-                0%, 100% { transform: translateX(-50%) scale(1.15) translateY(0); }
-                50% { transform: translateX(-50%) scale(1.15) translateY(-2px); }
+                0%, 100% { transform: translateX(-50%) scale(1.25) translateY(0); }
+                50% { transform: translateX(-50%) scale(1.25) translateY(-2px); }
             }
 
             /* 중앙 열 플로팅 애니메이션 */
@@ -370,88 +370,96 @@ export default class PartyStatusUI {
             }
 
             @keyframes spriteFloatCenter {
-                0%, 100% { transform: translateX(-50%) scale(1.265) translateY(0); }
-                50% { transform: translateX(-50%) scale(1.265) translateY(-2px); }
+                0%, 100% { transform: translateX(-50%) scale(1.375) translateY(0); }
+                50% { transform: translateX(-50%) scale(1.375) translateY(-2px); }
             }
 
-            /* ===== HP 바 + 숫자 (발판 하단 모서리) ===== */
+            /* ===== HP: 큰 숫자 + 작은 바 (발판 앞 오버레이) ===== */
             .unit-hp-container {
                 position: absolute;
-                bottom: 1px;
+                bottom: -8px;
                 left: 50%;
                 transform: translateX(-50%);
                 display: flex;
                 flex-direction: column;
                 align-items: center;
-                gap: 1px;
-                z-index: 10;
+                gap: 0;
+                z-index: 15;
             }
 
+            /* 작은 HP바 (숫자 위에) */
             .mini-hp-bar {
-                width: 48px;
-                height: 4px;
-                background: #0a0808;
-                border: 1px solid #2a2020;
-                border-radius: 2px;
+                width: 44px;
+                height: 3px;
+                background: #0a0505;
+                border: 1px solid #1a1010;
+                border-radius: 1px;
                 overflow: hidden;
-                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+                margin-bottom: 1px;
             }
 
             .mini-hp-fill {
                 height: 100%;
-                background: linear-gradient(180deg, #6c6 0%, #4a4 50%, #5b5 100%);
+                background: linear-gradient(180deg, #6d6 0%, #4a4 100%);
                 transition: width 0.3s ease;
-                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
             }
 
             .mini-hp-fill.enemy-hp {
-                background: linear-gradient(180deg, #c66 0%, #944 50%, #a55 100%);
+                background: linear-gradient(180deg, #d66 0%, #944 100%);
             }
 
             .mini-hp-fill.low {
-                background: linear-gradient(180deg, #ca6 0%, #a74 50%, #b85 100%);
+                background: linear-gradient(180deg, #da6 0%, #a74 100%);
             }
 
             .mini-hp-fill.critical {
-                background: linear-gradient(180deg, #c44 0%, #922 50%, #a33 100%);
+                background: linear-gradient(180deg, #d44 0%, #922 100%);
                 animation: hpPulse 0.4s ease-in-out infinite;
             }
 
+            /* 큰 HP 숫자 */
             .mini-hp-text {
                 font-family: 'Alexandria', sans-serif;
-                font-size: 11px;
+                font-size: 14px;
                 font-weight: 700;
-                color: #efe;
+                color: #5f5;
                 text-shadow:
                     -1px -1px 0 #000,
                     1px -1px 0 #000,
                     -1px 1px 0 #000,
                     1px 1px 0 #000,
-                    0 0 4px rgba(0, 0, 0, 0.8);
+                    -2px 0 0 #000,
+                    2px 0 0 #000,
+                    0 -2px 0 #000,
+                    0 2px 0 #000,
+                    0 0 8px rgba(0, 0, 0, 0.9);
                 transition: all 0.15s ease;
                 white-space: nowrap;
+                line-height: 1;
+                letter-spacing: -0.5px;
             }
 
-            .mini-hp-text.enemy-text { color: #fee; }
-            .mini-hp-text.low { color: #fea; }
+            .mini-hp-text.enemy-text { color: #f77; }
+            .mini-hp-text.low { color: #fa5; }
             .mini-hp-text.critical {
-                color: #faa;
+                color: #f55;
                 animation: hpPulse 0.4s ease-in-out infinite;
             }
 
             .mini-hp-text.hp-changed {
-                transform: scale(1.2);
+                transform: scale(1.15);
                 color: #fff !important;
             }
 
             .mini-hp-text.damage {
-                color: #f44 !important;
-                text-shadow: 0 0 6px #f00, 1px 1px 0 #000;
+                color: #f33 !important;
+                text-shadow: 0 0 8px #f00, -1px -1px 0 #000, 1px 1px 0 #000;
             }
 
             .mini-hp-text.heal {
-                color: #4f8 !important;
-                text-shadow: 0 0 6px #0f0, 1px 1px 0 #000;
+                color: #3f7 !important;
+                text-shadow: 0 0 8px #0f0, -1px -1px 0 #000, 1px 1px 0 #000;
             }
 
             /* ===== 피드백 효과 ===== */
@@ -537,38 +545,39 @@ export default class PartyStatusUI {
                 .platform-side { height: 6px; }
 
                 .unit-shadow {
-                    bottom: 13px;
-                    width: 26px;
-                    height: 8px;
+                    bottom: 5px;
+                    width: 28px;
+                    height: 10px;
+                    transform: translateX(-50%) translateY(6px);
                 }
 
                 .grid-column.col-1 .unit-shadow {
-                    width: 30px;
-                    height: 9px;
+                    width: 32px;
+                    height: 11px;
                 }
 
                 .unit-sprite-wrapper {
-                    bottom: 14px;
-                    transform: translateX(-50%) scale(1.0);
-                }
-
-                .grid-column.col-1 .unit-sprite-wrapper {
+                    bottom: 6px;
                     transform: translateX(-50%) scale(1.1);
                 }
 
-                @keyframes spriteFloat {
-                    0%, 100% { transform: translateX(-50%) scale(1.0) translateY(0); }
-                    50% { transform: translateX(-50%) scale(1.0) translateY(-1px); }
+                .grid-column.col-1 .unit-sprite-wrapper {
+                    transform: translateX(-50%) scale(1.2);
                 }
 
-                @keyframes spriteFloatCenter {
+                @keyframes spriteFloat {
                     0%, 100% { transform: translateX(-50%) scale(1.1) translateY(0); }
                     50% { transform: translateX(-50%) scale(1.1) translateY(-1px); }
                 }
 
-                .unit-hp-container { bottom: 0; }
-                .mini-hp-bar { width: 38px; height: 3px; }
-                .mini-hp-text { font-size: 9px; }
+                @keyframes spriteFloatCenter {
+                    0%, 100% { transform: translateX(-50%) scale(1.2) translateY(0); }
+                    50% { transform: translateX(-50%) scale(1.2) translateY(-1px); }
+                }
+
+                .unit-hp-container { bottom: -6px; }
+                .mini-hp-bar { width: 36px; height: 2px; }
+                .mini-hp-text { font-size: 11px; }
             }
         `;
         document.head.appendChild(style);
@@ -603,15 +612,15 @@ export default class PartyStatusUI {
             const shadow = document.createElement('div');
             shadow.className = 'unit-shadow';
 
-            // HP 컨테이너 (현재HP/최대HP 형식)
+            // HP 컨테이너 (작은 바 + 큰 숫자)
             const hpContainer = document.createElement('div');
             hpContainer.className = 'unit-hp-container';
             hpContainer.innerHTML = `
-                <span class="mini-hp-text ${this.isEnemy ? 'enemy-text' : ''}">${unit.currentHp}/${unit.maxHp}</span>
                 <div class="mini-hp-bar">
                     <div class="mini-hp-fill ${this.isEnemy ? 'enemy-hp' : ''}"
                          style="width: ${(unit.currentHp / unit.maxHp) * 100}%"></div>
                 </div>
+                <span class="mini-hp-text ${this.isEnemy ? 'enemy-text' : ''}">${unit.currentHp}/${unit.maxHp}</span>
             `;
 
             // 유닛 스프라이트
