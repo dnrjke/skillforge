@@ -18,7 +18,7 @@ export default class BattleControlUI {
 
         // 모바일 감지
         this.isMobile = this.detectMobile();
-        this.scale = this.isMobile ? 1.5 : 1;
+        this.scale = this.isMobile ? 1.0 : 1.0;
 
         this.createSpeedBadge();
         this.createControlPanel();
