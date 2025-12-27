@@ -29,58 +29,26 @@ export default class PartyStatusUI {
     create() {
         this.injectStyles();
 
-        // 메인 컨테이너 (perspective 적용)
+        // 메인 컨테이너
         this.containerElement = document.createElement('div');
         this.containerElement.className = `battlefield-panel ${this.isEnemy ? 'enemy' : 'ally'}`;
 
-        // 통합 보드 (하나의 큰 체스판 박스)
+        // 보드 스프라이트 이미지
         const board = document.createElement('div');
-        board.className = 'unified-board';
+        board.className = 'board-sprite';
 
-        // 보드 윗면 (하나의 연결된 면)
-        const boardTop = document.createElement('div');
-        boardTop.className = 'board-top';
-
-        // 내부 분할선 (SVG로 사다리꼴 그리기)
-        boardTop.innerHTML = `
-            <svg class="board-lines" viewBox="0 0 180 80" preserveAspectRatio="none">
-                <!-- 중앙 세로선 (역사다리꼴) -->
-                <line x1="55" y1="0" x2="48" y2="80" stroke="#1a1510" stroke-width="2"/>
-                <line x1="125" y1="0" x2="132" y2="80" stroke="#1a1510" stroke-width="2"/>
-                <!-- 가로 중앙선 -->
-                <line x1="0" y1="40" x2="180" y2="40" stroke="#1a1510" stroke-width="2"/>
-            </svg>
-            <!-- 6개 타일 배경색 -->
-            <div class="tile-colors">
-                <div class="tile-bg tile-0 tile-light"></div>
-                <div class="tile-bg tile-1 tile-dark"></div>
-                <div class="tile-bg tile-2 tile-light"></div>
-                <div class="tile-bg tile-3 tile-dark"></div>
-                <div class="tile-bg tile-4 tile-light"></div>
-                <div class="tile-bg tile-5 tile-dark"></div>
-            </div>
-        `;
-
-        // 보드 측면 (12px 두께, 하나의 연결된 면)
-        const boardSide = document.createElement('div');
-        boardSide.className = 'board-side';
-
-        board.appendChild(boardTop);
-        board.appendChild(boardSide);
-
-        // 캐릭터 컨테이너 (임시 비활성화)
-        // const unitsContainer = document.createElement('div');
-        // unitsContainer.className = 'units-container';
-        // this.containerElement.appendChild(unitsContainer);
-        // this.unitsContainer = unitsContainer;
+        // 캐릭터 컨테이너
+        const unitsContainer = document.createElement('div');
+        unitsContainer.className = 'units-container';
 
         this.containerElement.appendChild(board);
+        this.containerElement.appendChild(unitsContainer);
 
         const uiOverlay = document.getElementById('ui-overlay');
         uiOverlay.appendChild(this.containerElement);
 
-        // 캐릭터 렌더링 임시 비활성화
-        // this.renderUnits();
+        this.unitsContainer = unitsContainer;
+        this.renderUnits();
     }
 
     injectStyles() {
@@ -98,12 +66,11 @@ export default class PartyStatusUI {
                 font-weight: 700;
             }
 
-            /* ===== 메인 패널 (perspective 컨테이너) ===== */
+            /* ===== 메인 패널 ===== */
             .battlefield-panel {
                 position: absolute;
                 z-index: 20;
                 pointer-events: none;
-                perspective: 800px;
             }
 
             .battlefield-panel.ally {
@@ -116,130 +83,44 @@ export default class PartyStatusUI {
                 bottom: 2%;
             }
 
-            /* ===== 통합 보드 ===== */
-            .unified-board {
-                position: relative;
-                width: 180px;
-                height: 92px;
-                transform: rotateX(20deg);
-                transform-origin: center bottom;
-                transform-style: preserve-3d;
+            /* ===== 보드 스프라이트 ===== */
+            .board-sprite {
+                width: 200px;
+                height: 120px;
+                background-image: url('/assets/ui/UI_Tactical_Block_Stage.webp');
+                background-size: contain;
+                background-repeat: no-repeat;
+                background-position: center;
             }
 
-            .enemy .unified-board {
-                transform: rotateX(20deg) scaleX(-1);
+            .enemy .board-sprite {
+                transform: scaleX(-1);
             }
 
-            /* ===== 보드 윗면 (하나의 연결된 면) ===== */
-            .board-top {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 180px;
-                height: 80px;
-                background: #1a1510;
-                border: 3px solid #0a0808;
-                box-sizing: border-box;
-                overflow: hidden;
-            }
-
-            /* 타일 배경 컨테이너 */
-            .tile-colors {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-            }
-
-            /* 개별 타일 배경 (clip-path로 사다리꼴) */
-            .tile-bg {
-                position: absolute;
-                width: 100%;
-                height: 100%;
-            }
-
-            /* 좌측 상단 (0) - 사다리꼴 */
-            .tile-0 {
-                clip-path: polygon(0% 0%, 31% 0%, 27% 50%, 0% 50%);
-            }
-
-            /* 중앙 상단 (1) - 역사다리꼴 */
-            .tile-1 {
-                clip-path: polygon(31% 0%, 69% 0%, 73% 50%, 27% 50%);
-            }
-
-            /* 우측 상단 (2) - 사다리꼴 */
-            .tile-2 {
-                clip-path: polygon(69% 0%, 100% 0%, 100% 50%, 73% 50%);
-            }
-
-            /* 좌측 하단 (3) - 사다리꼴 */
-            .tile-3 {
-                clip-path: polygon(0% 50%, 27% 50%, 23% 100%, 0% 100%);
-            }
-
-            /* 중앙 하단 (4) - 역사다리꼴 */
-            .tile-4 {
-                clip-path: polygon(27% 50%, 73% 50%, 77% 100%, 23% 100%);
-            }
-
-            /* 우측 하단 (5) - 사다리꼴 */
-            .tile-5 {
-                clip-path: polygon(73% 50%, 100% 50%, 100% 100%, 77% 100%);
-            }
-
-            /* 타일 색상 */
-            .tile-light {
-                background: linear-gradient(180deg, #c8b898 0%, #a89878 100%);
-            }
-
-            .tile-dark {
-                background: linear-gradient(180deg, #4a4858 0%, #2a2838 100%);
-            }
-
-            /* SVG 분할선 */
-            .board-lines {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                z-index: 5;
-            }
-
-            /* ===== 보드 측면 (12px 두께) ===== */
-            .board-side {
-                position: absolute;
-                bottom: 0;
-                left: 0;
-                width: 180px;
-                height: 12px;
-                background: linear-gradient(180deg, #5a4a38 0%, #3a2a18 100%);
-                border: 3px solid #0a0808;
-                border-top: none;
-                box-sizing: border-box;
-            }
-
-            /* ===== 캐릭터 컨테이너 (임시 비활성화) ===== */
+            /* ===== 캐릭터 컨테이너 ===== */
             .units-container {
-                display: none;
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 200px;
+                height: 120px;
+                pointer-events: none;
             }
 
             /* ===== 개별 유닛 슬롯 ===== */
             .unit-slot {
                 position: absolute;
-                width: 58px;
-                height: 65px;
+                width: 60px;
+                height: 70px;
             }
 
-            /* 슬롯 위치 (3x2 그리드, 타일에 맞춤) */
-            .unit-slot[data-pos="0"] { left: 0; top: -8px; }
-            .unit-slot[data-pos="1"] { left: 61px; top: -12px; }
-            .unit-slot[data-pos="2"] { left: 122px; top: -8px; }
-            .unit-slot[data-pos="3"] { left: 0; top: 26px; }
-            .unit-slot[data-pos="4"] { left: 61px; top: 22px; }
-            .unit-slot[data-pos="5"] { left: 122px; top: 26px; }
+            /* 슬롯 위치 (3x2 그리드, 스프라이트 타일에 맞춤) */
+            .unit-slot[data-pos="0"] { left: 12px; top: 5px; }
+            .unit-slot[data-pos="1"] { left: 70px; top: 0; }
+            .unit-slot[data-pos="2"] { left: 128px; top: 5px; }
+            .unit-slot[data-pos="3"] { left: 12px; top: 40px; }
+            .unit-slot[data-pos="4"] { left: 70px; top: 35px; }
+            .unit-slot[data-pos="5"] { left: 128px; top: 40px; }
 
             /* 중앙 열 슬롯 강조 */
             .unit-slot[data-pos="1"],
@@ -459,31 +340,50 @@ export default class PartyStatusUI {
 
             /* ===== 모바일 ===== */
             @media (max-width: 768px) {
-                .battlefield-panel {
-                    perspective: 600px;
-                }
                 .battlefield-panel.ally { left: 0.5%; bottom: 1%; }
                 .battlefield-panel.enemy { right: 0.5%; bottom: 1%; }
 
-                .unified-board {
-                    width: 140px;
-                    height: 72px;
-                    transform: rotateX(18deg);
+                .board-sprite {
+                    width: 160px;
+                    height: 96px;
                 }
 
-                .enemy .unified-board {
-                    transform: rotateX(18deg) scaleX(-1);
+                .units-container {
+                    width: 160px;
+                    height: 96px;
                 }
 
-                .board-top {
-                    width: 140px;
-                    height: 62px;
+                .unit-slot {
+                    width: 48px;
+                    height: 56px;
                 }
 
-                .board-side {
-                    width: 140px;
-                    height: 10px;
+                .unit-slot[data-pos="0"] { left: 10px; top: 4px; }
+                .unit-slot[data-pos="1"] { left: 56px; top: 0; }
+                .unit-slot[data-pos="2"] { left: 102px; top: 4px; }
+                .unit-slot[data-pos="3"] { left: 10px; top: 32px; }
+                .unit-slot[data-pos="4"] { left: 56px; top: 28px; }
+                .unit-slot[data-pos="5"] { left: 102px; top: 32px; }
+
+                .unit-shadow {
+                    bottom: 16px;
+                    width: 24px;
+                    height: 6px;
                 }
+
+                .unit-sprite-wrapper {
+                    bottom: 17px;
+                    transform: translateX(-50%) scale(1.15);
+                }
+
+                .unit-slot[data-pos="1"] .unit-sprite-wrapper,
+                .unit-slot[data-pos="4"] .unit-sprite-wrapper {
+                    transform: translateX(-50%) scale(1.25);
+                }
+
+                .unit-hp-container { bottom: 2px; }
+                .mini-hp-bar { width: 38px; height: 3px; }
+                .mini-hp-text { font-size: 10px; }
             }
         `;
         document.head.appendChild(style);
