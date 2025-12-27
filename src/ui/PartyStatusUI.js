@@ -114,30 +114,43 @@ export default class PartyStatusUI {
                 height: 70px;
             }
 
-            /* 슬롯 위치 (3x2 그리드, 대각선 아이소메트릭) */
-            /* 뒷줄 (0, 1, 2) - 오른쪽 위 대각선 */
-            .unit-slot[data-pos="0"] { left: 70px; top: -18px; }
-            .unit-slot[data-pos="1"] { left: 140px; top: -28px; }
-            .unit-slot[data-pos="2"] { left: 210px; top: -18px; }
-            /* 앞줄 (3, 4, 5) - 왼쪽 아래 대각선 */
-            .unit-slot[data-pos="3"] { left: 0px; top: 8px; }
-            .unit-slot[data-pos="4"] { left: 70px; top: 18px; }
-            .unit-slot[data-pos="5"] { left: 140px; top: 8px; }
+            /*
+             * 타일 중심 좌표 (280x110px 보드 기준)
+             * ==========================================
+             * 보드 레이아웃 (아이소메트릭 45도 회전):
+             *
+             *        [0]       [1]       [2]    ← 뒷줄 (back row)
+             *     [3]       [4]       [5]       ← 앞줄 (front row)
+             *
+             * 타일 중심점:
+             *   - Tile 0: (95, 22)   뒷줄 좌측
+             *   - Tile 1: (155, 12)  뒷줄 중앙
+             *   - Tile 2: (215, 22)  뒷줄 우측
+             *   - Tile 3: (35, 58)   앞줄 좌측
+             *   - Tile 4: (95, 48)   앞줄 중앙
+             *   - Tile 5: (155, 58)  앞줄 우측
+             *
+             * 슬롯 위치 계산:
+             *   left = 타일중심X - (슬롯너비/2) = 타일중심X - 30
+             *   top = 타일중심Y - 슬롯높이 + 스프라이트bottom = 타일중심Y - 48
+             */
 
-            /* 앞줄이 뒷줄보다 위에 */
-            .unit-slot[data-pos="0"],
-            .unit-slot[data-pos="1"],
-            .unit-slot[data-pos="2"] {
-                z-index: 1;
-            }
-            .unit-slot[data-pos="3"],
-            .unit-slot[data-pos="4"],
-            .unit-slot[data-pos="5"] {
-                z-index: 2;
-            }
-            /* 중앙 열 강조 */
-            .unit-slot[data-pos="1"] { z-index: 3; }
+            /* 뒷줄 (0, 1, 2) */
+            .unit-slot[data-pos="0"] { left: 65px; top: -26px; }
+            .unit-slot[data-pos="1"] { left: 125px; top: -36px; }
+            .unit-slot[data-pos="2"] { left: 185px; top: -26px; }
+            /* 앞줄 (3, 4, 5) */
+            .unit-slot[data-pos="3"] { left: 5px; top: 10px; }
+            .unit-slot[data-pos="4"] { left: 65px; top: 0px; }
+            .unit-slot[data-pos="5"] { left: 125px; top: 10px; }
+
+            /* z-index: 앞줄이 뒷줄보다 위에 */
+            .unit-slot[data-pos="0"] { z-index: 1; }
+            .unit-slot[data-pos="1"] { z-index: 2; }
+            .unit-slot[data-pos="2"] { z-index: 1; }
+            .unit-slot[data-pos="3"] { z-index: 3; }
             .unit-slot[data-pos="4"] { z-index: 4; }
+            .unit-slot[data-pos="5"] { z-index: 3; }
 
             /* ===== 캐릭터 그림자 (발판 위, 앞쪽) ===== */
             .unit-shadow {
@@ -384,13 +397,16 @@ export default class PartyStatusUI {
                     height: 56px;
                 }
 
-                /* 모바일 슬롯 위치 (대각선 아이소메트릭) */
-                .unit-slot[data-pos="0"] { left: 50px; top: -14px; }
-                .unit-slot[data-pos="1"] { left: 100px; top: -22px; }
-                .unit-slot[data-pos="2"] { left: 150px; top: -14px; }
-                .unit-slot[data-pos="3"] { left: 0px; top: 4px; }
-                .unit-slot[data-pos="4"] { left: 50px; top: 12px; }
-                .unit-slot[data-pos="5"] { left: 100px; top: 4px; }
+                /*
+                 * 모바일 타일 중심 좌표 (200x78px, 데스크탑의 0.714배)
+                 * 슬롯 계산: left = 타일중심X - 24, top = 타일중심Y - 38
+                 */
+                .unit-slot[data-pos="0"] { left: 44px; top: -22px; }
+                .unit-slot[data-pos="1"] { left: 87px; top: -30px; }
+                .unit-slot[data-pos="2"] { left: 130px; top: -22px; }
+                .unit-slot[data-pos="3"] { left: 1px; top: 3px; }
+                .unit-slot[data-pos="4"] { left: 44px; top: -4px; }
+                .unit-slot[data-pos="5"] { left: 87px; top: 3px; }
 
                 .unit-shadow {
                     bottom: 16px;
