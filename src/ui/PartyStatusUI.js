@@ -33,50 +33,43 @@ export default class PartyStatusUI {
         this.containerElement = document.createElement('div');
         this.containerElement.className = `battlefield-panel ${this.isEnemy ? 'enemy' : 'ally'}`;
 
-        // 전장 그리드
-        const gridWrapper = document.createElement('div');
-        gridWrapper.className = 'grid-wrapper';
+        // 통합 보드 (하나의 큰 체스판 박스)
+        const board = document.createElement('div');
+        board.className = 'unified-board';
 
-        for (let col = 0; col < 3; col++) {
-            const column = document.createElement('div');
-            column.className = `grid-column col-${col}`;
+        // 보드 윗면 (타일 패턴)
+        const boardTop = document.createElement('div');
+        boardTop.className = 'board-top';
 
-            for (let row = 0; row < 2; row++) {
-                const slotIndex = row * 3 + col;
-                // 체스판 패턴
+        // 3x2 타일 그리드
+        for (let row = 0; row < 2; row++) {
+            for (let col = 0; col < 3; col++) {
                 const isLightTile = (col + row) % 2 === 0;
-
-                // 슬롯 (투명 컨테이너)
-                const slot = document.createElement('div');
-                slot.className = 'grid-slot';
-                slot.dataset.slotIndex = slotIndex;
-
-                // 입체 발판 (슬롯 하단에 위치)
-                const platform = document.createElement('div');
-                platform.className = `platform ${isLightTile ? 'platform-light' : 'platform-dark'}`;
-
-                // 발판 윗면
-                const platformTop = document.createElement('div');
-                platformTop.className = 'platform-top';
-
-                // 발판 옆면 (두께감)
-                const platformSide = document.createElement('div');
-                platformSide.className = 'platform-side';
-
-                platform.appendChild(platformTop);
-                platform.appendChild(platformSide);
-                slot.appendChild(platform);
-                column.appendChild(slot);
+                const tile = document.createElement('div');
+                tile.className = `board-tile ${isLightTile ? 'tile-light' : 'tile-dark'}`;
+                tile.dataset.slotIndex = row * 3 + col;
+                boardTop.appendChild(tile);
             }
-
-            gridWrapper.appendChild(column);
         }
 
-        this.containerElement.appendChild(gridWrapper);
+        // 보드 앞면 (두께)
+        const boardFront = document.createElement('div');
+        boardFront.className = 'board-front';
+
+        board.appendChild(boardTop);
+        board.appendChild(boardFront);
+
+        // 캐릭터 컨테이너 (보드 위에 배치)
+        const unitsContainer = document.createElement('div');
+        unitsContainer.className = 'units-container';
+
+        this.containerElement.appendChild(board);
+        this.containerElement.appendChild(unitsContainer);
 
         const uiOverlay = document.getElementById('ui-overlay');
         uiOverlay.appendChild(this.containerElement);
 
+        this.unitsContainer = unitsContainer;
         this.renderUnits();
     }
 
@@ -112,182 +105,111 @@ export default class PartyStatusUI {
                 bottom: 2%;
             }
 
-            /* ===== 그리드 래퍼 (전체 원근감) ===== */
-            .grid-wrapper {
-                display: flex;
-                gap: 0;
-                transform: perspective(500px) rotateX(28deg);
-                transform-origin: center bottom;
-            }
-
-            .enemy .grid-wrapper {
-                flex-direction: row-reverse;
-            }
-
-            /* ===== 그리드 열 ===== */
-            .grid-column {
-                display: flex;
-                flex-direction: column;
-                gap: 0;
-            }
-
-            /* 열별 깊이감 - 중앙 살짝 앞으로 */
-            .grid-column.col-0 { transform: translateY(3px); }
-            .grid-column.col-1 { transform: translateY(-2px); z-index: 5; }
-            .grid-column.col-2 { transform: translateY(3px); }
-
-            /* ===== 슬롯 (투명 컨테이너) ===== */
-            .grid-slot {
-                width: 56px;
-                height: 68px;
+            /* ===== 통합 보드 (하나의 큰 체스판 박스) ===== */
+            .unified-board {
                 position: relative;
-                background: transparent;
-                overflow: visible;
+                width: 162px;
+                height: 90px;
+                transform: perspective(400px) rotateX(35deg) rotateY(-8deg);
+                transform-origin: center bottom;
+                transform-style: preserve-3d;
             }
 
-            /* 중앙 열 슬롯 약간 확대 */
-            .grid-column.col-1 .grid-slot {
-                width: 60px;
-                height: 72px;
+            /* 적군: 좌측이 높게 기울어짐 */
+            .enemy .unified-board {
+                transform: perspective(400px) rotateX(35deg) rotateY(8deg) scaleX(-1);
             }
 
-            /* ===== 입체 발판 ===== */
-            .platform {
-                position: absolute;
-                bottom: 0;
-                left: 50%;
-                transform: translateX(-50%);
-                width: 54px;
-                height: 22px;
-                z-index: 1;
-            }
-
-            /* 발판 윗면 (정사다리꼴 - 좌우 열) */
-            .platform-top {
+            /* 보드 윗면 (3x2 타일 그리드) */
+            .board-top {
                 position: absolute;
                 top: 0;
                 left: 0;
                 width: 100%;
-                height: 16px;
-                clip-path: polygon(8% 0%, 92% 0%, 100% 100%, 0% 100%);
-                border-radius: 1px;
+                height: 70px;
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                grid-template-rows: repeat(2, 1fr);
+                gap: 1px;
+                background: #1a1510;
+                border-radius: 3px 3px 0 0;
+                padding: 2px;
+                box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
             }
 
-            /* 중앙 열 - 역사다리꼴 (상단 넓고 하단 좁음) */
-            .grid-column.col-1 .platform-top {
-                clip-path: polygon(0% 0%, 100% 0%, 92% 100%, 8% 100%);
+            /* 타일 스타일 */
+            .board-tile {
+                border-radius: 2px;
             }
 
-            /* 발판 옆면 (두께) */
-            .platform-side {
+            .tile-light {
+                background: linear-gradient(
+                    180deg,
+                    #b8a888 0%,
+                    #9a8a70 50%,
+                    #8a7a60 100%
+                );
+                box-shadow: inset 0 1px 0 rgba(255, 240, 200, 0.3);
+            }
+
+            .tile-dark {
+                background: linear-gradient(
+                    180deg,
+                    #3a3848 0%,
+                    #2a2838 50%,
+                    #1a1828 100%
+                );
+                box-shadow: inset 0 1px 0 rgba(100, 100, 150, 0.2);
+            }
+
+            /* 보드 앞면 (두께감) */
+            .board-front {
                 position: absolute;
                 bottom: 0;
                 left: 0;
                 width: 100%;
-                height: 7px;
-                clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
-                border-radius: 0 0 2px 2px;
-            }
-
-            /* 중앙 열 발판 옆면도 역사다리꼴 */
-            .grid-column.col-1 .platform-side {
-                clip-path: polygon(8% 0%, 92% 0%, 100% 100%, 0% 100%);
-            }
-
-            /* ===== 밝은 발판 (사암/금색 톤) ===== */
-            .platform-light .platform-top {
+                height: 22px;
                 background: linear-gradient(
                     180deg,
-                    #a89880 0%,
-                    #8a7a65 40%,
-                    #7a6a55 100%
+                    #3a3020 0%,
+                    #2a2015 50%,
+                    #1a1008 100%
                 );
+                border-radius: 0 0 4px 4px;
                 box-shadow:
-                    inset 0 1px 0 rgba(255, 240, 200, 0.4),
-                    inset 0 -1px 2px rgba(0, 0, 0, 0.3);
+                    inset 0 2px 0 rgba(100, 80, 50, 0.3),
+                    0 4px 8px rgba(0, 0, 0, 0.5);
             }
 
-            .platform-light .platform-side {
-                background: linear-gradient(
-                    180deg,
-                    #5a4a35 0%,
-                    #3a2a1a 100%
-                );
+            /* ===== 캐릭터 컨테이너 ===== */
+            .units-container {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 162px;
+                height: 90px;
+                pointer-events: none;
             }
 
-            /* ===== 어두운 발판 (짙은 남색/검정) ===== */
-            .platform-dark .platform-top {
-                background: linear-gradient(
-                    180deg,
-                    #4a4855 0%,
-                    #2a2835 40%,
-                    #1a1825 100%
-                );
-                box-shadow:
-                    inset 0 1px 0 rgba(150, 150, 180, 0.2),
-                    inset 0 -1px 2px rgba(0, 0, 0, 0.4);
+            /* ===== 개별 유닛 슬롯 ===== */
+            .unit-slot {
+                position: absolute;
+                width: 50px;
+                height: 60px;
             }
 
-            .platform-dark .platform-side {
-                background: linear-gradient(
-                    180deg,
-                    #151320 0%,
-                    #0a0810 100%
-                );
-            }
+            /* 슬롯 위치 (3x2 그리드) */
+            .unit-slot[data-pos="0"] { left: 4px; top: 0; }
+            .unit-slot[data-pos="1"] { left: 56px; top: -8px; }
+            .unit-slot[data-pos="2"] { left: 108px; top: 0; }
+            .unit-slot[data-pos="3"] { left: 4px; top: 28px; }
+            .unit-slot[data-pos="4"] { left: 56px; top: 20px; }
+            .unit-slot[data-pos="5"] { left: 108px; top: 28px; }
 
-            /* ===== 유닛이 있는 슬롯 ===== */
-            .grid-slot.occupied .platform-light .platform-top {
-                background: linear-gradient(
-                    180deg,
-                    #c8b898 0%,
-                    #a89878 40%,
-                    #988868 100%
-                );
-                box-shadow:
-                    inset 0 2px 0 rgba(255, 240, 200, 0.5),
-                    inset 0 -2px 3px rgba(0, 0, 0, 0.3),
-                    0 0 8px rgba(180, 160, 120, 0.3);
-            }
-
-            .grid-slot.occupied .platform-dark .platform-top {
-                background: linear-gradient(
-                    180deg,
-                    #5a5868 0%,
-                    #3a3848 40%,
-                    #2a2838 100%
-                );
-                box-shadow:
-                    inset 0 2px 0 rgba(150, 150, 200, 0.3),
-                    inset 0 -2px 3px rgba(0, 0, 0, 0.4),
-                    0 0 8px rgba(100, 100, 150, 0.3);
-            }
-
-            /* 적군 발판 */
-            .grid-slot.occupied.enemy-slot .platform-light .platform-top {
-                background: linear-gradient(
-                    180deg,
-                    #b89888 0%,
-                    #987868 40%,
-                    #886858 100%
-                );
-                box-shadow:
-                    inset 0 2px 0 rgba(255, 200, 180, 0.4),
-                    inset 0 -2px 3px rgba(0, 0, 0, 0.3),
-                    0 0 8px rgba(180, 100, 100, 0.3);
-            }
-
-            .grid-slot.occupied.enemy-slot .platform-dark .platform-top {
-                background: linear-gradient(
-                    180deg,
-                    #5a4858 0%,
-                    #3a2838 40%,
-                    #2a1828 100%
-                );
-                box-shadow:
-                    inset 0 2px 0 rgba(200, 150, 150, 0.3),
-                    inset 0 -2px 3px rgba(0, 0, 0, 0.4),
-                    0 0 8px rgba(150, 80, 80, 0.3);
+            /* 중앙 열 슬롯 강조 */
+            .unit-slot[data-pos="1"],
+            .unit-slot[data-pos="4"] {
+                z-index: 5;
             }
 
             /* ===== 캐릭터 그림자 (발판 위, 앞쪽) ===== */
@@ -308,8 +230,9 @@ export default class PartyStatusUI {
                 z-index: 2;
             }
 
-            /* 중앙 열 그림자 확대 */
-            .grid-column.col-1 .unit-shadow {
+            /* 중앙 슬롯 그림자 확대 */
+            .unit-slot[data-pos="1"] .unit-shadow,
+            .unit-slot[data-pos="4"] .unit-shadow {
                 width: 34px;
                 height: 9px;
             }
@@ -328,8 +251,9 @@ export default class PartyStatusUI {
                 z-index: 3;
             }
 
-            /* 중앙 열 캐릭터 1.1배 더 크게 (총 1.43배) */
-            .grid-column.col-1 .unit-sprite-wrapper {
+            /* 중앙 슬롯 캐릭터 1.1배 더 크게 (총 1.43배) */
+            .unit-slot[data-pos="1"] .unit-sprite-wrapper,
+            .unit-slot[data-pos="4"] .unit-sprite-wrapper {
                 transform: translateX(-50%) scale(1.43);
             }
 
@@ -364,8 +288,9 @@ export default class PartyStatusUI {
                 50% { transform: translateX(-50%) scale(1.3) translateY(-2px); }
             }
 
-            /* 중앙 열 플로팅 애니메이션 */
-            .grid-column.col-1 .unit-sprite-wrapper {
+            /* 중앙 슬롯 플로팅 애니메이션 */
+            .unit-slot[data-pos="1"] .unit-sprite-wrapper,
+            .unit-slot[data-pos="4"] .unit-sprite-wrapper {
                 animation: spriteFloatCenter 2s ease-in-out infinite;
             }
 
@@ -458,17 +383,8 @@ export default class PartyStatusUI {
             }
 
             /* ===== 피드백 효과 ===== */
-            .grid-slot.damage-flash .platform-top {
-                animation: platformFlash 0.25s ease;
-            }
-
-            .grid-slot.damage-flash .unit-sprite-wrapper {
+            .unit-slot.damage-flash .unit-sprite-wrapper {
                 animation: damageShake 0.25s ease;
-            }
-
-            @keyframes platformFlash {
-                0%, 100% { filter: brightness(1); }
-                50% { filter: brightness(1.8); }
             }
 
             @keyframes damageShake {
@@ -483,26 +399,26 @@ export default class PartyStatusUI {
             }
 
             /* 사망 */
-            .grid-slot.dead {
+            .unit-slot.dead {
                 opacity: 0.4;
                 filter: grayscale(0.8) brightness(0.6);
             }
 
-            .grid-slot.dead .unit-sprite-wrapper {
+            .unit-slot.dead .unit-sprite-wrapper {
                 animation: none;
             }
 
-            .grid-slot.dead .unit-sprite {
+            .unit-slot.dead .unit-sprite {
                 animation: none;
                 background-position: -288px 0px;
                 transform: none;
             }
 
-            .grid-slot.dead .unit-sprite.enemy-sprite {
+            .unit-slot.dead .unit-sprite.enemy-sprite {
                 transform: scaleX(-1);
             }
 
-            .grid-slot.dead .unit-shadow {
+            .unit-slot.dead .unit-shadow {
                 opacity: 0.3;
             }
 
@@ -511,42 +427,50 @@ export default class PartyStatusUI {
                 .battlefield-panel.ally { left: 0.5%; bottom: 1%; }
                 .battlefield-panel.enemy { right: 0.5%; bottom: 1%; }
 
-                .grid-wrapper {
-                    gap: 0;
-                    transform: perspective(400px) rotateX(25deg);
+                .unified-board {
+                    width: 130px;
+                    height: 72px;
+                    transform: perspective(350px) rotateX(30deg) rotateY(-6deg);
                 }
 
-                .grid-column { gap: 0; }
-                .grid-column.col-0 { transform: translateY(2px); }
-                .grid-column.col-1 { transform: translateY(-1px); z-index: 5; }
-                .grid-column.col-2 { transform: translateY(2px); }
-
-                .grid-slot {
-                    width: 44px;
-                    height: 54px;
+                .enemy .unified-board {
+                    transform: perspective(350px) rotateX(30deg) rotateY(6deg) scaleX(-1);
                 }
 
-                .grid-column.col-1 .grid-slot {
-                    width: 48px;
-                    height: 58px;
+                .board-top {
+                    height: 56px;
                 }
 
-                .platform {
-                    width: 42px;
+                .board-front {
                     height: 18px;
                 }
 
-                .platform-top { height: 13px; }
-                .platform-side { height: 6px; }
+                .units-container {
+                    width: 130px;
+                    height: 72px;
+                }
+
+                .unit-slot {
+                    width: 40px;
+                    height: 48px;
+                }
+
+                /* 슬롯 위치 조정 (모바일) */
+                .unit-slot[data-pos="0"] { left: 3px; top: 0; }
+                .unit-slot[data-pos="1"] { left: 45px; top: -6px; }
+                .unit-slot[data-pos="2"] { left: 87px; top: 0; }
+                .unit-slot[data-pos="3"] { left: 3px; top: 22px; }
+                .unit-slot[data-pos="4"] { left: 45px; top: 16px; }
+                .unit-slot[data-pos="5"] { left: 87px; top: 22px; }
 
                 .unit-shadow {
                     bottom: 16px;
                     width: 24px;
                     height: 6px;
-                    transform: translateX(-50%);
                 }
 
-                .grid-column.col-1 .unit-shadow {
+                .unit-slot[data-pos="1"] .unit-shadow,
+                .unit-slot[data-pos="4"] .unit-shadow {
                     width: 28px;
                     height: 7px;
                 }
@@ -556,7 +480,8 @@ export default class PartyStatusUI {
                     transform: translateX(-50%) scale(1.15);
                 }
 
-                .grid-column.col-1 .unit-sprite-wrapper {
+                .unit-slot[data-pos="1"] .unit-sprite-wrapper,
+                .unit-slot[data-pos="4"] .unit-sprite-wrapper {
                     transform: translateX(-50%) scale(1.25);
                 }
 
@@ -583,22 +508,21 @@ export default class PartyStatusUI {
             ? this.battleManager.enemies
             : this.battleManager.allies;
 
+        // 슬롯 매핑: activeSlots 값을 보드 위치로 변환
         const slotMapping = {
-            1: 1,
-            2: 2,
-            4: 4
+            1: 1,  // 중앙 뒷줄
+            2: 2,  // 오른쪽 뒷줄
+            4: 4   // 중앙 앞줄
         };
-
-        const slots = this.containerElement.querySelectorAll('.grid-slot');
 
         units.forEach((unit, unitIndex) => {
             const activeSlotIndex = this.activeSlots[unitIndex];
             const gridIndex = slotMapping[activeSlotIndex];
-            const slot = slots[gridIndex];
 
-            if (!slot) return;
-
-            slot.classList.add('occupied');
+            // 유닛 슬롯 생성
+            const slot = document.createElement('div');
+            slot.className = 'unit-slot';
+            slot.dataset.pos = gridIndex;
             if (this.isEnemy) {
                 slot.classList.add('enemy-slot');
             }
@@ -628,6 +552,8 @@ export default class PartyStatusUI {
             slot.appendChild(shadow);
             slot.appendChild(hpContainer);
             slot.appendChild(spriteWrapper);
+
+            this.unitsContainer.appendChild(slot);
 
             this.unitElements.set(unit.id, {
                 slot: slot,
