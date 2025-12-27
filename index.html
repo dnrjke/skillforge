@@ -14,32 +14,22 @@
             box-sizing: border-box;
         }
         html, body {
-            /* 모바일 바운싱(Overscroll) 방지 */
-            position: fixed;
             width: 100%;
             height: 100%;
             overflow: hidden;
             overscroll-behavior: none;
             -webkit-overflow-scrolling: touch;
-            /* iOS 사파리 주소창 숨김을 위한 트릭 */
-            min-height: 100.1vh;
+            -webkit-text-size-adjust: 100%;
+            -webkit-tap-highlight-color: transparent;
         }
         body {
             display: flex;
             justify-content: center;
             align-items: center;
             background-color: #1a1a2e;
-            /* iOS Safari 텍스트 크기 자동 조정 방지 */
-            -webkit-text-size-adjust: 100%;
-            /* 터치 하이라이트 제거 */
-            -webkit-tap-highlight-color: transparent;
         }
         #game-container {
             position: relative;
-            width: 100%;
-            max-width: 100vw;
-            max-height: 100vh;
-            aspect-ratio: 16 / 9;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
         }
         /* HTML UI 래퍼 - 캔버스와 동일한 영역에 오버레이 */
@@ -55,11 +45,36 @@
         #ui-overlay > * {
             pointer-events: auto;
         }
+        /* PWA 안내 문구 */
+        #pwa-hint {
+            position: absolute;
+            bottom: 2%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 8px 16px;
+            background: rgba(0, 0, 0, 0.75);
+            color: #aaa;
+            font-size: 11px;
+            font-family: Arial, sans-serif;
+            border-radius: 4px;
+            z-index: 50;
+            pointer-events: none;
+            opacity: 0.7;
+            text-align: center;
+        }
+        @media (max-width: 768px) {
+            #pwa-hint {
+                font-size: 10px;
+                padding: 6px 12px;
+            }
+        }
     </style>
 </head>
 <body>
     <div id="game-container">
-        <div id="ui-overlay"></div>
+        <div id="ui-overlay">
+            <div id="pwa-hint">💡 홈 화면에 추가하면 전체 화면으로 플레이 가능합니다</div>
+        </div>
     </div>
     <script type="module" src="/src/main.js"></script>
 </body>

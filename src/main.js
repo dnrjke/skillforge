@@ -2,62 +2,27 @@ import Phaser from 'phaser';
 import BootScene from './scenes/BootScene.js';
 import BattleScene from './scenes/BattleScene.js';
 
-// 모바일 바운싱 방지 (터치 이벤트)
-function preventOverscroll() {
-    let startY = 0;
-
-    document.addEventListener('touchstart', (e) => {
-        startY = e.touches[0].pageY;
-    }, { passive: false });
-
-    document.addEventListener('touchmove', (e) => {
-        const gameContainer = document.getElementById('game-container');
-        // 게임 컨테이너 밖의 스크롤 차단
-        if (!gameContainer.contains(e.target)) {
-            e.preventDefault();
-        }
-    }, { passive: false });
+// iOS Safari 주소표시줄 숨기기 (스크롤 트릭) - AUTO 버튼 클릭 시 호출
+export function hideAddressBar() {
+    window.scrollTo(0, 1);
+    setTimeout(() => {
+        window.scrollTo(0, 0);
+    }, 50);
 }
 
-// Fullscreen API 헬퍼
-function requestFullscreen() {
-    const elem = document.documentElement;
+// 컨테이너 기반 Fullscreen (Canvas + HTML UI 모두 포함)
+export function requestContainerFullscreen() {
+    const gameContainer = document.getElementById('game-container');
+    if (!gameContainer) return;
 
-    if (elem.requestFullscreen) {
-        elem.requestFullscreen().catch(err => {
-            console.log('Fullscreen request failed:', err);
-        });
-    } else if (elem.webkitRequestFullscreen) {
-        // Safari
-        elem.webkitRequestFullscreen();
-    } else if (elem.mozRequestFullScreen) {
-        // Firefox
-        elem.mozRequestFullScreen();
-    } else if (elem.msRequestFullscreen) {
-        // IE/Edge
-        elem.msRequestFullscreen();
-    }
-}
-
-// 모바일에서 첫 터치 시 Fullscreen 시도
-function setupFullscreenOnFirstTouch() {
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-    if (isMobile) {
-        let firstTouch = true;
-
-        const handleFirstTouch = () => {
-            if (firstTouch) {
-                firstTouch = false;
-                requestFullscreen();
-                // 한 번만 실행 후 리스너 제거
-                document.removeEventListener('touchstart', handleFirstTouch);
-                document.removeEventListener('click', handleFirstTouch);
-            }
-        };
-
-        document.addEventListener('touchstart', handleFirstTouch, { once: true, passive: true });
-        document.addEventListener('click', handleFirstTouch, { once: true, passive: true });
+    if (gameContainer.requestFullscreen) {
+        gameContainer.requestFullscreen().catch(() => {});
+    } else if (gameContainer.webkitRequestFullscreen) {
+        gameContainer.webkitRequestFullscreen();
+    } else if (gameContainer.mozRequestFullScreen) {
+        gameContainer.mozRequestFullScreen();
+    } else if (gameContainer.msRequestFullscreen) {
+        gameContainer.msRequestFullscreen();
     }
 }
 
@@ -83,9 +48,5 @@ const config = {
     },
     scene: [BootScene, BattleScene]
 };
-
-// 모바일 최적화 초기화
-preventOverscroll();
-setupFullscreenOnFirstTouch();
 
 const game = new Phaser.Game(config);
