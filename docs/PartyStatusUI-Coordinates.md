@@ -21,70 +21,57 @@ PartyStatusUI는 아이소메트릭 체스판 스타일의 3x2 타일 보드 위
 - 앞줄: 왼쪽 아래 대각선 방향
 ```
 
-## 투시 보정 (중요!)
+## 원본 이미지 좌표
 
-아이소메트릭 뷰에서 기하학적 타일 중심과 시각적 타일 표면 중심은 다릅니다.
-캐릭터 발이 타일 표면에 자연스럽게 닿으려면 **Y축 +12px 보정**이 필요합니다.
+원본 이미지 크기: **1280 x 832 px**
+
+| 타일 | 원본 좌표 (X, Y) |
+|------|------------------|
+| 0 | (262, 440) |
+| 1 | (572, 328) |
+| 2 | (900, 208) |
+| 3 | (376, 608) |
+| 4 | (712, 474) |
+| 5 | (1034, 352) |
+
+## 좌표 변환 공식
 
 ```
-기하학적 중심 → 투시 보정 → 타일 표면 중심
-     Y           + 12px          Y'
+scale = 110 / 832 = 0.1322
+offsetX = (280 - 1280 * scale) / 2 = 55px (중앙 정렬 보정)
+
+CSS_X = 원본_X * scale + offsetX - 30 (스프라이트 오프셋)
+CSS_Y = 원본_Y * scale - 48 (스프라이트 오프셋)
 ```
-
-## 타일 표면 좌표 (데스크탑 280x110px)
-
-| 타일 | 위치 | 기하 중심 | 보정 후 (표면) | 설명 |
-|------|------|----------|---------------|------|
-| 0 | 뒷줄 좌측 | (95, 22) | **(95, 34)** | 베이지 타일 |
-| 1 | 뒷줄 중앙 | (155, 12) | **(155, 24)** | 다크 타일 |
-| 2 | 뒷줄 우측 | (215, 22) | **(215, 34)** | 베이지 타일 |
-| 3 | 앞줄 좌측 | (35, 58) | **(35, 70)** | 다크 타일 |
-| 4 | 앞줄 중앙 | (95, 48) | **(95, 60)** | 베이지 타일 |
-| 5 | 앞줄 우측 | (155, 58) | **(155, 70)** | 다크 타일 |
-
-## 유닛 슬롯 계산 공식
 
 ### 슬롯 구조
 - **슬롯 크기**: 60 x 70 px (데스크탑), 48 x 56 px (모바일)
 - **스프라이트 위치**: 슬롯 내 `bottom: 22px`, `left: 50%`, `transform: translateX(-50%)`
 
-### 위치 계산 (투시 보정 포함)
-```
-left = 타일표면X - (슬롯너비 / 2)
-top = 타일표면Y - 슬롯높이 + 스프라이트bottom오프셋
-
-데스크탑:
-  left = 타일표면X - 30
-  top = 타일표면Y - 48
-
-모바일 (0.714배 + 투시보정 8px):
-  left = 타일표면X * 0.714 - 24
-  top = 타일표면Y * 0.714 - 38
-```
-
 ## 슬롯 CSS 값 (데스크탑)
 
 ```css
-/* 뒷줄 (0, 1, 2) - 투시 보정 적용 */
-.unit-slot[data-pos="0"] { left: 65px; top: -14px; }
-.unit-slot[data-pos="1"] { left: 125px; top: -24px; }
-.unit-slot[data-pos="2"] { left: 185px; top: -14px; }
+/* 뒷줄 (0, 1, 2) */
+.unit-slot[data-pos="0"] { left: 60px; top: 10px; }
+.unit-slot[data-pos="1"] { left: 101px; top: -5px; }
+.unit-slot[data-pos="2"] { left: 144px; top: -20px; }
 
-/* 앞줄 (3, 4, 5) - 투시 보정 적용 */
-.unit-slot[data-pos="3"] { left: 5px; top: 22px; }
-.unit-slot[data-pos="4"] { left: 65px; top: 12px; }
-.unit-slot[data-pos="5"] { left: 125px; top: 22px; }
+/* 앞줄 (3, 4, 5) */
+.unit-slot[data-pos="3"] { left: 75px; top: 32px; }
+.unit-slot[data-pos="4"] { left: 119px; top: 15px; }
+.unit-slot[data-pos="5"] { left: 162px; top: -1px; }
 ```
 
 ## 슬롯 CSS 값 (모바일)
 
 ```css
-.unit-slot[data-pos="0"] { left: 44px; top: -14px; }
-.unit-slot[data-pos="1"] { left: 87px; top: -21px; }
-.unit-slot[data-pos="2"] { left: 130px; top: -14px; }
-.unit-slot[data-pos="3"] { left: 1px; top: 12px; }
-.unit-slot[data-pos="4"] { left: 44px; top: 5px; }
-.unit-slot[data-pos="5"] { left: 87px; top: 12px; }
+/* 모바일 (데스크탑의 0.714배) */
+.unit-slot[data-pos="0"] { left: 43px; top: 7px; }
+.unit-slot[data-pos="1"] { left: 72px; top: -4px; }
+.unit-slot[data-pos="2"] { left: 103px; top: -14px; }
+.unit-slot[data-pos="3"] { left: 54px; top: 23px; }
+.unit-slot[data-pos="4"] { left: 85px; top: 11px; }
+.unit-slot[data-pos="5"] { left: 116px; top: -1px; }
 ```
 
 ## Z-Index 레이어링
