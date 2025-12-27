@@ -252,29 +252,51 @@ export default class PartyStatusUI {
                 border-color: rgba(160, 100, 100, 0.6);
             }
 
-            /* ===== 유닛 아이콘 ===== */
-            .unit-icon-wrapper {
+            /* ===== 유닛 스프라이트 ===== */
+            .unit-sprite-wrapper {
                 position: absolute;
-                bottom: 8px;
+                bottom: 4px;
                 left: 50%;
                 transform: translateX(-50%);
-                width: 28px;
-                height: 28px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                animation: iconIdle 1.5s ease-in-out infinite;
+                width: 32px;
+                height: 32px;
+                overflow: hidden;
             }
 
-            .unit-icon {
-                font-size: 20px;
-                filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.6));
+            .unit-sprite {
+                width: 32px;
+                height: 32px;
+                background-image: url('/assets/char/knight_a.png');
+                background-repeat: no-repeat;
+                image-rendering: pixelated;
+                image-rendering: crisp-edges;
+                /* idle animation: row 3 (y=96), frames 0-3 */
+                background-position: 0 -96px;
+                animation: spriteIdle 0.5s steps(1) infinite;
+                filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.7));
             }
 
-            .ally-icon { color: #c8d8f0; }
-            .enemy-icon { color: #f0c8c8; transform: scaleX(-1); }
+            .unit-sprite.enemy-sprite {
+                transform: scaleX(-1);
+                filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.7))
+                        sepia(0.3) hue-rotate(-30deg) saturate(1.3);
+            }
 
-            @keyframes iconIdle {
+            /* idle 애니메이션: 프레임 30-33 (row 3, cols 0-3) */
+            @keyframes spriteIdle {
+                0%   { background-position: 0px -96px; }
+                25%  { background-position: -32px -96px; }
+                50%  { background-position: -64px -96px; }
+                75%  { background-position: -96px -96px; }
+                100% { background-position: 0px -96px; }
+            }
+
+            /* 부드러운 부유 효과 */
+            .unit-sprite-wrapper {
+                animation: spriteFloat 2s ease-in-out infinite;
+            }
+
+            @keyframes spriteFloat {
                 0%, 100% { transform: translateX(-50%) translateY(0); }
                 50% { transform: translateX(-50%) translateY(-2px); }
             }
@@ -366,7 +388,7 @@ export default class PartyStatusUI {
                 animation: damageFlash 0.25s ease;
             }
 
-            .grid-tile.damage-flash .unit-icon {
+            .grid-tile.damage-flash .unit-sprite-wrapper {
                 animation: damageShake 0.25s ease;
             }
 
@@ -380,8 +402,8 @@ export default class PartyStatusUI {
 
             @keyframes damageShake {
                 0%, 100% { transform: translateX(-50%) translateY(0); }
-                25% { transform: translateX(calc(-50% + 2px)) translateY(-1px); }
-                75% { transform: translateX(calc(-50% - 2px)) translateY(1px); }
+                25% { transform: translateX(calc(-50% + 3px)) translateY(-1px); }
+                75% { transform: translateX(calc(-50% - 3px)) translateY(1px); }
             }
 
             @keyframes hpPulse {
@@ -395,13 +417,20 @@ export default class PartyStatusUI {
                 filter: grayscale(0.9) brightness(0.7);
             }
 
-            .grid-tile.dead .unit-icon-wrapper {
+            .grid-tile.dead .unit-sprite-wrapper {
                 animation: none;
             }
 
-            .grid-tile.dead .unit-icon {
-                transform: rotate(90deg);
-                opacity: 0.5;
+            .grid-tile.dead .unit-sprite {
+                animation: none;
+                /* death frame: row 0, last frame */
+                background-position: -288px 0px;
+                transform: none;
+                opacity: 0.7;
+            }
+
+            .grid-tile.dead .unit-sprite.enemy-sprite {
+                transform: scaleX(-1);
             }
 
             /* ===== 푸터 ===== */
@@ -482,13 +511,23 @@ export default class PartyStatusUI {
                     height: 36px;
                 }
 
-                .unit-icon-wrapper {
-                    width: 22px;
-                    height: 22px;
-                    bottom: 5px;
+                .unit-sprite-wrapper {
+                    width: 24px;
+                    height: 24px;
+                    bottom: 3px;
                 }
 
-                .unit-icon { font-size: 16px; }
+                .unit-sprite {
+                    width: 32px;
+                    height: 32px;
+                    transform: scale(0.75);
+                    transform-origin: top left;
+                }
+
+                .unit-sprite.enemy-sprite {
+                    transform: scale(0.75) scaleX(-1);
+                    transform-origin: top right;
+                }
 
                 .unit-hp-container { top: 2px; }
                 .mini-hp-bar { width: 30px; height: 4px; }
@@ -512,9 +551,6 @@ export default class PartyStatusUI {
             2: 2,  // 중열 상
             4: 4   // 전열 상
         };
-
-        // 유닛 타입별 아이콘 (검사, 마법사, 도적)
-        const unitIcons = ['⚔️', '🔮', '🗡️'];
 
         const tiles = this.containerElement.querySelectorAll('.grid-tile');
 
@@ -541,21 +577,21 @@ export default class PartyStatusUI {
                 <span class="mini-hp-text ${this.isEnemy ? 'enemy-text' : ''}">${unit.currentHp}</span>
             `;
 
-            // 유닛 아이콘
-            const iconWrapper = document.createElement('div');
-            iconWrapper.className = 'unit-icon-wrapper';
-            iconWrapper.innerHTML = `
-                <span class="unit-icon ${this.isEnemy ? 'enemy-icon' : 'ally-icon'}">${unitIcons[unitIndex % unitIcons.length]}</span>
+            // 유닛 스프라이트 (실제 게임 캐릭터)
+            const spriteWrapper = document.createElement('div');
+            spriteWrapper.className = 'unit-sprite-wrapper';
+            spriteWrapper.innerHTML = `
+                <div class="unit-sprite ${this.isEnemy ? 'enemy-sprite' : ''}"></div>
             `;
 
             tile.appendChild(hpContainer);
-            tile.appendChild(iconWrapper);
+            tile.appendChild(spriteWrapper);
 
             this.unitElements.set(unit.id, {
                 tile: tile,
                 hpBar: hpContainer.querySelector('.mini-hp-fill'),
                 hpText: hpContainer.querySelector('.mini-hp-text'),
-                icon: iconWrapper.querySelector('.unit-icon'),
+                sprite: spriteWrapper.querySelector('.unit-sprite'),
                 unit: unit
             });
 
