@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import LogWindow from '../objects/LogWindow.js';
 import StatusBar from '../objects/StatusBar.js';
 import BattleControlUI from '../objects/BattleControlUI.js';
+import PartyStatusUI from '../objects/PartyStatusUI.js';
 import BattleManager from '../battle/BattleManager.js';
 
 // 캐릭터 배치 좌표 상수 (전열2/중열2/후열2 - 가로 화면 최적화)
@@ -44,6 +45,10 @@ export default class BattleScene extends Phaser.Scene {
         this.battleManager = null;
         this.battleControlUI = null;
 
+        // 파티 현황판 UI
+        this.allyStatusUI = null;
+        this.enemyStatusUI = null;
+
         // 카메라 레이어 컨테이너
         this.worldContainer = null;
         this.mainCamera = null;
@@ -70,6 +75,9 @@ export default class BattleScene extends Phaser.Scene {
 
         // 전투 컨트롤 UI 설정
         this.battleControlUI = new BattleControlUI(this, this.battleManager);
+
+        // 파티 현황판 UI 설정
+        this.setupPartyStatusUI();
 
         // 입력 설정
         this.setupInput();
@@ -199,6 +207,20 @@ export default class BattleScene extends Phaser.Scene {
         // 전투 매니저 생성 및 유닛 초기화
         this.battleManager = new BattleManager(this);
         this.battleManager.initializeUnits(this.allies, this.enemies);
+    }
+
+    setupPartyStatusUI() {
+        // 아군 현황판 (좌하단)
+        this.allyStatusUI = new PartyStatusUI(this, this.battleManager, {
+            isEnemy: false,
+            activeSlots: ACTIVE_SLOTS
+        });
+
+        // 적군 현황판 (우하단)
+        this.enemyStatusUI = new PartyStatusUI(this, this.battleManager, {
+            isEnemy: true,
+            activeSlots: ACTIVE_SLOTS
+        });
     }
 
     setupInput() {
