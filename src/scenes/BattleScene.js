@@ -107,7 +107,7 @@ export default class BattleScene extends Phaser.Scene {
 
         // UI Camera: UI만 비추는 카메라 (줌 불가, 항상 고정)
         this.uiCamera = this.cameras.add(0, 0, 1280, 720);
-        this.uiCamera.setTransparent(true);
+        this.uiCamera.setBackgroundColor(0x000000, 0); // alpha=0 (투명)
         this.uiCamera.ignore(this.worldContainer);
     }
 
