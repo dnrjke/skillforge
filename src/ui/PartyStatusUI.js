@@ -1,5 +1,5 @@
-// 파티 현황판 UI (유니콘 오버로드 스타일 + Classic RPG 감성)
-// 미니어처 전장 그리드 + 유닛 스프라이트 + 체력바
+// 파티 현황판 UI (유니콘 오버로드 스타일)
+// 입체 발판 + 캐릭터 스프라이트 + 체력바
 // HTML/CSS 기반, z-index: 20
 
 export default class PartyStatusUI {
@@ -29,11 +29,11 @@ export default class PartyStatusUI {
     create() {
         this.injectStyles();
 
-        // 메인 컨테이너 (그리드만)
+        // 메인 컨테이너
         this.containerElement = document.createElement('div');
         this.containerElement.className = `battlefield-panel ${this.isEnemy ? 'enemy' : 'ally'}`;
 
-        // 전장 그리드 (헤더/푸터 없이 그리드만)
+        // 전장 그리드
         const gridWrapper = document.createElement('div');
         gridWrapper.className = 'grid-wrapper';
 
@@ -43,12 +43,30 @@ export default class PartyStatusUI {
 
             for (let row = 0; row < 2; row++) {
                 const slotIndex = row * 3 + col;
-                const tile = document.createElement('div');
-                // 체스판 패턴: (col + row) % 2 === 0 이면 밝은 타일
+                // 체스판 패턴
                 const isLightTile = (col + row) % 2 === 0;
-                tile.className = `grid-tile ${isLightTile ? 'tile-light' : 'tile-dark'}`;
-                tile.dataset.slotIndex = slotIndex;
-                column.appendChild(tile);
+
+                // 슬롯 (투명 컨테이너)
+                const slot = document.createElement('div');
+                slot.className = 'grid-slot';
+                slot.dataset.slotIndex = slotIndex;
+
+                // 입체 발판 (슬롯 하단에 위치)
+                const platform = document.createElement('div');
+                platform.className = `platform ${isLightTile ? 'platform-light' : 'platform-dark'}`;
+
+                // 발판 윗면
+                const platformTop = document.createElement('div');
+                platformTop.className = 'platform-top';
+
+                // 발판 옆면 (두께감)
+                const platformSide = document.createElement('div');
+                platformSide.className = 'platform-side';
+
+                platform.appendChild(platformTop);
+                platform.appendChild(platformSide);
+                slot.appendChild(platform);
+                column.appendChild(slot);
             }
 
             gridWrapper.appendChild(column);
@@ -85,22 +103,20 @@ export default class PartyStatusUI {
             }
 
             .battlefield-panel.ally {
-                left: 1.5%;
+                left: 1%;
                 bottom: 2%;
             }
 
             .battlefield-panel.enemy {
-                right: 1.5%;
+                right: 1%;
                 bottom: 2%;
             }
 
-            /* ===== 그리드 래퍼 (입체화) ===== */
+            /* ===== 그리드 래퍼 (전체 원근감) ===== */
             .grid-wrapper {
                 display: flex;
-                gap: 4px;
-                padding: 6px;
-                background: transparent;
-                transform: perspective(500px) rotateX(20deg);
+                gap: 2px;
+                transform: perspective(600px) rotateX(25deg);
                 transform-origin: center bottom;
             }
 
@@ -112,111 +128,179 @@ export default class PartyStatusUI {
             .grid-column {
                 display: flex;
                 flex-direction: column;
-                gap: 4px;
+                gap: 2px;
             }
 
-            .grid-column.col-0 { transform: translateY(4px); }
+            /* 열별 깊이감 */
+            .grid-column.col-0 { transform: translateY(6px); }
             .grid-column.col-1 { transform: translateY(0px); }
-            .grid-column.col-2 { transform: translateY(-4px); }
+            .grid-column.col-2 { transform: translateY(-6px); }
 
-            /* ===== 그리드 타일 (베벨 효과) ===== */
-            .grid-tile {
-                width: 56px;
-                height: 52px;
+            /* ===== 슬롯 (투명 컨테이너) ===== */
+            .grid-slot {
+                width: 60px;
+                height: 58px;
                 position: relative;
-                border-radius: 3px;
-                border: 2px outset #6a5a4a;
+                background: transparent;
+            }
+
+            /* ===== 입체 발판 ===== */
+            .platform {
+                position: absolute;
+                bottom: 0;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 54px;
+                height: 24px;
+            }
+
+            /* 발판 윗면 (사다리꼴) */
+            .platform-top {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 18px;
+                clip-path: polygon(12% 0%, 88% 0%, 100% 100%, 0% 100%);
+                border-radius: 2px;
+            }
+
+            /* 발판 옆면 (두께) */
+            .platform-side {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                height: 8px;
+                clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+                border-radius: 0 0 2px 2px;
+            }
+
+            /* ===== 밝은 발판 (사암/금색 톤) ===== */
+            .platform-light .platform-top {
+                background: linear-gradient(
+                    180deg,
+                    #a89880 0%,
+                    #8a7a65 40%,
+                    #7a6a55 100%
+                );
                 box-shadow:
-                    inset 0 0 10px #000,
-                    2px 2px 5px rgba(0, 0, 0, 0.5),
-                    inset 1px 1px 0 rgba(255, 220, 180, 0.1);
+                    inset 0 1px 0 rgba(255, 240, 200, 0.4),
+                    inset 0 -1px 2px rgba(0, 0, 0, 0.3);
             }
 
-            /* 체스판 패턴 - 밝은 타일 (마법석 느낌) */
-            .grid-tile.tile-light {
-                background: radial-gradient(
-                    ellipse at center,
-                    rgba(90, 80, 70, 0.9) 0%,
-                    rgba(60, 52, 45, 0.95) 60%,
-                    rgba(45, 38, 32, 0.98) 100%
+            .platform-light .platform-side {
+                background: linear-gradient(
+                    180deg,
+                    #5a4a35 0%,
+                    #3a2a1a 100%
                 );
             }
 
-            /* 체스판 패턴 - 어두운 타일 */
-            .grid-tile.tile-dark {
-                background: radial-gradient(
-                    ellipse at center,
-                    rgba(55, 48, 42, 0.9) 0%,
-                    rgba(40, 35, 30, 0.95) 60%,
-                    rgba(30, 25, 22, 0.98) 100%
+            /* ===== 어두운 발판 (짙은 남색/검정) ===== */
+            .platform-dark .platform-top {
+                background: linear-gradient(
+                    180deg,
+                    #4a4855 0%,
+                    #2a2835 40%,
+                    #1a1825 100%
                 );
-            }
-
-            /* 유닛이 있는 타일 */
-            .grid-tile.occupied {
-                border-color: #8a7a5a;
                 box-shadow:
-                    inset 0 0 12px rgba(0, 0, 0, 0.8),
-                    2px 2px 6px rgba(0, 0, 0, 0.6),
-                    inset 2px 2px 4px rgba(255, 220, 180, 0.1),
-                    0 0 8px rgba(100, 180, 100, 0.15);
+                    inset 0 1px 0 rgba(150, 150, 180, 0.2),
+                    inset 0 -1px 2px rgba(0, 0, 0, 0.4);
             }
 
-            .grid-tile.occupied.tile-light {
-                background: radial-gradient(
-                    ellipse at center,
-                    rgba(100, 95, 80, 0.92) 0%,
-                    rgba(70, 62, 52, 0.96) 60%,
-                    rgba(50, 44, 38, 0.98) 100%
+            .platform-dark .platform-side {
+                background: linear-gradient(
+                    180deg,
+                    #151320 0%,
+                    #0a0810 100%
                 );
             }
 
-            .grid-tile.occupied.tile-dark {
-                background: radial-gradient(
-                    ellipse at center,
-                    rgba(70, 65, 55, 0.92) 0%,
-                    rgba(50, 45, 38, 0.96) 60%,
-                    rgba(35, 30, 26, 0.98) 100%
+            /* ===== 유닛이 있는 슬롯 ===== */
+            .grid-slot.occupied .platform-light .platform-top {
+                background: linear-gradient(
+                    180deg,
+                    #c8b898 0%,
+                    #a89878 40%,
+                    #988868 100%
                 );
-            }
-
-            .grid-tile.occupied.enemy-tile {
-                border-color: #8a5a5a;
                 box-shadow:
-                    inset 0 0 12px rgba(0, 0, 0, 0.8),
-                    2px 2px 6px rgba(0, 0, 0, 0.6),
-                    inset 2px 2px 4px rgba(255, 180, 180, 0.1),
-                    0 0 8px rgba(180, 100, 100, 0.15);
+                    inset 0 2px 0 rgba(255, 240, 200, 0.5),
+                    inset 0 -2px 3px rgba(0, 0, 0, 0.3),
+                    0 0 8px rgba(180, 160, 120, 0.3);
             }
 
-            .grid-tile.occupied.enemy-tile.tile-light {
-                background: radial-gradient(
-                    ellipse at center,
-                    rgba(100, 80, 80, 0.92) 0%,
-                    rgba(70, 52, 52, 0.96) 60%,
-                    rgba(50, 38, 38, 0.98) 100%
+            .grid-slot.occupied .platform-dark .platform-top {
+                background: linear-gradient(
+                    180deg,
+                    #5a5868 0%,
+                    #3a3848 40%,
+                    #2a2838 100%
                 );
+                box-shadow:
+                    inset 0 2px 0 rgba(150, 150, 200, 0.3),
+                    inset 0 -2px 3px rgba(0, 0, 0, 0.4),
+                    0 0 8px rgba(100, 100, 150, 0.3);
             }
 
-            .grid-tile.occupied.enemy-tile.tile-dark {
+            /* 적군 발판 */
+            .grid-slot.occupied.enemy-slot .platform-light .platform-top {
+                background: linear-gradient(
+                    180deg,
+                    #b89888 0%,
+                    #987868 40%,
+                    #886858 100%
+                );
+                box-shadow:
+                    inset 0 2px 0 rgba(255, 200, 180, 0.4),
+                    inset 0 -2px 3px rgba(0, 0, 0, 0.3),
+                    0 0 8px rgba(180, 100, 100, 0.3);
+            }
+
+            .grid-slot.occupied.enemy-slot .platform-dark .platform-top {
+                background: linear-gradient(
+                    180deg,
+                    #5a4858 0%,
+                    #3a2838 40%,
+                    #2a1828 100%
+                );
+                box-shadow:
+                    inset 0 2px 0 rgba(200, 150, 150, 0.3),
+                    inset 0 -2px 3px rgba(0, 0, 0, 0.4),
+                    0 0 8px rgba(150, 80, 80, 0.3);
+            }
+
+            /* ===== 캐릭터 그림자 (발밑 타원) ===== */
+            .unit-shadow {
+                position: absolute;
+                bottom: 18px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 28px;
+                height: 8px;
                 background: radial-gradient(
                     ellipse at center,
-                    rgba(70, 55, 55, 0.92) 0%,
-                    rgba(50, 38, 38, 0.96) 60%,
-                    rgba(35, 26, 26, 0.98) 100%
+                    rgba(0, 0, 0, 0.5) 0%,
+                    rgba(0, 0, 0, 0.2) 50%,
+                    transparent 70%
                 );
+                border-radius: 50%;
+                z-index: 1;
             }
 
             /* ===== 유닛 스프라이트 ===== */
             .unit-sprite-wrapper {
                 position: absolute;
-                bottom: 2px;
+                bottom: 20px;
                 left: 50%;
                 transform: translateX(-50%);
                 width: 32px;
                 height: 32px;
                 overflow: hidden;
                 animation: spriteFloat 2s ease-in-out infinite;
+                z-index: 2;
             }
 
             .unit-sprite {
@@ -228,12 +312,12 @@ export default class PartyStatusUI {
                 image-rendering: crisp-edges;
                 background-position: 0 -96px;
                 animation: spriteIdle 0.5s steps(1) infinite;
-                filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.8));
+                filter: drop-shadow(1px 1px 1px rgba(0, 0, 0, 0.8));
             }
 
             .unit-sprite.enemy-sprite {
                 transform: scaleX(-1);
-                filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.8))
+                filter: drop-shadow(-1px 1px 1px rgba(0, 0, 0, 0.8))
                         sepia(0.3) hue-rotate(-30deg) saturate(1.3);
             }
 
@@ -250,42 +334,38 @@ export default class PartyStatusUI {
                 50% { transform: translateX(-50%) translateY(-2px); }
             }
 
-            /* ===== HP 바 ===== */
+            /* ===== HP 바 (캐릭터 위) ===== */
             .unit-hp-container {
                 position: absolute;
-                top: 2px;
+                bottom: 50px;
                 left: 50%;
                 transform: translateX(-50%);
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 gap: 1px;
+                z-index: 3;
             }
 
             .mini-hp-bar {
-                width: 44px;
-                height: 6px;
-                background: linear-gradient(180deg, #1a1510 0%, #2a2018 100%);
-                border: 1px solid #5a4a3a;
+                width: 42px;
+                height: 5px;
+                background: #0a0808;
+                border: 1px solid #3a3030;
                 border-radius: 2px;
                 overflow: hidden;
-                box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
             }
 
             .mini-hp-fill {
                 height: 100%;
-                background: linear-gradient(180deg, #6a6 0%, #4a4 50%, #5a5 100%);
+                background: linear-gradient(180deg, #5a5 0%, #3a3 50%, #4a4 100%);
                 transition: width 0.3s ease;
-                box-shadow:
-                    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-                    0 0 4px rgba(100, 200, 100, 0.3);
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
             }
 
             .mini-hp-fill.enemy-hp {
-                background: linear-gradient(180deg, #a66 0%, #844 50%, #955 100%);
-                box-shadow:
-                    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-                    0 0 4px rgba(200, 100, 100, 0.3);
+                background: linear-gradient(180deg, #a55 0%, #833 50%, #944 100%);
             }
 
             .mini-hp-fill.low {
@@ -293,54 +373,52 @@ export default class PartyStatusUI {
             }
 
             .mini-hp-fill.critical {
-                background: linear-gradient(180deg, #a44 0%, #822 50%, #933 100%);
+                background: linear-gradient(180deg, #a33 0%, #811 50%, #922 100%);
                 animation: hpPulse 0.4s ease-in-out infinite;
             }
 
             .mini-hp-text {
                 font-family: 'Press Start 2P', monospace;
                 font-size: 7px;
-                color: #b8d8b8;
-                text-shadow: 1px 1px 0 #000, -1px -1px 0 #000;
+                color: #dfd;
+                text-shadow:
+                    1px 0 0 #000, -1px 0 0 #000,
+                    0 1px 0 #000, 0 -1px 0 #000,
+                    1px 1px 0 #000;
                 transition: all 0.2s ease;
             }
 
-            .mini-hp-text.enemy-text { color: #d8b8b8; }
-            .mini-hp-text.low { color: #d8c088; }
-            .mini-hp-text.critical { color: #d88888; }
+            .mini-hp-text.enemy-text { color: #fdd; }
+            .mini-hp-text.low { color: #fda; }
+            .mini-hp-text.critical { color: #faa; }
 
             .mini-hp-text.hp-changed {
-                transform: scale(1.5);
+                transform: scale(1.4);
                 color: #fff !important;
             }
 
             .mini-hp-text.damage {
                 color: #f44 !important;
-                text-shadow: 0 0 6px #f00, 1px 1px 0 #000;
+                text-shadow: 0 0 4px #f00, 1px 1px 0 #000;
             }
 
             .mini-hp-text.heal {
                 color: #4f8 !important;
-                text-shadow: 0 0 6px #0f0, 1px 1px 0 #000;
+                text-shadow: 0 0 4px #0f0, 1px 1px 0 #000;
             }
 
             /* ===== 피드백 효과 ===== */
-            .grid-tile.damage-flash {
-                animation: damageFlash 0.25s ease;
+            .grid-slot.damage-flash .platform-top {
+                animation: platformFlash 0.25s ease;
             }
 
-            .grid-tile.damage-flash .unit-sprite-wrapper {
+            .grid-slot.damage-flash .unit-sprite-wrapper {
                 animation: damageShake 0.25s ease;
             }
 
-            @keyframes damageFlash {
+            @keyframes platformFlash {
                 0%, 100% { filter: brightness(1); }
-                50% {
-                    filter: brightness(1.5);
-                    box-shadow:
-                        inset 0 0 15px rgba(255, 80, 60, 0.7),
-                        2px 2px 5px rgba(0, 0, 0, 0.5);
-                }
+                50% { filter: brightness(1.8); }
             }
 
             @keyframes damageShake {
@@ -355,50 +433,66 @@ export default class PartyStatusUI {
             }
 
             /* 사망 */
-            .grid-tile.dead {
-                opacity: 0.35;
-                filter: grayscale(0.9) brightness(0.7);
+            .grid-slot.dead {
+                opacity: 0.4;
+                filter: grayscale(0.8) brightness(0.6);
             }
 
-            .grid-tile.dead .unit-sprite-wrapper {
+            .grid-slot.dead .unit-sprite-wrapper {
                 animation: none;
             }
 
-            .grid-tile.dead .unit-sprite {
+            .grid-slot.dead .unit-sprite {
                 animation: none;
                 background-position: -288px 0px;
                 transform: none;
-                opacity: 0.7;
             }
 
-            .grid-tile.dead .unit-sprite.enemy-sprite {
+            .grid-slot.dead .unit-sprite.enemy-sprite {
                 transform: scaleX(-1);
+            }
+
+            .grid-slot.dead .unit-shadow {
+                opacity: 0.3;
             }
 
             /* ===== 모바일 ===== */
             @media (max-width: 768px) {
-                .battlefield-panel.ally { left: 1%; bottom: 1%; }
-                .battlefield-panel.enemy { right: 1%; bottom: 1%; }
+                .battlefield-panel.ally { left: 0.5%; bottom: 1%; }
+                .battlefield-panel.enemy { right: 0.5%; bottom: 1%; }
 
                 .grid-wrapper {
-                    gap: 3px;
-                    padding: 4px;
-                    transform: perspective(400px) rotateX(18deg);
+                    gap: 1px;
+                    transform: perspective(500px) rotateX(22deg);
                 }
 
-                .grid-column { gap: 3px; }
-                .grid-column.col-0 { transform: translateY(3px); }
-                .grid-column.col-2 { transform: translateY(-3px); }
+                .grid-column { gap: 1px; }
+                .grid-column.col-0 { transform: translateY(4px); }
+                .grid-column.col-2 { transform: translateY(-4px); }
 
-                .grid-tile {
+                .grid-slot {
+                    width: 46px;
+                    height: 46px;
+                }
+
+                .platform {
                     width: 42px;
-                    height: 40px;
+                    height: 18px;
+                }
+
+                .platform-top { height: 14px; }
+                .platform-side { height: 6px; }
+
+                .unit-shadow {
+                    bottom: 14px;
+                    width: 22px;
+                    height: 6px;
                 }
 
                 .unit-sprite-wrapper {
+                    bottom: 15px;
                     width: 24px;
                     height: 24px;
-                    bottom: 1px;
                 }
 
                 .unit-sprite {
@@ -413,8 +507,8 @@ export default class PartyStatusUI {
                     transform-origin: top right;
                 }
 
-                .unit-hp-container { top: 1px; }
-                .mini-hp-bar { width: 34px; height: 5px; }
+                .unit-hp-container { bottom: 38px; }
+                .mini-hp-bar { width: 34px; height: 4px; }
                 .mini-hp-text { font-size: 6px; }
             }
         `;
@@ -432,19 +526,23 @@ export default class PartyStatusUI {
             4: 4
         };
 
-        const tiles = this.containerElement.querySelectorAll('.grid-tile');
+        const slots = this.containerElement.querySelectorAll('.grid-slot');
 
         units.forEach((unit, unitIndex) => {
             const activeSlotIndex = this.activeSlots[unitIndex];
             const gridIndex = slotMapping[activeSlotIndex];
-            const tile = tiles[gridIndex];
+            const slot = slots[gridIndex];
 
-            if (!tile) return;
+            if (!slot) return;
 
-            tile.classList.add('occupied');
+            slot.classList.add('occupied');
             if (this.isEnemy) {
-                tile.classList.add('enemy-tile');
+                slot.classList.add('enemy-slot');
             }
+
+            // 캐릭터 그림자
+            const shadow = document.createElement('div');
+            shadow.className = 'unit-shadow';
 
             // HP 컨테이너
             const hpContainer = document.createElement('div');
@@ -464,11 +562,12 @@ export default class PartyStatusUI {
                 <div class="unit-sprite ${this.isEnemy ? 'enemy-sprite' : ''}"></div>
             `;
 
-            tile.appendChild(hpContainer);
-            tile.appendChild(spriteWrapper);
+            slot.appendChild(shadow);
+            slot.appendChild(hpContainer);
+            slot.appendChild(spriteWrapper);
 
             this.unitElements.set(unit.id, {
-                tile: tile,
+                slot: slot,
                 hpBar: hpContainer.querySelector('.mini-hp-fill'),
                 hpText: hpContainer.querySelector('.mini-hp-text'),
                 sprite: spriteWrapper.querySelector('.unit-sprite'),
@@ -510,8 +609,8 @@ export default class PartyStatusUI {
 
                 if (isDamage) {
                     elements.hpText.classList.add('damage');
-                    elements.tile.classList.add('damage-flash');
-                    setTimeout(() => elements.tile.classList.remove('damage-flash'), 250);
+                    elements.slot.classList.add('damage-flash');
+                    setTimeout(() => elements.slot.classList.remove('damage-flash'), 250);
                 } else if (isHeal) {
                     elements.hpText.classList.add('heal');
                 }
@@ -535,7 +634,7 @@ export default class PartyStatusUI {
             }
 
             if (!unit.isAlive) {
-                elements.tile.classList.add('dead');
+                elements.slot.classList.add('dead');
             }
         });
     }
