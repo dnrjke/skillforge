@@ -9,7 +9,7 @@ export default class PartyStatusUI {
 
         this.isEnemy = options.isEnemy || false;
         this.maxSlots = options.maxSlots || 6;
-        this.activeSlots = options.activeSlots || [1, 2, 4];
+        this.activeSlots = options.activeSlots || [0, 1, 2, 3, 4, 5]; // 테스트용 6슬롯
 
         this.containerElement = null;
         this.unitElements = new Map();
@@ -442,16 +442,9 @@ export default class PartyStatusUI {
             ? this.battleManager.enemies
             : this.battleManager.allies;
 
-        // 슬롯 매핑: activeSlots 값을 보드 위치로 변환
-        const slotMapping = {
-            1: 1,  // 중앙 뒷줄
-            2: 2,  // 오른쪽 뒷줄
-            4: 4   // 중앙 앞줄
-        };
-
+        // 슬롯 매핑: activeSlots 값을 보드 위치로 직접 사용
         units.forEach((unit, unitIndex) => {
-            const activeSlotIndex = this.activeSlots[unitIndex];
-            const gridIndex = slotMapping[activeSlotIndex];
+            const gridIndex = this.activeSlots[unitIndex];
 
             // 유닛 슬롯 생성
             const slot = document.createElement('div');
