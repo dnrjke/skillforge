@@ -2,6 +2,8 @@
 // 우상단: 배속 뱃지 (여러 번 눌러서 변경)
 // 우하단: 자동전투/일시정지 버튼
 
+import { hideAddressBar } from '../main.js';
+
 export default class BattleControlUI {
     constructor(scene, battleManager) {
         this.scene = scene;
@@ -263,7 +265,19 @@ export default class BattleControlUI {
         const autoBtn = this.controlPanelElement.querySelector('#auto-btn');
 
         if (!this.battleManager.isRunning) {
-            // 전투 시작
+            // 전투 시작 + iOS Safari 주소표시줄 숨기기 트리거
+            hideAddressBar();
+
+            // PWA 안내 문구 숨기기 (게임 시작 후)
+            const pwaHint = document.getElementById('pwa-hint');
+            if (pwaHint) {
+                pwaHint.style.transition = 'opacity 0.5s';
+                pwaHint.style.opacity = '0';
+                setTimeout(() => {
+                    pwaHint.style.display = 'none';
+                }, 500);
+            }
+
             this.battleManager.autoMode = true;
             this.battleManager.startBattle();
             autoBtn.classList.add('active');
