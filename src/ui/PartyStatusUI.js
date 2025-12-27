@@ -1,6 +1,6 @@
 // 파티 현황판 UI (유니콘 오버로드 스타일)
-// 좌하단: 아군 현황판 / 우하단: 적군 현황판
-// HTML/CSS 기반, z-index: 20 (패시브 알림보다 낮음)
+// 미니어처 전장 그리드 + 유닛 스프라이트 + 체력바
+// HTML/CSS 기반, z-index: 20
 
 export default class PartyStatusUI {
     constructor(scene, battleManager, options = {}) {
@@ -9,14 +9,14 @@ export default class PartyStatusUI {
 
         // 설정
         this.isEnemy = options.isEnemy || false;
-        this.maxSlots = options.maxSlots || 6; // 3x2 그리드
-        this.activeSlots = options.activeSlots || [1, 2, 4]; // 실제 배치된 슬롯 인덱스
+        this.maxSlots = options.maxSlots || 6;
+        this.activeSlots = options.activeSlots || [1, 2, 4];
 
         // DOM 요소
         this.containerElement = null;
-        this.unitElements = new Map(); // unitId -> DOM element
+        this.unitElements = new Map();
 
-        // 상태 추적 (애니메이션용)
+        // 상태 추적
         this.previousHp = new Map();
 
         // 모바일 감지
@@ -32,376 +32,510 @@ export default class PartyStatusUI {
     }
 
     create() {
-        // 스타일 주입 (한 번만)
         this.injectStyles();
 
-        // 메인 컨테이너 생성
+        // 메인 컨테이너 (금속 프레임)
         this.containerElement = document.createElement('div');
-        this.containerElement.className = `party-status-board ${this.isEnemy ? 'enemy' : 'ally'}`;
+        this.containerElement.className = `battlefield-panel ${this.isEnemy ? 'enemy' : 'ally'}`;
 
-        // 그리드 컨테이너
-        const gridContainer = document.createElement('div');
-        gridContainer.className = 'party-grid';
+        // 헤더 (팀 레이블)
+        const header = document.createElement('div');
+        header.className = 'panel-header';
+        header.innerHTML = `
+            <div class="header-deco left"></div>
+            <span class="team-label">${this.isEnemy ? 'ENEMY' : 'ALLY'}</span>
+            <div class="header-deco right"></div>
+        `;
+        this.containerElement.appendChild(header);
 
-        // 3x2 그리드 슬롯 생성 (후열/중열/전열 x 상/하)
-        // 아군: 왼쪽이 후열, 오른쪽이 전열
-        // 적군: 오른쪽이 후열, 왼쪽이 전열 (미러링)
-        for (let row = 0; row < 2; row++) {
-            for (let col = 0; col < 3; col++) {
+        // 전장 그리드 (사선 투영)
+        const battlefield = document.createElement('div');
+        battlefield.className = 'mini-battlefield';
+
+        // 3열 x 2행 그리드 생성 (후열/중열/전열 x 상/하)
+        const gridWrapper = document.createElement('div');
+        gridWrapper.className = 'grid-wrapper';
+
+        for (let col = 0; col < 3; col++) {
+            const column = document.createElement('div');
+            column.className = `grid-column col-${col}`;
+            column.dataset.row = ['back', 'middle', 'front'][col];
+
+            for (let row = 0; row < 2; row++) {
                 const slotIndex = row * 3 + col;
-                const slot = document.createElement('div');
-                slot.className = 'party-slot';
-                slot.dataset.slotIndex = slotIndex;
+                const tile = document.createElement('div');
+                tile.className = 'grid-tile';
+                tile.dataset.slotIndex = slotIndex;
 
-                // 빈 슬롯 표시
-                slot.innerHTML = `<div class="slot-empty"></div>`;
+                // 타일 표면
+                const surface = document.createElement('div');
+                surface.className = 'tile-surface';
+                tile.appendChild(surface);
 
-                gridContainer.appendChild(slot);
+                column.appendChild(tile);
             }
+
+            gridWrapper.appendChild(column);
         }
 
-        this.containerElement.appendChild(gridContainer);
+        battlefield.appendChild(gridWrapper);
+        this.containerElement.appendChild(battlefield);
 
-        // 파티 전체 정보 (리더 패널 영역)
-        const partyInfo = document.createElement('div');
-        partyInfo.className = 'party-info';
-        partyInfo.innerHTML = `
-            <div class="party-label">${this.isEnemy ? 'ENEMY' : 'ALLY'}</div>
-            <div class="party-hp-total">
-                <span class="total-current">0</span>/<span class="total-max">0</span>
+        // 총 HP 표시
+        const footer = document.createElement('div');
+        footer.className = 'panel-footer';
+        footer.innerHTML = `
+            <div class="total-hp">
+                <span class="hp-icon">♥</span>
+                <span class="total-current">0</span>
+                <span class="hp-divider">/</span>
+                <span class="total-max">0</span>
             </div>
         `;
-        this.containerElement.appendChild(partyInfo);
+        this.containerElement.appendChild(footer);
 
         // ui-overlay에 추가
         const uiOverlay = document.getElementById('ui-overlay');
         uiOverlay.appendChild(this.containerElement);
 
-        // 초기 유닛 렌더링
+        // 유닛 렌더링
         this.renderUnits();
     }
 
     injectStyles() {
-        if (document.getElementById('party-status-style')) return;
+        if (document.getElementById('battlefield-panel-style')) return;
 
         const style = document.createElement('style');
-        style.id = 'party-status-style';
+        style.id = 'battlefield-panel-style';
         style.textContent = `
-            /* 파티 현황판 메인 컨테이너 */
-            .party-status-board {
+            /* ===== 픽셀 폰트 정의 ===== */
+            @font-face {
+                font-family: 'PixelFont';
+                src: local('Consolas'), local('Monaco'), local('monospace');
+            }
+
+            /* ===== 메인 패널 (금속 프레임) ===== */
+            .battlefield-panel {
                 position: absolute;
                 z-index: 20;
                 pointer-events: none;
                 display: flex;
                 flex-direction: column;
-                gap: 8px;
-                padding: 10px;
+                padding: 6px;
                 background: linear-gradient(
-                    135deg,
-                    rgba(20, 25, 35, 0.92),
-                    rgba(15, 20, 30, 0.88)
+                    145deg,
+                    rgba(45, 50, 65, 0.95),
+                    rgba(30, 35, 45, 0.98)
                 );
-                border: 2px solid rgba(120, 140, 170, 0.6);
-                border-radius: 8px;
+                border: 3px solid transparent;
+                border-image: linear-gradient(
+                    145deg,
+                    #8090a0 0%,
+                    #4a5568 25%,
+                    #6b7a8a 50%,
+                    #4a5568 75%,
+                    #8090a0 100%
+                ) 1;
                 box-shadow:
-                    0 0 15px rgba(0, 0, 0, 0.5),
-                    inset 0 0 20px rgba(80, 100, 140, 0.1),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-                backdrop-filter: blur(4px);
+                    0 4px 20px rgba(0, 0, 0, 0.6),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+                    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
             }
 
             /* 아군 - 좌하단 */
-            .party-status-board.ally {
-                left: 2%;
-                bottom: 3%;
+            .battlefield-panel.ally {
+                left: 1.5%;
+                bottom: 2%;
             }
 
             /* 적군 - 우하단 */
-            .party-status-board.enemy {
-                right: 2%;
-                bottom: 3%;
+            .battlefield-panel.enemy {
+                right: 1.5%;
+                bottom: 2%;
             }
 
-            /* 적군 그리드는 좌우 반전 */
-            .party-status-board.enemy .party-grid {
-                direction: rtl;
-            }
-
-            .party-status-board.enemy .party-slot {
-                direction: ltr;
-            }
-
-            /* 그리드 컨테이너 */
-            .party-grid {
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                grid-template-rows: repeat(2, 1fr);
-                gap: 4px;
-            }
-
-            /* 개별 슬롯 */
-            .party-slot {
-                width: 70px;
-                height: 50px;
-                background: rgba(30, 35, 50, 0.6);
-                border: 1px solid rgba(80, 90, 110, 0.4);
-                border-radius: 4px;
-                position: relative;
-                overflow: hidden;
-            }
-
-            /* 빈 슬롯 */
-            .slot-empty {
-                width: 100%;
-                height: 100%;
-                background: repeating-linear-gradient(
-                    45deg,
-                    transparent,
-                    transparent 5px,
-                    rgba(50, 60, 80, 0.2) 5px,
-                    rgba(50, 60, 80, 0.2) 10px
-                );
-            }
-
-            /* 유닛이 배치된 슬롯 */
-            .party-slot.occupied {
-                border-color: rgba(100, 120, 150, 0.6);
-                background: linear-gradient(
-                    180deg,
-                    rgba(40, 50, 70, 0.8),
-                    rgba(25, 30, 45, 0.9)
-                );
-            }
-
-            .party-slot.occupied.enemy-unit {
-                border-color: rgba(150, 80, 80, 0.6);
-                background: linear-gradient(
-                    180deg,
-                    rgba(60, 40, 45, 0.8),
-                    rgba(35, 25, 30, 0.9)
-                );
-            }
-
-            /* 유닛 컨텐츠 */
-            .unit-content {
-                width: 100%;
-                height: 100%;
-                display: flex;
-                flex-direction: column;
-                padding: 3px;
-            }
-
-            /* 초상화 영역 */
-            .unit-portrait {
-                width: 24px;
-                height: 24px;
-                background: rgba(60, 70, 90, 0.8);
-                border: 1px solid rgba(100, 110, 130, 0.5);
-                border-radius: 3px;
+            /* ===== 헤더 ===== */
+            .panel-header {
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 12px;
-                color: #aabbcc;
-                position: absolute;
-                top: 3px;
-                left: 3px;
+                gap: 8px;
+                padding: 4px 0;
+                margin-bottom: 4px;
+                border-bottom: 1px solid rgba(100, 120, 150, 0.3);
             }
 
-            .unit-portrait.enemy-portrait {
-                background: rgba(90, 60, 65, 0.8);
-                border-color: rgba(130, 90, 95, 0.5);
-                color: #ffaaaa;
-            }
-
-            /* HP 데이터 영역 */
-            .unit-hp-data {
-                position: absolute;
-                top: 3px;
-                right: 3px;
-                text-align: right;
-                font-family: 'Consolas', 'Monaco', monospace;
-            }
-
-            .hp-value {
-                font-size: 13px;
+            .team-label {
+                font-family: 'PixelFont', monospace;
+                font-size: 11px;
                 font-weight: bold;
-                color: #66dd66;
-                text-shadow:
-                    -1px -1px 0 #000,
-                    1px -1px 0 #000,
-                    -1px 1px 0 #000,
-                    1px 1px 0 #000;
-                transition: all 0.3s ease;
+                letter-spacing: 2px;
+                color: #9ab;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
             }
 
-            .hp-value.enemy-hp {
-                color: #ff8888;
+            .enemy .team-label {
+                color: #c99;
             }
 
-            .hp-value.low-hp {
-                color: #ffaa44;
+            .header-deco {
+                width: 20px;
+                height: 2px;
+                background: linear-gradient(90deg, transparent, #667, transparent);
             }
 
-            .hp-value.critical-hp {
-                color: #ff4444;
-                animation: criticalPulse 0.5s ease-in-out infinite;
+            .enemy .header-deco {
+                background: linear-gradient(90deg, transparent, #966, transparent);
             }
 
-            /* HP 변동 애니메이션 */
-            .hp-value.hp-changed {
-                transform: scale(1.3);
-                color: #ffffff;
+            /* ===== 미니 전장 ===== */
+            .mini-battlefield {
+                padding: 8px;
+                background: linear-gradient(
+                    180deg,
+                    rgba(20, 25, 35, 0.9),
+                    rgba(15, 20, 28, 0.95)
+                );
+                border: 1px solid rgba(80, 90, 110, 0.4);
+                border-radius: 4px;
             }
 
-            .hp-value.hp-damage {
-                color: #ff4444 !important;
-                transform: scale(1.4);
+            /* ===== 그리드 래퍼 (사선 투영) ===== */
+            .grid-wrapper {
+                display: flex;
+                gap: 6px;
+                transform: perspective(200px) rotateX(15deg);
+                transform-origin: center bottom;
             }
 
-            .hp-value.hp-heal {
-                color: #44ff88 !important;
-                transform: scale(1.3);
+            .enemy .grid-wrapper {
+                flex-direction: row-reverse;
             }
 
-            /* HP 바 */
-            .unit-hp-bar {
+            /* ===== 그리드 열 ===== */
+            .grid-column {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+
+            /* 열 높이 차이로 원근감 */
+            .grid-column.col-0 { transform: translateY(4px); }
+            .grid-column.col-1 { transform: translateY(0px); }
+            .grid-column.col-2 { transform: translateY(-4px); }
+
+            /* ===== 그리드 타일 ===== */
+            .grid-tile {
+                width: 58px;
+                height: 52px;
+                position: relative;
+                transition: all 0.2s ease;
+            }
+
+            .tile-surface {
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(
+                    135deg,
+                    rgba(40, 50, 70, 0.7),
+                    rgba(30, 38, 55, 0.8)
+                );
+                border: 1px solid rgba(70, 85, 110, 0.5);
+                border-radius: 3px;
+                box-shadow:
+                    inset 0 2px 4px rgba(255, 255, 255, 0.05),
+                    inset 0 -2px 4px rgba(0, 0, 0, 0.2);
+            }
+
+            /* 빈 타일 패턴 */
+            .grid-tile:not(.occupied) .tile-surface {
+                background:
+                    repeating-linear-gradient(
+                        45deg,
+                        transparent,
+                        transparent 4px,
+                        rgba(50, 60, 80, 0.3) 4px,
+                        rgba(50, 60, 80, 0.3) 8px
+                    ),
+                    linear-gradient(135deg, rgba(30, 38, 55, 0.6), rgba(25, 32, 48, 0.7));
+            }
+
+            /* 유닛이 있는 타일 */
+            .grid-tile.occupied .tile-surface {
+                background: linear-gradient(
+                    135deg,
+                    rgba(50, 65, 90, 0.85),
+                    rgba(35, 45, 65, 0.9)
+                );
+                border-color: rgba(100, 130, 170, 0.6);
+            }
+
+            .grid-tile.occupied.enemy-tile .tile-surface {
+                background: linear-gradient(
+                    135deg,
+                    rgba(75, 50, 55, 0.85),
+                    rgba(55, 35, 40, 0.9)
+                );
+                border-color: rgba(170, 100, 110, 0.6);
+            }
+
+            /* ===== 유닛 스프라이트 컨테이너 ===== */
+            .unit-sprite-wrapper {
                 position: absolute;
-                bottom: 3px;
-                left: 3px;
-                right: 3px;
-                height: 6px;
-                background: rgba(20, 20, 30, 0.8);
+                bottom: 10px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 36px;
+                height: 36px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            /* 유닛 스프라이트 (CSS로 idle 애니메이션) */
+            .unit-sprite {
+                width: 32px;
+                height: 32px;
+                image-rendering: pixelated;
+                background-size: contain;
+                background-repeat: no-repeat;
+                background-position: center;
+                filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5));
+                animation: spriteIdle 1.2s ease-in-out infinite;
+            }
+
+            .unit-sprite.ally-sprite {
+                background-image: url('assets/sprites/knight.png');
+            }
+
+            .unit-sprite.enemy-sprite {
+                background-image: url('assets/sprites/knight.png');
+                filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5))
+                        sepia(1) saturate(3) hue-rotate(-50deg) brightness(0.9);
+                transform: scaleX(-1);
+            }
+
+            /* Idle 애니메이션 */
+            @keyframes spriteIdle {
+                0%, 100% { transform: translateY(0) translateX(-50%); }
+                50% { transform: translateY(-3px) translateX(-50%); }
+            }
+
+            .enemy-sprite {
+                animation: spriteIdleEnemy 1.2s ease-in-out infinite;
+            }
+
+            @keyframes spriteIdleEnemy {
+                0%, 100% { transform: translateY(0) translateX(-50%) scaleX(-1); }
+                50% { transform: translateY(-3px) translateX(-50%) scaleX(-1); }
+            }
+
+            /* ===== HP 바 (스프라이트 위) ===== */
+            .unit-hp-container {
+                position: absolute;
+                top: 2px;
+                left: 50%;
+                transform: translateX(-50%);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 1px;
+            }
+
+            .mini-hp-bar {
+                width: 42px;
+                height: 5px;
+                background: rgba(0, 0, 0, 0.7);
                 border: 1px solid rgba(60, 70, 90, 0.6);
                 border-radius: 2px;
                 overflow: hidden;
             }
 
-            .hp-bar-fill {
+            .mini-hp-fill {
                 height: 100%;
-                background: linear-gradient(
-                    180deg,
-                    #66ee66,
-                    #44aa44
-                );
-                transition: width 0.4s ease-out;
-                box-shadow: 0 0 4px rgba(100, 238, 100, 0.4);
+                background: linear-gradient(180deg, #6f6, #4a4);
+                transition: width 0.3s ease;
+                box-shadow: 0 0 4px rgba(100, 255, 100, 0.3);
             }
 
-            .hp-bar-fill.enemy-bar {
-                background: linear-gradient(
-                    180deg,
-                    #ee6666,
-                    #aa4444
-                );
-                box-shadow: 0 0 4px rgba(238, 100, 100, 0.4);
+            .mini-hp-fill.enemy-hp {
+                background: linear-gradient(180deg, #f66, #a44);
+                box-shadow: 0 0 4px rgba(255, 100, 100, 0.3);
             }
 
-            .hp-bar-fill.low-hp {
-                background: linear-gradient(180deg, #eeaa44, #aa7722);
+            .mini-hp-fill.low { background: linear-gradient(180deg, #fa4, #a74); }
+            .mini-hp-fill.critical {
+                background: linear-gradient(180deg, #f44, #a22);
+                animation: hpPulse 0.5s ease-in-out infinite;
             }
 
-            .hp-bar-fill.critical-hp {
-                background: linear-gradient(180deg, #ee4444, #aa2222);
-                animation: barPulse 0.5s ease-in-out infinite;
-            }
-
-            /* 파티 정보 */
-            .party-info {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 4px 8px;
-                background: rgba(40, 50, 70, 0.5);
-                border-radius: 4px;
-                border: 1px solid rgba(80, 90, 110, 0.3);
-            }
-
-            .party-label {
-                font-family: Arial, sans-serif;
-                font-size: 11px;
+            /* HP 텍스트 */
+            .mini-hp-text {
+                font-family: 'PixelFont', monospace;
+                font-size: 9px;
                 font-weight: bold;
-                color: rgba(150, 170, 200, 0.8);
-                letter-spacing: 1px;
+                color: #afc;
+                text-shadow:
+                    -1px -1px 0 #000,
+                    1px -1px 0 #000,
+                    -1px 1px 0 #000,
+                    1px 1px 0 #000;
+                transition: all 0.2s ease;
             }
 
-            .enemy .party-label {
-                color: rgba(200, 150, 150, 0.8);
+            .mini-hp-text.enemy-text { color: #faa; }
+            .mini-hp-text.low { color: #fa8; }
+            .mini-hp-text.critical { color: #f66; }
+
+            /* HP 변동 효과 */
+            .mini-hp-text.hp-changed {
+                transform: scale(1.4);
+                color: #fff !important;
             }
 
-            .party-hp-total {
-                font-family: 'Consolas', 'Monaco', monospace;
-                font-size: 12px;
-                color: #88aacc;
+            .mini-hp-text.damage {
+                color: #f44 !important;
+                text-shadow: 0 0 8px #f00;
             }
 
-            .party-hp-total .total-current {
-                color: #66dd66;
-                font-weight: bold;
+            .mini-hp-text.heal {
+                color: #4f8 !important;
+                text-shadow: 0 0 8px #0f0;
             }
 
-            .enemy .party-hp-total .total-current {
-                color: #ff8888;
+            /* ===== 피드백 효과 ===== */
+            .grid-tile.damage-flash .tile-surface {
+                animation: damageFlash 0.3s ease;
             }
 
-            /* 애니메이션 */
-            @keyframes criticalPulse {
+            .grid-tile.damage-flash .unit-sprite {
+                animation: damageShake 0.3s ease;
+            }
+
+            @keyframes damageFlash {
+                0%, 100% {
+                    box-shadow: inset 0 0 0 rgba(255, 0, 0, 0);
+                    filter: brightness(1);
+                }
+                50% {
+                    box-shadow: inset 0 0 20px rgba(255, 0, 0, 0.6);
+                    filter: brightness(1.3);
+                }
+            }
+
+            @keyframes damageShake {
+                0%, 100% { transform: translateX(-50%) translateY(0); }
+                25% { transform: translateX(calc(-50% + 3px)) translateY(-1px); }
+                75% { transform: translateX(calc(-50% - 3px)) translateY(1px); }
+            }
+
+            @keyframes hpPulse {
                 0%, 100% { opacity: 1; }
-                50% { opacity: 0.6; }
+                50% { opacity: 0.7; }
             }
 
-            @keyframes barPulse {
-                0%, 100% { filter: brightness(1); }
-                50% { filter: brightness(1.3); }
+            /* 사망 상태 */
+            .grid-tile.dead {
+                opacity: 0.4;
+                filter: grayscale(0.8);
             }
 
-            /* 모바일 대응 */
+            .grid-tile.dead .unit-sprite {
+                animation: none;
+                transform: translateX(-50%) rotate(90deg);
+                opacity: 0.6;
+            }
+
+            /* ===== 푸터 (총 HP) ===== */
+            .panel-footer {
+                display: flex;
+                justify-content: center;
+                padding: 4px 0 2px;
+                margin-top: 4px;
+                border-top: 1px solid rgba(100, 120, 150, 0.3);
+            }
+
+            .total-hp {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                font-family: 'PixelFont', monospace;
+                font-size: 11px;
+            }
+
+            .hp-icon {
+                color: #f66;
+                text-shadow: 0 0 4px rgba(255, 100, 100, 0.5);
+            }
+
+            .total-current {
+                color: #6f6;
+                font-weight: bold;
+            }
+
+            .enemy .total-current {
+                color: #f88;
+            }
+
+            .hp-divider {
+                color: #889;
+            }
+
+            .total-max {
+                color: #9ab;
+            }
+
+            /* ===== 모바일 대응 ===== */
             @media (max-width: 768px) {
-                .party-status-board {
-                    padding: 6px;
-                    gap: 4px;
+                .battlefield-panel {
+                    padding: 4px;
                 }
 
-                .party-status-board.ally {
-                    left: 1%;
-                    bottom: 2%;
+                .battlefield-panel.ally { left: 1%; bottom: 1.5%; }
+                .battlefield-panel.enemy { right: 1%; bottom: 1.5%; }
+
+                .panel-header { padding: 2px 0; margin-bottom: 2px; }
+                .team-label { font-size: 9px; letter-spacing: 1px; }
+                .header-deco { width: 12px; }
+
+                .mini-battlefield { padding: 4px; }
+
+                .grid-wrapper {
+                    gap: 3px;
+                    transform: perspective(180px) rotateX(12deg);
                 }
 
-                .party-status-board.enemy {
-                    right: 1%;
-                    bottom: 2%;
+                .grid-column { gap: 2px; }
+                .grid-column.col-0 { transform: translateY(2px); }
+                .grid-column.col-2 { transform: translateY(-2px); }
+
+                .grid-tile {
+                    width: 42px;
+                    height: 38px;
                 }
 
-                .party-slot {
-                    width: 55px;
-                    height: 40px;
+                .unit-sprite-wrapper {
+                    width: 28px;
+                    height: 28px;
+                    bottom: 6px;
                 }
 
-                .unit-portrait {
-                    width: 18px;
-                    height: 18px;
-                    font-size: 10px;
+                .unit-sprite {
+                    width: 24px;
+                    height: 24px;
                 }
 
-                .hp-value {
-                    font-size: 11px;
-                }
+                .unit-hp-container { top: 1px; }
 
-                .unit-hp-bar {
+                .mini-hp-bar {
+                    width: 32px;
                     height: 4px;
                 }
 
-                .party-info {
-                    padding: 2px 4px;
-                }
+                .mini-hp-text { font-size: 8px; }
 
-                .party-label {
-                    font-size: 9px;
-                }
-
-                .party-hp-total {
-                    font-size: 10px;
-                }
+                .panel-footer { padding: 2px 0 1px; margin-top: 2px; }
+                .total-hp { font-size: 9px; gap: 2px; }
             }
         `;
         document.head.appendChild(style);
@@ -412,56 +546,59 @@ export default class PartyStatusUI {
             ? this.battleManager.enemies
             : this.battleManager.allies;
 
-        // 슬롯과 유닛 매핑
         // activeSlots: [1, 2, 4] -> 후열하, 중열상, 전열상
-        // 그리드 인덱스 매핑:
-        // 0(후열상), 1(중열상), 2(전열상)
-        // 3(후열하), 4(중열하), 5(전열하)
+        // 그리드 인덱스: 0(후열상), 1(후열하), 2(중열상), 3(중열하), 4(전열상), 5(전열하)
         const slotMapping = {
-            1: 3,  // 후열 하 -> 그리드 인덱스 3
-            2: 1,  // 중열 상 -> 그리드 인덱스 1
-            4: 2   // 전열 상 -> 그리드 인덱스 2
+            1: 1,  // 후열 하 -> col0, row1 (인덱스 1)
+            2: 2,  // 중열 상 -> col1, row0 (인덱스 2)
+            4: 4   // 전열 상 -> col2, row0 (인덱스 4)
         };
 
-        const slots = this.containerElement.querySelectorAll('.party-slot');
+        const tiles = this.containerElement.querySelectorAll('.grid-tile');
 
         units.forEach((unit, unitIndex) => {
             const activeSlotIndex = this.activeSlots[unitIndex];
             const gridIndex = slotMapping[activeSlotIndex];
-            const slot = slots[gridIndex];
+            const tile = tiles[gridIndex];
 
-            if (!slot) return;
+            if (!tile) return;
 
-            // 슬롯에 유닛 배치
-            slot.classList.add('occupied');
+            // 타일 상태 업데이트
+            tile.classList.add('occupied');
             if (this.isEnemy) {
-                slot.classList.add('enemy-unit');
+                tile.classList.add('enemy-tile');
             }
 
             // 유닛 컨텐츠 생성
-            const unitContent = document.createElement('div');
-            unitContent.className = 'unit-content';
-            unitContent.innerHTML = `
-                <div class="unit-portrait ${this.isEnemy ? 'enemy-portrait' : ''}">
-                    ${this.getUnitIcon(unit, unitIndex)}
+            const surface = tile.querySelector('.tile-surface');
+
+            // HP 컨테이너
+            const hpContainer = document.createElement('div');
+            hpContainer.className = 'unit-hp-container';
+            hpContainer.innerHTML = `
+                <div class="mini-hp-bar">
+                    <div class="mini-hp-fill ${this.isEnemy ? 'enemy-hp' : ''}"
+                         style="width: ${(unit.currentHp / unit.maxHp) * 100}%"></div>
                 </div>
-                <div class="unit-hp-data">
-                    <span class="hp-value ${this.isEnemy ? 'enemy-hp' : ''}">${unit.currentHp}/${unit.maxHp}</span>
-                </div>
-                <div class="unit-hp-bar">
-                    <div class="hp-bar-fill ${this.isEnemy ? 'enemy-bar' : ''}" style="width: ${(unit.currentHp / unit.maxHp) * 100}%"></div>
-                </div>
+                <span class="mini-hp-text ${this.isEnemy ? 'enemy-text' : ''}">${unit.currentHp}</span>
             `;
 
-            // 기존 컨텐츠 교체
-            slot.innerHTML = '';
-            slot.appendChild(unitContent);
+            // 스프라이트 래퍼
+            const spriteWrapper = document.createElement('div');
+            spriteWrapper.className = 'unit-sprite-wrapper';
+            spriteWrapper.innerHTML = `
+                <div class="unit-sprite ${this.isEnemy ? 'enemy-sprite' : 'ally-sprite'}"></div>
+            `;
+
+            surface.appendChild(hpContainer);
+            surface.appendChild(spriteWrapper);
 
             // 요소 저장
             this.unitElements.set(unit.id, {
-                slot: slot,
-                hpValue: unitContent.querySelector('.hp-value'),
-                hpBar: unitContent.querySelector('.hp-bar-fill'),
+                tile: tile,
+                hpBar: hpContainer.querySelector('.mini-hp-fill'),
+                hpText: hpContainer.querySelector('.mini-hp-text'),
+                sprite: spriteWrapper.querySelector('.unit-sprite'),
                 unit: unit
             });
 
@@ -469,18 +606,10 @@ export default class PartyStatusUI {
             this.previousHp.set(unit.id, unit.currentHp);
         });
 
-        // 전체 HP 업데이트
         this.updateTotalHp();
     }
 
-    getUnitIcon(unit, index) {
-        // 간단한 아이콘 (나중에 실제 초상화로 교체 가능)
-        const icons = ['⚔', '🔮', '🗡'];
-        return icons[index % icons.length];
-    }
-
     setupEventListeners() {
-        // 주기적 업데이트 (100ms 간격)
         this.updateInterval = setInterval(() => {
             this.update();
         }, 100);
@@ -505,49 +634,49 @@ export default class PartyStatusUI {
                 const isDamage = currentHp < prevHp;
                 const isHeal = currentHp > prevHp;
 
-                // HP 값 업데이트
-                elements.hpValue.textContent = `${currentHp}/${maxHp}`;
-
-                // HP 바 업데이트
+                // HP 업데이트
+                elements.hpText.textContent = currentHp;
                 elements.hpBar.style.width = `${hpRatio * 100}%`;
 
-                // 변동 애니메이션
-                elements.hpValue.classList.add('hp-changed');
+                // 피드백 효과
+                elements.hpText.classList.add('hp-changed');
+
                 if (isDamage) {
-                    elements.hpValue.classList.add('hp-damage');
+                    elements.hpText.classList.add('damage');
+                    elements.tile.classList.add('damage-flash');
+
+                    setTimeout(() => {
+                        elements.tile.classList.remove('damage-flash');
+                    }, 300);
                 } else if (isHeal) {
-                    elements.hpValue.classList.add('hp-heal');
+                    elements.hpText.classList.add('heal');
                 }
 
-                // 애니메이션 제거
                 setTimeout(() => {
-                    elements.hpValue.classList.remove('hp-changed', 'hp-damage', 'hp-heal');
+                    elements.hpText.classList.remove('hp-changed', 'damage', 'heal');
                 }, 300);
 
-                // HP 저장
                 this.previousHp.set(unit.id, currentHp);
             }
 
-            // HP 상태에 따른 스타일
-            elements.hpValue.classList.remove('low-hp', 'critical-hp');
-            elements.hpBar.classList.remove('low-hp', 'critical-hp');
+            // HP 상태 스타일
+            elements.hpText.classList.remove('low', 'critical');
+            elements.hpBar.classList.remove('low', 'critical');
 
             if (hpRatio <= 0.25) {
-                elements.hpValue.classList.add('critical-hp');
-                elements.hpBar.classList.add('critical-hp');
+                elements.hpText.classList.add('critical');
+                elements.hpBar.classList.add('critical');
             } else if (hpRatio <= 0.5) {
-                elements.hpValue.classList.add('low-hp');
-                elements.hpBar.classList.add('low-hp');
+                elements.hpText.classList.add('low');
+                elements.hpBar.classList.add('low');
             }
 
             // 사망 처리
             if (!unit.isAlive) {
-                elements.slot.style.opacity = '0.4';
-                elements.slot.style.filter = 'grayscale(0.8)';
+                elements.tile.classList.add('dead');
             }
         });
 
-        // 전체 HP 업데이트
         this.updateTotalHp();
     }
 

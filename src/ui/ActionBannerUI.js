@@ -296,22 +296,32 @@ export default class ActionBannerUI {
 
             /* ===== 모바일 대응 ===== */
             @media (max-width: 768px) {
-                .banner-content {
-                    padding: 10px 30px;
-                    min-width: 220px;
+                .action-banner {
+                    bottom: 25%;
+                    gap: 6px;
                 }
-                .banner-text { font-size: 18px; }
-                .banner-deco { font-size: 22px; margin: 0 8px; }
-                .ap-dot { width: 7px; height: 7px; }
+
+                .ap-dots { gap: 12px; }
+                .ap-group { gap: 6px; }
+                .ap-dot { width: 5px; height: 5px; }
+
+                .banner-content {
+                    padding: 6px 16px;
+                    min-width: 140px;
+                    border-width: 1px;
+                }
+                .banner-text { font-size: 14px; letter-spacing: 0.5px; }
+                .banner-deco { font-size: 16px; margin: 0 6px; }
 
                 .passive-banner {
-                    padding: 8px 16px;
-                    min-width: 160px;
+                    padding: 5px 10px;
+                    min-width: 100px;
+                    border-width: 1px;
                 }
-                .passive-banner.left { left: 5%; }
-                .passive-banner.right { right: 5%; }
-                .passive-icon { font-size: 16px; }
-                .passive-text { font-size: 14px; }
+                .passive-banner.left { left: 3%; }
+                .passive-banner.right { right: 3%; }
+                .passive-icon { font-size: 12px; }
+                .passive-text { font-size: 11px; }
             }
         `;
         document.head.appendChild(style);
