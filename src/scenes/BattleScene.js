@@ -46,9 +46,7 @@ export default class BattleScene extends Phaser.Scene {
 
         // 카메라 레이어 컨테이너
         this.worldContainer = null;
-        this.uiContainer = null;
         this.mainCamera = null;
-        this.uiCamera = null;
     }
 
     create() {
@@ -90,31 +88,22 @@ export default class BattleScene extends Phaser.Scene {
     }
 
     setupContainers() {
-        // World Container: 게임 월드 객체들 (캐릭터, 배경 등)
+        // World Container: 게임 월드 객체들 (캐릭터, 배경, StatusBar)
+        // 카메라 줌/이동 영향을 받는 모든 객체를 포함
         this.worldContainer = this.add.container(0, 0);
         this.worldContainer.setDepth(0);
 
-        // UI Container: UI 요소들 (상태바, 로그, 컨트롤 등)
-        this.uiContainer = this.add.container(0, 0);
-        this.uiContainer.setDepth(1000);
+        console.log('[Container Debug] worldContainer created');
     }
 
     setupCameras() {
-        // Main Camera: 게임 월드를 비추는 카메라 (줌 가능)
+        // Main Camera: 모든 게임 오브젝트를 렌더링 (줌 가능)
+        // DOM 요소들(LogWindow, BattleControlUI)은 이미 setScrollFactor(0)로 카메라 독립
         this.mainCamera = this.cameras.main;
         this.mainCamera.setZoom(1.0);
-        this.mainCamera.ignore(this.uiContainer);
 
-        // UI Camera: UI만 비추는 카메라 (줌 불가, 항상 고정)
-        this.uiCamera = this.cameras.add(0, 0, 1280, 720);
-        this.uiCamera.setBackgroundColor(0x000000, 0); // alpha=0 (투명)
-        this.uiCamera.clearBeforeRender = false; // 메인 카메라 화면 보존
-        this.uiCamera.ignore(this.worldContainer);
-
-        // 디버그 로그: 카메라 ignore 설정 확인
-        console.log('[Camera Debug] Main Camera ignoring:', this.mainCamera.ignore);
-        console.log('[Camera Debug] UI Camera ignoring:', this.uiCamera.ignore);
-        console.log('[Camera Debug] UI Camera clearBeforeRender:', this.uiCamera.clearBeforeRender);
+        console.log('[Camera Debug] Main Camera zoom:', this.mainCamera.zoom);
+        console.log('[Camera Debug] Main Camera bounds:', this.mainCamera.getBounds());
     }
 
     setupBackground() {
