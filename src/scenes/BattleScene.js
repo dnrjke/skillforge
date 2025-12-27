@@ -46,9 +46,7 @@ export default class BattleScene extends Phaser.Scene {
 
         // 카메라 레이어 컨테이너
         this.worldContainer = null;
-        this.uiContainer = null;
         this.mainCamera = null;
-        this.uiCamera = null;
     }
 
     create() {
@@ -90,25 +88,22 @@ export default class BattleScene extends Phaser.Scene {
     }
 
     setupContainers() {
-        // World Container: 게임 월드 객체들 (캐릭터, 배경 등)
+        // World Container: 게임 월드 객체들 (캐릭터, 배경, StatusBar)
+        // 카메라 줌/이동 영향을 받는 모든 객체를 포함
         this.worldContainer = this.add.container(0, 0);
         this.worldContainer.setDepth(0);
 
-        // UI Container: UI 요소들 (상태바, 로그, 컨트롤 등)
-        this.uiContainer = this.add.container(0, 0);
-        this.uiContainer.setDepth(1000);
+        console.log('[Container Debug] worldContainer created');
     }
 
     setupCameras() {
-        // Main Camera: 게임 월드를 비추는 카메라 (줌 가능)
+        // Main Camera: 모든 게임 오브젝트를 렌더링 (줌 가능)
+        // DOM 요소들(LogWindow, BattleControlUI)은 이미 setScrollFactor(0)로 카메라 독립
         this.mainCamera = this.cameras.main;
         this.mainCamera.setZoom(1.0);
-        this.mainCamera.ignore(this.uiContainer);
 
-        // UI Camera: UI만 비추는 카메라 (줌 불가, 항상 고정)
-        this.uiCamera = this.cameras.add(0, 0, 1280, 720);
-        this.uiCamera.setTransparent(true);
-        this.uiCamera.ignore(this.worldContainer);
+        console.log('[Camera Debug] Main Camera zoom:', this.mainCamera.zoom);
+        console.log('[Camera Debug] Main Camera bounds:', this.mainCamera.getBounds());
     }
 
     setupBackground() {
@@ -118,6 +113,12 @@ export default class BattleScene extends Phaser.Scene {
 
         // 배경을 월드 컨테이너에 추가
         this.worldContainer.add(bg);
+
+        // 디버그 로그: worldContainer 가시성 확인
+        console.log('[Visibility Debug] worldContainer alpha:', this.worldContainer.alpha);
+        console.log('[Visibility Debug] worldContainer visible:', this.worldContainer.visible);
+        console.log('[Visibility Debug] worldContainer length:', this.worldContainer.length);
+        console.log('[Visibility Debug] background added to worldContainer:', bg);
     }
 
     setupCharacters() {
@@ -258,10 +259,14 @@ export default class BattleScene extends Phaser.Scene {
         });
     }
 
-    repositionUI() {
+    repositionUI(gameSize) {
         // 화면 크기 변경 시 UI 재배치
-        const { width, height } = this.scale;
+        const { width, height } = gameSize || this.scale;
 
+        // 1. 카메라의 뷰포트를 새로운 크기에 맞춤
+        this.cameras.main.setSize(width, height);
+
+        // 2. UI 레이아웃 재배치
         // BattleControlUI 재배치
         if (this.battleControlUI) {
             this.battleControlUI.reposition(width, height);

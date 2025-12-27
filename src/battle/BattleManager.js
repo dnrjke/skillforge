@@ -515,210 +515,344 @@ export default class BattleManager {
         }
     }
 
-    // 행동 배너 표시 (중앙 - AP 소모량 알갱이 표시)
+    // 행동 배너 표시 (HTML - 중앙 하단, 카메라 영향 없음)
     showActionBanner(actionName, apCost = 0) {
         // 기존 배너 제거
-        if (this.skillBanner) {
-            this.skillBanner.destroy();
+        if (this.skillBannerElement) {
+            this.skillBannerElement.remove();
+            this.skillBannerElement = null;
         }
 
-        // 하단 중앙에 행동 이름 배너
-        const banner = this.scene.add.container(640, 580);
-        banner.setDepth(3000);
-        banner.setScrollFactor(0);
+        // 모바일 감지
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                         window.innerWidth <= 768;
 
-        // 배경 바
-        const bgGlow = this.scene.add.rectangle(0, 0, 340, 60, 0xffaa44, 0.25);
-        bgGlow.setScrollFactor(0);
+        // HTML 배너 생성
+        const banner = document.createElement('div');
+        banner.className = 'action-banner';
 
-        const bg = this.scene.add.rectangle(0, 0, 320, 50, 0x000000, 0.85);
-        bg.setStrokeStyle(2, 0xffaa44);
-        bg.setScrollFactor(0);
-
-        // 행동 이름
-        const text = this.scene.add.text(0, 0, actionName, {
-            fontSize: '22px',
-            fill: '#ffffff',
-            fontFamily: 'Arial',
-            fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 2
-        }).setOrigin(0.5).setScrollFactor(0);
-
-        // 좌우 장식
-        const leftDeco = this.scene.add.text(-120, 0, '【', {
-            fontSize: '26px',
-            fill: '#ffaa44',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5).setScrollFactor(0);
-
-        const rightDeco = this.scene.add.text(120, 0, '】', {
-            fontSize: '26px',
-            fill: '#ffaa44',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5).setScrollFactor(0);
-
-        banner.add([bgGlow, bg, leftDeco, text, rightDeco]);
-
-        // AP 소모량 알갱이 표시 (5개 단위로 그룹핑, 중앙 정렬)
+        // AP 알갱이 HTML 생성 (스킬명 위에)
+        let apDotsHTML = '';
         if (apCost > 0) {
-            const dotSize = 8;
-            const dotGap = 12;         // 그룹 내 알갱이 간격
-            const groupGap = 24;       // 그룹 간 간격
-            const dotY = 0;
-
-            // 왼쪽 그룹 (1-5개)
             const leftGroupCount = Math.min(5, apCost);
-            // 오른쪽 그룹 (6-10개)
             const rightGroupCount = Math.max(0, Math.min(5, apCost - 5));
 
-            // 전체 너비 계산
-            const leftGroupWidth = leftGroupCount > 0 ? (leftGroupCount - 1) * dotGap : 0;
-            const rightGroupWidth = rightGroupCount > 0 ? (rightGroupCount - 1) * dotGap : 0;
-            const totalWidth = leftGroupWidth + (rightGroupCount > 0 ? groupGap + rightGroupWidth : 0);
-
-            // 중앙 정렬을 위한 오프셋
-            const offsetX = -totalWidth / 2;
-
-            // 왼쪽 그룹 그리기 (왼쪽에서 오른쪽으로)
-            let currentX = offsetX;
+            let leftDots = '';
             for (let i = 0; i < leftGroupCount; i++) {
-                const dotX = currentX + i * dotGap;
-                const dot = this.scene.add.circle(dotX, dotY, dotSize / 2, 0xffcc66);
-                dot.setScrollFactor(0);
-                dot.setStrokeStyle(1, 0xffaa44);
-                banner.add(dot);
+                leftDots += '<span class="ap-dot"></span>';
             }
 
-            // 오른쪽 그룹 그리기 (그룹 간격 적용)
-            if (rightGroupCount > 0) {
-                currentX = offsetX + leftGroupWidth + groupGap;
-                for (let i = 0; i < rightGroupCount; i++) {
-                    const dotX = currentX + i * dotGap;
-                    const dot = this.scene.add.circle(dotX, dotY, dotSize / 2, 0xffcc66);
-                    dot.setScrollFactor(0);
-                    dot.setStrokeStyle(1, 0xffaa44);
-                    banner.add(dot);
-                }
+            let rightDots = '';
+            for (let i = 0; i < rightGroupCount; i++) {
+                rightDots += '<span class="ap-dot"></span>';
             }
+
+            apDotsHTML = `
+                <div class="ap-dots">
+                    <div class="ap-group">${leftDots}</div>
+                    ${rightGroupCount > 0 ? `<div class="ap-group">${rightDots}</div>` : ''}
+                </div>
+            `;
         }
 
-        // 등장 애니메이션
-        banner.setScale(0.5);
-        banner.setAlpha(0);
+        banner.innerHTML = `
+            ${apDotsHTML}
+            <div class="banner-content">
+                <span class="banner-deco left">【</span>
+                <span class="banner-text">${actionName}</span>
+                <span class="banner-deco right">】</span>
+            </div>
+        `;
 
-        this.scene.tweens.add({
-            targets: banner,
-            scaleX: 1,
-            scaleY: 1,
-            alpha: 1,
-            duration: 150,
-            ease: 'Back.easeOut'
-        });
+        // 스타일 추가 (한 번만)
+        if (!document.getElementById('action-banner-style')) {
+            const style = document.createElement('style');
+            style.id = 'action-banner-style';
+            style.textContent = `
+                .action-banner {
+                    position: absolute;
+                    bottom: 20%;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    z-index: 200;
+                    pointer-events: none;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 10px;
+                    animation: bannerFadeIn 0.15s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+                }
+
+                .ap-dots {
+                    display: flex;
+                    gap: 24px;
+                    align-items: center;
+                }
+
+                .ap-group {
+                    display: flex;
+                    gap: 12px;
+                }
+
+                .ap-dot {
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background: #ffcc66;
+                    border: 1px solid #ffaa44;
+                    box-shadow: 0 0 4px rgba(255, 204, 102, 0.5);
+                }
+
+                .banner-content {
+                    position: relative;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 12px 40px;
+                    background: linear-gradient(135deg, rgba(0,0,0,0.9), rgba(0,0,0,0.85));
+                    border: 2px solid #ffaa44;
+                    border-radius: 8px;
+                    box-shadow: 0 0 20px rgba(255, 170, 68, 0.25), inset 0 0 20px rgba(255, 170, 68, 0.15);
+                    min-width: 280px;
+                }
+
+                .banner-text {
+                    font-family: Arial, sans-serif;
+                    font-size: 22px;
+                    font-weight: bold;
+                    color: #ffffff;
+                    text-shadow:
+                        -1px -1px 0 #000,
+                        1px -1px 0 #000,
+                        -1px 1px 0 #000,
+                        1px 1px 0 #000,
+                        0 0 8px rgba(255, 255, 255, 0.3);
+                    letter-spacing: 1px;
+                }
+
+                .banner-deco {
+                    font-size: 26px;
+                    color: #ffaa44;
+                    font-family: Arial, sans-serif;
+                    margin: 0 12px;
+                    text-shadow: 0 0 8px rgba(255, 170, 68, 0.6);
+                }
+
+                @keyframes bannerFadeIn {
+                    from {
+                        opacity: 0;
+                        transform: translateX(-50%) scale(0.5);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateX(-50%) scale(1);
+                    }
+                }
+
+                @keyframes bannerFadeOut {
+                    to {
+                        opacity: 0;
+                        transform: translateX(-50%) translateY(-20px);
+                    }
+                }
+
+                @media (max-width: 768px) {
+                    .banner-content {
+                        padding: 10px 30px;
+                        min-width: 220px;
+                    }
+                    .banner-text {
+                        font-size: 18px;
+                    }
+                    .banner-deco {
+                        font-size: 22px;
+                        margin: 0 8px;
+                    }
+                    .ap-dot {
+                        width: 7px;
+                        height: 7px;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        const uiOverlay = document.getElementById('ui-overlay');
+        uiOverlay.appendChild(banner);
+        this.skillBannerElement = banner;
 
         // 0.8초 후 사라짐
         setTimeout(() => {
-            if (banner && banner.active) {
-                this.scene.tweens.add({
-                    targets: banner,
-                    alpha: 0,
-                    y: banner.y - 20,
-                    duration: 200,
-                    onComplete: () => {
-                        if (banner && banner.active) {
-                            banner.destroy();
-                        }
-                        if (this.skillBanner === banner) {
-                            this.skillBanner = null;
-                        }
+            if (banner && banner.parentNode) {
+                banner.style.animation = 'bannerFadeOut 0.2s forwards';
+                setTimeout(() => {
+                    if (banner.parentNode) {
+                        banner.remove();
                     }
-                });
+                    if (this.skillBannerElement === banner) {
+                        this.skillBannerElement = null;
+                    }
+                }, 200);
             }
         }, 800);
-
-        this.skillBanner = banner;
     }
 
-    // 패시브 스킬 사이드 배너 표시 (하늘색 기조, 양측 표시)
+    // 패시브 스킬 사이드 배너 표시 (HTML - 하늘색 기조, 양측 표시, 카메라 영향 없음)
     showPassiveBanner(passiveName, isLeftSide = true) {
         // 패시브 배너 배열 초기화
-        if (!this.passiveBanners) {
-            this.passiveBanners = [];
+        if (!this.passiveBannersHTML) {
+            this.passiveBannersHTML = [];
         }
 
         // 현재 같은 쪽에 있는 배너 수 계산 (스택용)
-        const sameSideBanners = this.passiveBanners.filter(b => b.isLeft === isLeftSide && b.active);
+        const sameSideBanners = this.passiveBannersHTML.filter(b => b.isLeft === isLeftSide);
         const stackOffset = sameSideBanners.length * 50;
 
-        // 사이드 배너 위치
-        const baseX = isLeftSide ? 180 : 1100;
-        const baseY = 500 - stackOffset;
+        // HTML 배너 생성
+        const banner = document.createElement('div');
+        banner.className = `passive-banner ${isLeftSide ? 'left' : 'right'}`;
+        banner.style.top = `${70 - (stackOffset / 720 * 100)}%`; // 70%에서 위로 스택
 
-        const banner = this.scene.add.container(baseX, baseY);
-        banner.setDepth(2900);
-        banner.setScrollFactor(0);
-        banner.isLeft = isLeftSide;
+        banner.innerHTML = `
+            <div class="passive-icon">${isLeftSide ? '⚡' : '⚡'}</div>
+            <div class="passive-text">${passiveName}</div>
+        `;
 
-        // 배경 바 (하늘색 기조)
-        const bgGlow = this.scene.add.rectangle(0, 0, 260, 45, 0x4488ff, 0.3);
-        bgGlow.setScrollFactor(0);
+        // 스타일 추가 (한 번만)
+        if (!document.getElementById('passive-banner-style')) {
+            const style = document.createElement('style');
+            style.id = 'passive-banner-style';
+            style.textContent = `
+                .passive-banner {
+                    position: absolute;
+                    z-index: 200;
+                    pointer-events: none;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 10px 20px;
+                    background: linear-gradient(135deg, rgba(0,0,0,0.9), rgba(0,0,0,0.85));
+                    border: 2px solid #66aaff;
+                    border-radius: 6px;
+                    box-shadow: 0 0 15px rgba(68, 136, 255, 0.3), inset 0 0 15px rgba(102, 170, 255, 0.15);
+                    min-width: 200px;
+                }
 
-        const bg = this.scene.add.rectangle(0, 0, 240, 38, 0x000000, 0.85);
-        bg.setStrokeStyle(2, 0x66aaff);
-        bg.setScrollFactor(0);
+                .passive-banner.left {
+                    left: 14%;
+                    animation: passiveSlideInLeft 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                }
 
-        // 번개 아이콘
-        const icon = this.scene.add.text(isLeftSide ? -100 : 100, 0, '⚡', {
-            fontSize: '18px',
-            fill: '#88ccff'
-        }).setOrigin(0.5).setScrollFactor(0);
+                .passive-banner.right {
+                    right: 14%;
+                    animation: passiveSlideInRight 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                }
 
-        // 패시브 이름
-        const text = this.scene.add.text(0, 0, passiveName, {
-            fontSize: '16px',
-            fill: '#aaccff',
-            fontFamily: 'Arial',
-            fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 2
-        }).setOrigin(0.5).setScrollFactor(0);
+                .passive-banner.fade-out-left {
+                    animation: passiveSlideOutLeft 0.25s forwards;
+                }
 
-        banner.add([bgGlow, bg, icon, text]);
+                .passive-banner.fade-out-right {
+                    animation: passiveSlideOutRight 0.25s forwards;
+                }
 
-        // 등장 애니메이션 (슬라이드 인)
-        const slideFrom = isLeftSide ? -150 : 150;
-        banner.x = baseX + slideFrom;
-        banner.setAlpha(0);
+                .passive-icon {
+                    font-size: 18px;
+                    color: #88ccff;
+                    text-shadow: 0 0 8px rgba(136, 204, 255, 0.6);
+                }
 
-        this.scene.tweens.add({
-            targets: banner,
-            x: baseX,
-            alpha: 1,
-            duration: 200,
-            ease: 'Power2.easeOut'
-        });
+                .passive-text {
+                    font-family: Arial, sans-serif;
+                    font-size: 16px;
+                    font-weight: bold;
+                    color: #aaccff;
+                    text-shadow:
+                        -1px -1px 0 #000,
+                        1px -1px 0 #000,
+                        -1px 1px 0 #000,
+                        1px 1px 0 #000;
+                    letter-spacing: 0.5px;
+                }
 
-        this.passiveBanners.push(banner);
+                @keyframes passiveSlideInLeft {
+                    from {
+                        opacity: 0;
+                        transform: translateX(-150px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateX(0);
+                    }
+                }
+
+                @keyframes passiveSlideInRight {
+                    from {
+                        opacity: 0;
+                        transform: translateX(150px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateX(0);
+                    }
+                }
+
+                @keyframes passiveSlideOutLeft {
+                    to {
+                        opacity: 0;
+                        transform: translateX(-100px);
+                    }
+                }
+
+                @keyframes passiveSlideOutRight {
+                    to {
+                        opacity: 0;
+                        transform: translateX(100px);
+                    }
+                }
+
+                @media (max-width: 768px) {
+                    .passive-banner {
+                        padding: 8px 16px;
+                        min-width: 160px;
+                    }
+                    .passive-banner.left {
+                        left: 5%;
+                    }
+                    .passive-banner.right {
+                        right: 5%;
+                    }
+                    .passive-icon {
+                        font-size: 16px;
+                    }
+                    .passive-text {
+                        font-size: 14px;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        const uiOverlay = document.getElementById('ui-overlay');
+        uiOverlay.appendChild(banner);
+
+        const bannerData = { element: banner, isLeft: isLeftSide };
+        this.passiveBannersHTML.push(bannerData);
 
         // 1초 후 사라짐
         setTimeout(() => {
-            if (banner && banner.active) {
-                this.scene.tweens.add({
-                    targets: banner,
-                    x: banner.x + (isLeftSide ? -100 : 100),
-                    alpha: 0,
-                    duration: 250,
-                    onComplete: () => {
-                        if (banner && banner.active) {
-                            banner.destroy();
-                        }
-                        // 배열에서 제거
-                        const idx = this.passiveBanners.indexOf(banner);
-                        if (idx > -1) {
-                            this.passiveBanners.splice(idx, 1);
-                        }
+            if (banner && banner.parentNode) {
+                banner.classList.add(isLeftSide ? 'fade-out-left' : 'fade-out-right');
+                setTimeout(() => {
+                    if (banner.parentNode) {
+                        banner.remove();
                     }
-                });
+                    // 배열에서 제거
+                    const idx = this.passiveBannersHTML.indexOf(bannerData);
+                    if (idx > -1) {
+                        this.passiveBannersHTML.splice(idx, 1);
+                    }
+                }, 250);
             }
         }, 1000);
 
