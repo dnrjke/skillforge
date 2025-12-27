@@ -62,6 +62,9 @@ export default class LogWindow {
 
         const html = `
             <style>
+                #log-window {
+                    pointer-events: auto;
+                }
                 #log-window *::-webkit-scrollbar {
                     width: ${this.isMobile ? 10 : 6}px;
                 }

@@ -108,7 +108,13 @@ export default class BattleScene extends Phaser.Scene {
         // UI Camera: UI만 비추는 카메라 (줌 불가, 항상 고정)
         this.uiCamera = this.cameras.add(0, 0, 1280, 720);
         this.uiCamera.setBackgroundColor(0x000000, 0); // alpha=0 (투명)
+        this.uiCamera.clearBeforeRender = false; // 메인 카메라 화면 보존
         this.uiCamera.ignore(this.worldContainer);
+
+        // 디버그 로그: 카메라 ignore 설정 확인
+        console.log('[Camera Debug] Main Camera ignoring:', this.mainCamera.ignore);
+        console.log('[Camera Debug] UI Camera ignoring:', this.uiCamera.ignore);
+        console.log('[Camera Debug] UI Camera clearBeforeRender:', this.uiCamera.clearBeforeRender);
     }
 
     setupBackground() {
@@ -118,6 +124,12 @@ export default class BattleScene extends Phaser.Scene {
 
         // 배경을 월드 컨테이너에 추가
         this.worldContainer.add(bg);
+
+        // 디버그 로그: worldContainer 가시성 확인
+        console.log('[Visibility Debug] worldContainer alpha:', this.worldContainer.alpha);
+        console.log('[Visibility Debug] worldContainer visible:', this.worldContainer.visible);
+        console.log('[Visibility Debug] worldContainer length:', this.worldContainer.length);
+        console.log('[Visibility Debug] background added to worldContainer:', bg);
     }
 
     setupCharacters() {

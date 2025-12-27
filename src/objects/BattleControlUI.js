@@ -54,6 +54,7 @@ export default class BattleControlUI {
                     color: #fff;
                     transition: all 0.15s;
                     touch-action: manipulation;
+                    pointer-events: auto;
                 }
                 #speed-badge:hover {
                     transform: scale(1.1);
@@ -117,6 +118,7 @@ export default class BattleControlUI {
                     flex-direction: column;
                     gap: ${gap}px;
                     font-family: Arial, sans-serif;
+                    pointer-events: auto;
                 }
                 #control-panel button {
                     padding: ${btnPaddingV}px ${btnPaddingH}px;
@@ -128,6 +130,7 @@ export default class BattleControlUI {
                     transition: all 0.2s;
                     min-width: ${minWidth}px;
                     touch-action: manipulation;
+                    pointer-events: auto;
                 }
                 #control-panel button:active {
                     transform: scale(0.95);
