@@ -91,6 +91,8 @@ export default class PartyStatusUI {
                 background-size: contain;
                 background-repeat: no-repeat;
                 background-position: center;
+                position: relative;
+                z-index: 0;
             }
 
             .enemy .board-sprite {
@@ -105,6 +107,7 @@ export default class PartyStatusUI {
                 width: 280px;
                 height: 110px;
                 pointer-events: none;
+                z-index: 1;
             }
 
             /* ===== 개별 유닛 슬롯 ===== */
@@ -115,36 +118,37 @@ export default class PartyStatusUI {
             }
 
             /*
-             * 타일 중심 좌표 (280x110px 보드 기준)
+             * 타일 표면 좌표 (280x110px 보드 기준)
              * ==========================================
-             * 보드 레이아웃 (아이소메트릭 45도 회전):
+             * 아이소메트릭 투시 보정: 기하학적 중심 + 12px (타일 표면으로 이동)
              *
+             * 보드 레이아웃:
              *        [0]       [1]       [2]    ← 뒷줄 (back row)
              *     [3]       [4]       [5]       ← 앞줄 (front row)
              *
-             * 타일 중심점:
-             *   - Tile 0: (95, 22)   뒷줄 좌측
-             *   - Tile 1: (155, 12)  뒷줄 중앙
-             *   - Tile 2: (215, 22)  뒷줄 우측
-             *   - Tile 3: (35, 58)   앞줄 좌측
-             *   - Tile 4: (95, 48)   앞줄 중앙
-             *   - Tile 5: (155, 58)  앞줄 우측
+             * 보정된 타일 표면 중심점 (Y축 +12px):
+             *   - Tile 0: (95, 34)   뒷줄 좌측
+             *   - Tile 1: (155, 24)  뒷줄 중앙
+             *   - Tile 2: (215, 34)  뒷줄 우측
+             *   - Tile 3: (35, 70)   앞줄 좌측
+             *   - Tile 4: (95, 60)   앞줄 중앙
+             *   - Tile 5: (155, 70)  앞줄 우측
              *
              * 슬롯 위치 계산:
-             *   left = 타일중심X - (슬롯너비/2) = 타일중심X - 30
-             *   top = 타일중심Y - 슬롯높이 + 스프라이트bottom = 타일중심Y - 48
+             *   left = 타일X - 30
+             *   top = 타일Y - 48 (슬롯높이70 - 스프라이트bottom22)
              */
 
-            /* 뒷줄 (0, 1, 2) */
-            .unit-slot[data-pos="0"] { left: 65px; top: -26px; }
-            .unit-slot[data-pos="1"] { left: 125px; top: -36px; }
-            .unit-slot[data-pos="2"] { left: 185px; top: -26px; }
-            /* 앞줄 (3, 4, 5) */
-            .unit-slot[data-pos="3"] { left: 5px; top: 10px; }
-            .unit-slot[data-pos="4"] { left: 65px; top: 0px; }
-            .unit-slot[data-pos="5"] { left: 125px; top: 10px; }
+            /* 뒷줄 (0, 1, 2) - 투시 보정 적용 */
+            .unit-slot[data-pos="0"] { left: 65px; top: -14px; }
+            .unit-slot[data-pos="1"] { left: 125px; top: -24px; }
+            .unit-slot[data-pos="2"] { left: 185px; top: -14px; }
+            /* 앞줄 (3, 4, 5) - 투시 보정 적용 */
+            .unit-slot[data-pos="3"] { left: 5px; top: 22px; }
+            .unit-slot[data-pos="4"] { left: 65px; top: 12px; }
+            .unit-slot[data-pos="5"] { left: 125px; top: 22px; }
 
-            /* z-index: 앞줄이 뒷줄보다 위에 */
+            /* z-index: 보드(0) < 뒷줄(1-2) < 앞줄(3-4) */
             .unit-slot[data-pos="0"] { z-index: 1; }
             .unit-slot[data-pos="1"] { z-index: 2; }
             .unit-slot[data-pos="2"] { z-index: 1; }
@@ -398,15 +402,15 @@ export default class PartyStatusUI {
                 }
 
                 /*
-                 * 모바일 타일 중심 좌표 (200x78px, 데스크탑의 0.714배)
-                 * 슬롯 계산: left = 타일중심X - 24, top = 타일중심Y - 38
+                 * 모바일 타일 표면 좌표 (200x78px, 0.714배)
+                 * 투시 보정 +8px 적용
                  */
-                .unit-slot[data-pos="0"] { left: 44px; top: -22px; }
-                .unit-slot[data-pos="1"] { left: 87px; top: -30px; }
-                .unit-slot[data-pos="2"] { left: 130px; top: -22px; }
-                .unit-slot[data-pos="3"] { left: 1px; top: 3px; }
-                .unit-slot[data-pos="4"] { left: 44px; top: -4px; }
-                .unit-slot[data-pos="5"] { left: 87px; top: 3px; }
+                .unit-slot[data-pos="0"] { left: 44px; top: -14px; }
+                .unit-slot[data-pos="1"] { left: 87px; top: -21px; }
+                .unit-slot[data-pos="2"] { left: 130px; top: -14px; }
+                .unit-slot[data-pos="3"] { left: 1px; top: 12px; }
+                .unit-slot[data-pos="4"] { left: 44px; top: 5px; }
+                .unit-slot[data-pos="5"] { left: 87px; top: 12px; }
 
                 .unit-shadow {
                     bottom: 16px;
