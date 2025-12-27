@@ -2,6 +2,19 @@ import Phaser from 'phaser';
 import BootScene from './scenes/BootScene.js';
 import BattleScene from './scenes/BattleScene.js';
 
+// iOS Safari 주소표시줄 숨기기 (스크롤 트릭)
+function hideAddressBar() {
+    // iOS Safari는 스크롤 시 주소표시줄이 자동으로 숨겨짐
+    // 페이지 로드 후 약간 스크롤하여 강제로 주소표시줄 숨김
+    setTimeout(() => {
+        window.scrollTo(0, 1);
+        // 다시 원래 위치로 (하지만 주소표시줄은 숨겨진 상태 유지)
+        setTimeout(() => {
+            window.scrollTo(0, 0);
+        }, 50);
+    }, 100);
+}
+
 // 모바일 바운싱 방지 (터치 이벤트)
 function preventOverscroll() {
     let startY = 0;
@@ -85,7 +98,17 @@ const config = {
 };
 
 // 모바일 최적화 초기화
+hideAddressBar(); // iOS Safari 주소표시줄 숨기기
 preventOverscroll();
 setupFullscreenOnFirstTouch();
 
 const game = new Phaser.Game(config);
+
+// 리사이즈/회전 시에도 주소표시줄 숨기기 재시도
+window.addEventListener('resize', () => {
+    hideAddressBar();
+});
+
+window.addEventListener('orientationchange', () => {
+    hideAddressBar();
+});
