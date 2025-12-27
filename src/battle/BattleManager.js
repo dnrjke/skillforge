@@ -515,25 +515,23 @@ export default class BattleManager {
         }
     }
 
-    // 행동 배너 표시 (중앙 - AP 소모량 알갱이 표시)
+    // 행동 배너 표시 (중앙 - AP 소모량 알갱이는 스킬명 위에 표시)
     showActionBanner(actionName, apCost = 0) {
         // 기존 배너 제거
         if (this.skillBanner) {
             this.skillBanner.destroy();
         }
 
-        // 하단 중앙에 행동 이름 배너
+        // 하단 중앙에 행동 이름 배너 (카메라 영향 받음)
         const banner = this.scene.add.container(640, 580);
         banner.setDepth(3000);
-        banner.setScrollFactor(0);
+        // setScrollFactor 제거 - 카메라 줌/흔들림 영향 받음
 
         // 배경 바
         const bgGlow = this.scene.add.rectangle(0, 0, 340, 60, 0xffaa44, 0.25);
-        bgGlow.setScrollFactor(0);
 
         const bg = this.scene.add.rectangle(0, 0, 320, 50, 0x000000, 0.85);
         bg.setStrokeStyle(2, 0xffaa44);
-        bg.setScrollFactor(0);
 
         // 행동 이름
         const text = this.scene.add.text(0, 0, actionName, {
@@ -543,29 +541,29 @@ export default class BattleManager {
             fontStyle: 'bold',
             stroke: '#000000',
             strokeThickness: 2
-        }).setOrigin(0.5).setScrollFactor(0);
+        }).setOrigin(0.5);
 
         // 좌우 장식
         const leftDeco = this.scene.add.text(-120, 0, '【', {
             fontSize: '26px',
             fill: '#ffaa44',
             fontFamily: 'Arial'
-        }).setOrigin(0.5).setScrollFactor(0);
+        }).setOrigin(0.5);
 
         const rightDeco = this.scene.add.text(120, 0, '】', {
             fontSize: '26px',
             fill: '#ffaa44',
             fontFamily: 'Arial'
-        }).setOrigin(0.5).setScrollFactor(0);
+        }).setOrigin(0.5);
 
         banner.add([bgGlow, bg, leftDeco, text, rightDeco]);
 
-        // AP 소모량 알갱이 표시 (5개 단위로 그룹핑, 중앙 정렬)
+        // AP 소모량 알갱이 표시 (스킬명 위에 - 5개 단위로 그룹핑, 중앙 정렬)
         if (apCost > 0) {
             const dotSize = 8;
             const dotGap = 12;         // 그룹 내 알갱이 간격
             const groupGap = 24;       // 그룹 간 간격
-            const dotY = 0;
+            const dotY = -40;          // 스킬명 위로 이동
 
             // 왼쪽 그룹 (1-5개)
             const leftGroupCount = Math.min(5, apCost);
@@ -585,7 +583,6 @@ export default class BattleManager {
             for (let i = 0; i < leftGroupCount; i++) {
                 const dotX = currentX + i * dotGap;
                 const dot = this.scene.add.circle(dotX, dotY, dotSize / 2, 0xffcc66);
-                dot.setScrollFactor(0);
                 dot.setStrokeStyle(1, 0xffaa44);
                 banner.add(dot);
             }
@@ -596,7 +593,6 @@ export default class BattleManager {
                 for (let i = 0; i < rightGroupCount; i++) {
                     const dotX = currentX + i * dotGap;
                     const dot = this.scene.add.circle(dotX, dotY, dotSize / 2, 0xffcc66);
-                    dot.setScrollFactor(0);
                     dot.setStrokeStyle(1, 0xffaa44);
                     banner.add(dot);
                 }
@@ -639,7 +635,7 @@ export default class BattleManager {
         this.skillBanner = banner;
     }
 
-    // 패시브 스킬 사이드 배너 표시 (하늘색 기조, 양측 표시)
+    // 패시브 스킬 사이드 배너 표시 (하늘색 기조, 양측 표시) - 카메라 영향 받음
     showPassiveBanner(passiveName, isLeftSide = true) {
         // 패시브 배너 배열 초기화
         if (!this.passiveBanners) {
@@ -656,22 +652,20 @@ export default class BattleManager {
 
         const banner = this.scene.add.container(baseX, baseY);
         banner.setDepth(2900);
-        banner.setScrollFactor(0);
+        // setScrollFactor 제거 - 카메라 줌/흔들림 영향 받음
         banner.isLeft = isLeftSide;
 
         // 배경 바 (하늘색 기조)
         const bgGlow = this.scene.add.rectangle(0, 0, 260, 45, 0x4488ff, 0.3);
-        bgGlow.setScrollFactor(0);
 
         const bg = this.scene.add.rectangle(0, 0, 240, 38, 0x000000, 0.85);
         bg.setStrokeStyle(2, 0x66aaff);
-        bg.setScrollFactor(0);
 
         // 번개 아이콘
         const icon = this.scene.add.text(isLeftSide ? -100 : 100, 0, '⚡', {
             fontSize: '18px',
             fill: '#88ccff'
-        }).setOrigin(0.5).setScrollFactor(0);
+        }).setOrigin(0.5);
 
         // 패시브 이름
         const text = this.scene.add.text(0, 0, passiveName, {
@@ -681,7 +675,7 @@ export default class BattleManager {
             fontStyle: 'bold',
             stroke: '#000000',
             strokeThickness: 2
-        }).setOrigin(0.5).setScrollFactor(0);
+        }).setOrigin(0.5);
 
         banner.add([bgGlow, bg, icon, text]);
 
