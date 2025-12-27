@@ -29,62 +29,44 @@ export default class BattleControlUI {
                window.innerWidth <= 768;
     }
 
-    // 우상단 배속 뱃지
+    // 우상단 배속 뱃지 (순수 HTML - 뷰포트 고정)
     createSpeedBadge() {
         const size = Math.round(50 * this.scale);
         const fontSize = Math.round(16 * this.scale);
         const borderWidth = Math.round(3 * this.scale);
 
-        const html = `
-            <style>
-                #speed-badge {
-                    width: ${size}px;
-                    height: ${size}px;
-                    border-radius: 50%;
-                    background: rgba(50, 50, 50, 0.9);
-                    border: ${borderWidth}px solid #666;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    cursor: pointer;
-                    user-select: none;
-                    font-family: Arial, sans-serif;
-                    font-size: ${fontSize}px;
-                    font-weight: bold;
-                    color: #fff;
-                    transition: all 0.15s;
-                    touch-action: manipulation;
-                    pointer-events: auto;
-                }
-                #speed-badge:hover {
-                    transform: scale(1.1);
-                    border-color: #ff9900;
-                }
-                #speed-badge:active {
-                    transform: scale(0.95);
-                }
-                #speed-badge.fast {
-                    border-color: #ff9900;
-                    background: rgba(255, 150, 50, 0.9);
-                }
-                #speed-badge.superfast {
-                    border-color: #ff3300;
-                    background: rgba(255, 80, 30, 0.95);
-                }
-            </style>
-            <div id="speed-badge">1x</div>
+        // 순수 HTML 엘리먼트 생성 (Phaser DOM 사용 안함)
+        const badge = document.createElement('div');
+        badge.id = 'speed-badge';
+        badge.textContent = '1x';
+
+        // CSS로 뷰포트에 고정
+        badge.style.cssText = `
+            position: fixed;
+            top: ${this.isMobile ? 50 : 40}px;
+            right: ${this.isMobile ? 60 : 40}px;
+            width: ${size}px;
+            height: ${size}px;
+            border-radius: 50%;
+            background: rgba(50, 50, 50, 0.9);
+            border: ${borderWidth}px solid #666;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            font-family: Arial, sans-serif;
+            font-size: ${fontSize}px;
+            font-weight: bold;
+            color: #fff;
+            transition: all 0.15s;
+            touch-action: manipulation;
+            pointer-events: auto;
+            z-index: 1000;
         `;
 
-        const width = this.scene.scale.width;
-        const height = this.scene.scale.height;
-        const posX = this.isMobile ? width - 60 : width - 40;
-        const posY = this.isMobile ? 50 : 40;
-        this.speedBadge = this.scene.add.dom(posX, posY).createFromHTML(html);
-        this.speedBadge.setOrigin(0.5, 0.5);
-        this.speedBadge.setDepth(2000);
-        this.speedBadge.setScrollFactor(0);  // 카메라 워킹 영향 안받음
-
-        const badge = this.speedBadge.node.querySelector('#speed-badge');
+        document.body.appendChild(badge);
+        this.speedBadgeElement = badge;
 
         // 클릭으로 배속 순환
         badge.addEventListener('click', (e) => {
@@ -92,15 +74,40 @@ export default class BattleControlUI {
             this.cycleSpeed();
         });
 
+        // 호버 효과
+        badge.addEventListener('mouseenter', () => {
+            badge.style.transform = 'scale(1.1)';
+            badge.style.borderColor = '#ff9900';
+        });
+
+        badge.addEventListener('mouseleave', () => {
+            badge.style.transform = 'scale(1)';
+            const actualSpeed = this.speedOptions[this.currentSpeedIndex];
+            if (actualSpeed >= 4) {
+                badge.style.borderColor = '#ff3300';
+            } else if (actualSpeed > 0.5) {
+                badge.style.borderColor = '#ff9900';
+            } else {
+                badge.style.borderColor = '#666';
+            }
+        });
+
+        badge.addEventListener('mousedown', () => {
+            badge.style.transform = 'scale(0.95)';
+        });
+
+        badge.addEventListener('mouseup', () => {
+            badge.style.transform = 'scale(1)';
+        });
+
         badge.addEventListener('touchstart', (e) => {
             e.stopPropagation();
         }, { passive: true });
 
-        // 키보드 이벤트 방지
         badge.addEventListener('keydown', (e) => e.stopPropagation());
     }
 
-    // 우하단 컨트롤 패널
+    // 우하단 컨트롤 패널 (순수 HTML - 뷰포트 고정)
     createControlPanel() {
         const gap = Math.round(8 * this.scale);
         const btnPaddingV = Math.round(10 * this.scale);
@@ -111,86 +118,81 @@ export default class BattleControlUI {
         const statusFontSize = Math.round(11 * this.scale);
         const statusPadding = Math.round(4 * this.scale);
 
-        const html = `
-            <style>
-                #control-panel {
-                    display: flex;
-                    flex-direction: column;
-                    gap: ${gap}px;
-                    font-family: Arial, sans-serif;
-                    pointer-events: auto;
-                }
-                #control-panel button {
-                    padding: ${btnPaddingV}px ${btnPaddingH}px;
-                    border: none;
-                    border-radius: ${btnRadius}px;
-                    cursor: pointer;
-                    font-size: ${btnFontSize}px;
-                    font-weight: bold;
-                    transition: all 0.2s;
-                    min-width: ${minWidth}px;
-                    touch-action: manipulation;
-                    pointer-events: auto;
-                }
-                #control-panel button:active {
-                    transform: scale(0.95);
-                }
-                .control-btn {
-                    background: rgba(50, 100, 150, 0.9);
-                    color: #fff;
-                }
-                .control-btn.active {
-                    background: rgba(50, 150, 50, 0.9);
-                }
-                .control-btn.paused {
-                    background: rgba(150, 50, 50, 0.9);
-                }
-                #battle-status {
-                    font-size: ${statusFontSize}px;
-                    color: #aaa;
-                    text-align: center;
-                    padding: ${statusPadding}px;
-                    background: rgba(0,0,0,0.5);
-                    border-radius: ${btnRadius}px;
-                }
-            </style>
-            <div id="control-panel">
-                <button id="auto-btn" class="control-btn">▶ AUTO</button>
-                <button id="pause-btn" class="control-btn">⏸ PAUSE</button>
-                <div id="battle-status">대기 중</div>
-            </div>
+        // 순수 HTML 엘리먼트 생성
+        const panel = document.createElement('div');
+        panel.id = 'control-panel';
+        panel.innerHTML = `
+            <button id="auto-btn" class="control-btn">▶ AUTO</button>
+            <button id="pause-btn" class="control-btn">⏸ PAUSE</button>
+            <div id="battle-status">대기 중</div>
         `;
 
-        // 우하단 배치 (모바일에서 약간 위로)
-        const width = this.scene.scale.width;
-        const height = this.scene.scale.height;
-        const posX = this.isMobile ? width - 70 : width - 50;
-        const posY = this.isMobile ? height - 180 : height - 140;
-        this.controlPanel = this.scene.add.dom(posX, posY).createFromHTML(html);
-        this.controlPanel.setOrigin(1, 0);
-        this.controlPanel.setDepth(2000);
-        this.controlPanel.setScrollFactor(0);  // 카메라 워킹 영향 안받음
+        // CSS로 뷰포트에 고정
+        panel.style.cssText = `
+            position: fixed;
+            bottom: ${this.isMobile ? 180 : 140}px;
+            right: ${this.isMobile ? 70 : 50}px;
+            display: flex;
+            flex-direction: column;
+            gap: ${gap}px;
+            font-family: Arial, sans-serif;
+            pointer-events: auto;
+            z-index: 1000;
+        `;
+
+        // 버튼 스타일 추가
+        const style = document.createElement('style');
+        style.textContent = `
+            #control-panel button {
+                padding: ${btnPaddingV}px ${btnPaddingH}px;
+                border: none;
+                border-radius: ${btnRadius}px;
+                cursor: pointer;
+                font-size: ${btnFontSize}px;
+                font-weight: bold;
+                transition: all 0.2s;
+                min-width: ${minWidth}px;
+                touch-action: manipulation;
+                pointer-events: auto;
+            }
+            #control-panel button:active {
+                transform: scale(0.95);
+            }
+            #control-panel .control-btn {
+                background: rgba(50, 100, 150, 0.9);
+                color: #fff;
+            }
+            #control-panel .control-btn.active {
+                background: rgba(50, 150, 50, 0.9);
+            }
+            #control-panel .control-btn.paused {
+                background: rgba(150, 50, 50, 0.9);
+            }
+            #control-panel #battle-status {
+                font-size: ${statusFontSize}px;
+                color: #aaa;
+                text-align: center;
+                padding: ${statusPadding}px;
+                background: rgba(0,0,0,0.5);
+                border-radius: ${btnRadius}px;
+            }
+        `;
+
+        document.head.appendChild(style);
+        document.body.appendChild(panel);
+        this.controlPanelElement = panel;
 
         this.setupControlEvents();
     }
 
-    // 화면 크기 변경 시 UI 재배치
+    // 화면 크기 변경 시 UI 재배치 (position: fixed이므로 불필요하지만 유지)
     reposition(width, height) {
-        if (this.speedBadge) {
-            const posX = this.isMobile ? width - 60 : width - 40;
-            const posY = this.isMobile ? 50 : 40;
-            this.speedBadge.setPosition(posX, posY);
-        }
-
-        if (this.controlPanel) {
-            const posX = this.isMobile ? width - 70 : width - 50;
-            const posY = this.isMobile ? height - 180 : height - 140;
-            this.controlPanel.setPosition(posX, posY);
-        }
+        // position: fixed 사용으로 자동 재배치됨
+        // 필요시 여기서 스타일 업데이트 가능
     }
 
     setupControlEvents() {
-        const container = this.controlPanel.node;
+        const container = this.controlPanelElement;
 
         // 자동 전투 버튼
         const autoBtn = container.querySelector('#auto-btn');
@@ -227,18 +229,22 @@ export default class BattleControlUI {
     }
 
     applySpeed() {
-        const badge = this.speedBadge.node.querySelector('#speed-badge');
+        const badge = this.speedBadgeElement;
         const label = this.speedLabels[this.currentSpeedIndex];
         const actualSpeed = this.speedOptions[this.currentSpeedIndex];
 
         badge.textContent = label;
 
         // 스타일 업데이트
-        badge.classList.remove('fast', 'superfast');
         if (actualSpeed >= 4) {
-            badge.classList.add('superfast');
+            badge.style.borderColor = '#ff3300';
+            badge.style.background = 'rgba(255, 80, 30, 0.95)';
         } else if (actualSpeed > 0.5) {
-            badge.classList.add('fast');
+            badge.style.borderColor = '#ff9900';
+            badge.style.background = 'rgba(255, 150, 50, 0.9)';
+        } else {
+            badge.style.borderColor = '#666';
+            badge.style.background = 'rgba(50, 50, 50, 0.9)';
         }
 
         // BattleManager 딜레이 조정
@@ -252,7 +258,7 @@ export default class BattleControlUI {
     toggleAuto() {
         if (!this.battleManager) return;
 
-        const autoBtn = this.controlPanel.node.querySelector('#auto-btn');
+        const autoBtn = this.controlPanelElement.querySelector('#auto-btn');
 
         if (!this.battleManager.isRunning) {
             // 전투 시작
@@ -273,7 +279,7 @@ export default class BattleControlUI {
     togglePause() {
         if (!this.battleManager || !this.battleManager.isRunning) return;
 
-        const pauseBtn = this.controlPanel.node.querySelector('#pause-btn');
+        const pauseBtn = this.controlPanelElement.querySelector('#pause-btn');
         const isPaused = this.battleManager.togglePause();
 
         pauseBtn.classList.toggle('paused', isPaused);
@@ -288,7 +294,7 @@ export default class BattleControlUI {
     }
 
     updateStatus() {
-        const statusEl = this.controlPanel.node.querySelector('#battle-status');
+        const statusEl = this.controlPanelElement.querySelector('#battle-status');
         if (!this.battleManager) {
             statusEl.textContent = '대기 중';
             return;
@@ -311,15 +317,15 @@ export default class BattleControlUI {
 
     // 전투 종료 시 호출
     onBattleEnd(result) {
-        const autoBtn = this.controlPanel.node.querySelector('#auto-btn');
-        const pauseBtn = this.controlPanel.node.querySelector('#pause-btn');
+        const autoBtn = this.controlPanelElement.querySelector('#auto-btn');
+        const pauseBtn = this.controlPanelElement.querySelector('#pause-btn');
 
         autoBtn.classList.remove('active');
         autoBtn.textContent = '▶ AUTO';
         pauseBtn.classList.remove('paused');
         pauseBtn.textContent = '⏸ PAUSE';
 
-        const statusEl = this.controlPanel.node.querySelector('#battle-status');
+        const statusEl = this.controlPanelElement.querySelector('#battle-status');
         statusEl.textContent = `종료: ${result}`;
     }
 }
