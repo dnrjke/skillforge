@@ -29,7 +29,7 @@ export default class BattleControlUI {
                window.innerWidth <= 768;
     }
 
-    // 우상단 배속 뱃지 (순수 HTML - 뷰포트 고정)
+    // 우상단 배속 뱃지 (순수 HTML - 게임 컨테이너 기준)
     createSpeedBadge() {
         const size = Math.round(50 * this.scale);
         const fontSize = Math.round(16 * this.scale);
@@ -40,11 +40,11 @@ export default class BattleControlUI {
         badge.id = 'speed-badge';
         badge.textContent = '1x';
 
-        // CSS로 뷰포트에 고정
+        // CSS로 게임 컨테이너 기준 절대 위치
         badge.style.cssText = `
-            position: fixed;
-            top: ${this.isMobile ? 50 : 40}px;
-            right: ${this.isMobile ? 60 : 40}px;
+            position: absolute;
+            top: ${this.isMobile ? '5%' : '5.5%'};
+            right: ${this.isMobile ? '4%' : '3%'};
             width: ${size}px;
             height: ${size}px;
             border-radius: 50%;
@@ -62,10 +62,11 @@ export default class BattleControlUI {
             transition: all 0.15s;
             touch-action: manipulation;
             pointer-events: auto;
-            z-index: 1000;
+            z-index: 100;
         `;
 
-        document.body.appendChild(badge);
+        const uiOverlay = document.getElementById('ui-overlay');
+        uiOverlay.appendChild(badge);
         this.speedBadgeElement = badge;
 
         // 클릭으로 배속 순환
@@ -107,7 +108,7 @@ export default class BattleControlUI {
         badge.addEventListener('keydown', (e) => e.stopPropagation());
     }
 
-    // 우하단 컨트롤 패널 (순수 HTML - 뷰포트 고정)
+    // 우하단 컨트롤 패널 (순수 HTML - 게임 컨테이너 기준)
     createControlPanel() {
         const gap = Math.round(8 * this.scale);
         const btnPaddingV = Math.round(10 * this.scale);
@@ -127,17 +128,17 @@ export default class BattleControlUI {
             <div id="battle-status">대기 중</div>
         `;
 
-        // CSS로 뷰포트에 고정
+        // CSS로 게임 컨테이너 기준 절대 위치
         panel.style.cssText = `
-            position: fixed;
-            bottom: ${this.isMobile ? 180 : 140}px;
-            right: ${this.isMobile ? 70 : 50}px;
+            position: absolute;
+            bottom: ${this.isMobile ? '24%' : '19%'};
+            right: ${this.isMobile ? '5%' : '4%'};
             display: flex;
             flex-direction: column;
             gap: ${gap}px;
             font-family: Arial, sans-serif;
             pointer-events: auto;
-            z-index: 1000;
+            z-index: 100;
         `;
 
         // 버튼 스타일 추가
@@ -179,7 +180,8 @@ export default class BattleControlUI {
         `;
 
         document.head.appendChild(style);
-        document.body.appendChild(panel);
+        const uiOverlay = document.getElementById('ui-overlay');
+        uiOverlay.appendChild(panel);
         this.controlPanelElement = panel;
 
         this.setupControlEvents();

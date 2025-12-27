@@ -157,20 +157,21 @@ export default class LogWindow {
             </div>
         `;
 
-        // 순수 HTML 엘리먼트 생성 (position:fixed로 뷰포트 고정)
+        // 순수 HTML 엘리먼트 생성 (게임 컨테이너 기준 절대 위치)
         const container = document.createElement('div');
         container.id = 'log-window-container';
         container.style.cssText = `
-            position: fixed;
+            position: absolute;
             bottom: 0;
             left: 50%;
             transform: translateX(-50%);
-            z-index: 1000;
+            z-index: 100;
             pointer-events: auto;
         `;
         container.innerHTML = html;
 
-        document.body.appendChild(container);
+        const uiOverlay = document.getElementById('ui-overlay');
+        uiOverlay.appendChild(container);
         this.containerElement = container;
 
         this.window = container.querySelector('#log-window');

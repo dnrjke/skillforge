@@ -259,10 +259,14 @@ export default class BattleScene extends Phaser.Scene {
         });
     }
 
-    repositionUI() {
+    repositionUI(gameSize) {
         // 화면 크기 변경 시 UI 재배치
-        const { width, height } = this.scale;
+        const { width, height } = gameSize || this.scale;
 
+        // 1. 카메라의 뷰포트를 새로운 크기에 맞춤
+        this.cameras.main.setSize(width, height);
+
+        // 2. UI 레이아웃 재배치
         // BattleControlUI 재배치
         if (this.battleControlUI) {
             this.battleControlUI.reposition(width, height);
