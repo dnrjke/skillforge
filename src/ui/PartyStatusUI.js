@@ -37,43 +37,50 @@ export default class PartyStatusUI {
         const board = document.createElement('div');
         board.className = 'unified-board';
 
-        // 3x2 타일 그리드 (각 타일이 사다리꼴 + 측면)
-        for (let row = 0; row < 2; row++) {
-            for (let col = 0; col < 3; col++) {
-                const slotIndex = row * 3 + col;
-                const isLightTile = (col + row) % 2 === 0;
+        // 보드 윗면 (하나의 연결된 면)
+        const boardTop = document.createElement('div');
+        boardTop.className = 'board-top';
 
-                // 타일 컨테이너 (윗면 + 측면)
-                const tileContainer = document.createElement('div');
-                tileContainer.className = `tile-container tile-col-${col} tile-row-${row}`;
-                tileContainer.dataset.slot = slotIndex;
+        // 내부 분할선 (SVG로 사다리꼴 그리기)
+        boardTop.innerHTML = `
+            <svg class="board-lines" viewBox="0 0 180 80" preserveAspectRatio="none">
+                <!-- 중앙 세로선 (역사다리꼴) -->
+                <line x1="55" y1="0" x2="48" y2="80" stroke="#1a1510" stroke-width="2"/>
+                <line x1="125" y1="0" x2="132" y2="80" stroke="#1a1510" stroke-width="2"/>
+                <!-- 가로 중앙선 -->
+                <line x1="0" y1="40" x2="180" y2="40" stroke="#1a1510" stroke-width="2"/>
+            </svg>
+            <!-- 6개 타일 배경색 -->
+            <div class="tile-colors">
+                <div class="tile-bg tile-0 tile-light"></div>
+                <div class="tile-bg tile-1 tile-dark"></div>
+                <div class="tile-bg tile-2 tile-light"></div>
+                <div class="tile-bg tile-3 tile-dark"></div>
+                <div class="tile-bg tile-4 tile-light"></div>
+                <div class="tile-bg tile-5 tile-dark"></div>
+            </div>
+        `;
 
-                // 타일 윗면 (clip-path 사다리꼴)
-                const tileTop = document.createElement('div');
-                tileTop.className = `tile-top ${isLightTile ? 'tile-light' : 'tile-dark'}`;
+        // 보드 측면 (12px 두께, 하나의 연결된 면)
+        const boardSide = document.createElement('div');
+        boardSide.className = 'board-side';
 
-                // 타일 측면 (두께)
-                const tileSide = document.createElement('div');
-                tileSide.className = `tile-side ${isLightTile ? 'side-light' : 'side-dark'}`;
+        board.appendChild(boardTop);
+        board.appendChild(boardSide);
 
-                tileContainer.appendChild(tileTop);
-                tileContainer.appendChild(tileSide);
-                board.appendChild(tileContainer);
-            }
-        }
-
-        // 캐릭터 컨테이너 (보드 위에 배치)
-        const unitsContainer = document.createElement('div');
-        unitsContainer.className = 'units-container';
+        // 캐릭터 컨테이너 (임시 비활성화)
+        // const unitsContainer = document.createElement('div');
+        // unitsContainer.className = 'units-container';
+        // this.containerElement.appendChild(unitsContainer);
+        // this.unitsContainer = unitsContainer;
 
         this.containerElement.appendChild(board);
-        this.containerElement.appendChild(unitsContainer);
 
         const uiOverlay = document.getElementById('ui-overlay');
         uiOverlay.appendChild(this.containerElement);
 
-        this.unitsContainer = unitsContainer;
-        this.renderUnits();
+        // 캐릭터 렌더링 임시 비활성화
+        // this.renderUnits();
     }
 
     injectStyles() {
@@ -113,128 +120,110 @@ export default class PartyStatusUI {
             .unified-board {
                 position: relative;
                 width: 180px;
-                height: 100px;
-                transform: rotateX(18deg);
+                height: 92px;
+                transform: rotateX(20deg);
                 transform-origin: center bottom;
                 transform-style: preserve-3d;
             }
 
             .enemy .unified-board {
-                transform: rotateX(18deg) scaleX(-1);
+                transform: rotateX(20deg) scaleX(-1);
             }
 
-            /* ===== 타일 컨테이너 (3x2 그리드 배치) ===== */
-            .tile-container {
+            /* ===== 보드 윗면 (하나의 연결된 면) ===== */
+            .board-top {
                 position: absolute;
-                width: 58px;
-                height: 36px;
+                top: 0;
+                left: 0;
+                width: 180px;
+                height: 80px;
+                background: #1a1510;
+                border: 3px solid #0a0808;
+                box-sizing: border-box;
+                overflow: hidden;
             }
 
-            /* 타일 위치 (row 0 = 뒷줄, row 1 = 앞줄) */
-            .tile-col-0.tile-row-0 { left: 0; top: 0; }
-            .tile-col-1.tile-row-0 { left: 61px; top: 0; }
-            .tile-col-2.tile-row-0 { left: 122px; top: 0; }
-            .tile-col-0.tile-row-1 { left: 0; top: 38px; }
-            .tile-col-1.tile-row-1 { left: 61px; top: 38px; }
-            .tile-col-2.tile-row-1 { left: 122px; top: 38px; }
-
-            /* ===== 타일 윗면 (clip-path 사다리꼴) ===== */
-            .tile-top {
+            /* 타일 배경 컨테이너 */
+            .tile-colors {
                 position: absolute;
                 top: 0;
                 left: 0;
                 width: 100%;
                 height: 100%;
-                border: 2px solid #1a1510;
-                box-sizing: border-box;
             }
 
-            /* 좌측 열: 오른쪽으로 기울어진 사다리꼴 (소실점 중앙) */
-            .tile-col-0 .tile-top {
-                clip-path: polygon(0% 0%, 90% 8%, 90% 92%, 0% 100%);
+            /* 개별 타일 배경 (clip-path로 사다리꼴) */
+            .tile-bg {
+                position: absolute;
+                width: 100%;
+                height: 100%;
             }
 
-            /* 중앙 열: 역사다리꼴 (윗변이 넓음) */
-            .tile-col-1 .tile-top {
-                clip-path: polygon(5% 8%, 95% 8%, 100% 92%, 0% 92%);
+            /* 좌측 상단 (0) - 사다리꼴 */
+            .tile-0 {
+                clip-path: polygon(0% 0%, 31% 0%, 27% 50%, 0% 50%);
             }
 
-            /* 우측 열: 왼쪽으로 기울어진 사다리꼴 */
-            .tile-col-2 .tile-top {
-                clip-path: polygon(10% 8%, 100% 0%, 100% 100%, 10% 92%);
+            /* 중앙 상단 (1) - 역사다리꼴 */
+            .tile-1 {
+                clip-path: polygon(31% 0%, 69% 0%, 73% 50%, 27% 50%);
+            }
+
+            /* 우측 상단 (2) - 사다리꼴 */
+            .tile-2 {
+                clip-path: polygon(69% 0%, 100% 0%, 100% 50%, 73% 50%);
+            }
+
+            /* 좌측 하단 (3) - 사다리꼴 */
+            .tile-3 {
+                clip-path: polygon(0% 50%, 27% 50%, 23% 100%, 0% 100%);
+            }
+
+            /* 중앙 하단 (4) - 역사다리꼴 */
+            .tile-4 {
+                clip-path: polygon(27% 50%, 73% 50%, 77% 100%, 23% 100%);
+            }
+
+            /* 우측 하단 (5) - 사다리꼴 */
+            .tile-5 {
+                clip-path: polygon(73% 50%, 100% 50%, 100% 100%, 77% 100%);
             }
 
             /* 타일 색상 */
             .tile-light {
-                background: linear-gradient(
-                    180deg,
-                    #c8b898 0%,
-                    #b0a080 50%,
-                    #988868 100%
-                );
+                background: linear-gradient(180deg, #c8b898 0%, #a89878 100%);
             }
 
             .tile-dark {
-                background: linear-gradient(
-                    180deg,
-                    #4a4858 0%,
-                    #3a3848 50%,
-                    #2a2838 100%
-                );
+                background: linear-gradient(180deg, #4a4858 0%, #2a2838 100%);
             }
 
-            /* ===== 타일 측면 (12px 두께) ===== */
-            .tile-side {
+            /* SVG 분할선 */
+            .board-lines {
                 position: absolute;
-                bottom: -12px;
+                top: 0;
                 left: 0;
                 width: 100%;
+                height: 100%;
+                z-index: 5;
+            }
+
+            /* ===== 보드 측면 (12px 두께) ===== */
+            .board-side {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                width: 180px;
                 height: 12px;
-                border: 2px solid #0a0808;
+                background: linear-gradient(180deg, #5a4a38 0%, #3a2a18 100%);
+                border: 3px solid #0a0808;
                 border-top: none;
                 box-sizing: border-box;
             }
 
-            /* 좌측 열 측면 clip-path */
-            .tile-col-0 .tile-side {
-                clip-path: polygon(0% 0%, 90% 0%, 90% 100%, 0% 100%);
-            }
-
-            /* 중앙 열 측면 clip-path */
-            .tile-col-1 .tile-side {
-                clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
-            }
-
-            /* 우측 열 측면 clip-path */
-            .tile-col-2 .tile-side {
-                clip-path: polygon(10% 0%, 100% 0%, 100% 100%, 10% 100%);
-            }
-
-            /* 측면 색상 (윗면보다 어둡게) */
-            .side-light {
-                background: linear-gradient(
-                    180deg,
-                    #8a7858 0%,
-                    #6a5838 100%
-                );
-            }
-
-            .side-dark {
-                background: linear-gradient(
-                    180deg,
-                    #2a2838 0%,
-                    #1a1828 100%
-                );
-            }
-
-            /* ===== 캐릭터 컨테이너 ===== */
+            /* ===== 캐릭터 컨테이너 (임시 비활성화) ===== */
             .units-container {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 180px;
-                height: 100px;
-                pointer-events: none;
+                display: none;
             }
 
             /* ===== 개별 유닛 슬롯 ===== */
@@ -478,83 +467,23 @@ export default class PartyStatusUI {
 
                 .unified-board {
                     width: 140px;
-                    height: 78px;
-                    transform: rotateX(16deg);
+                    height: 72px;
+                    transform: rotateX(18deg);
                 }
 
                 .enemy .unified-board {
-                    transform: rotateX(16deg) scaleX(-1);
+                    transform: rotateX(18deg) scaleX(-1);
                 }
 
-                .tile-container {
-                    width: 45px;
-                    height: 28px;
-                }
-
-                .tile-col-0.tile-row-0 { left: 0; top: 0; }
-                .tile-col-1.tile-row-0 { left: 47px; top: 0; }
-                .tile-col-2.tile-row-0 { left: 94px; top: 0; }
-                .tile-col-0.tile-row-1 { left: 0; top: 30px; }
-                .tile-col-1.tile-row-1 { left: 47px; top: 30px; }
-                .tile-col-2.tile-row-1 { left: 94px; top: 30px; }
-
-                .tile-side {
-                    height: 10px;
-                    bottom: -10px;
-                }
-
-                .units-container {
+                .board-top {
                     width: 140px;
-                    height: 78px;
+                    height: 62px;
                 }
 
-                .unit-slot {
-                    width: 45px;
-                    height: 52px;
+                .board-side {
+                    width: 140px;
+                    height: 10px;
                 }
-
-                .unit-slot[data-pos="0"] { left: 0; top: -6px; }
-                .unit-slot[data-pos="1"] { left: 47px; top: -10px; }
-                .unit-slot[data-pos="2"] { left: 94px; top: -6px; }
-                .unit-slot[data-pos="3"] { left: 0; top: 20px; }
-                .unit-slot[data-pos="4"] { left: 47px; top: 16px; }
-                .unit-slot[data-pos="5"] { left: 94px; top: 20px; }
-
-                .unit-shadow {
-                    bottom: 16px;
-                    width: 24px;
-                    height: 6px;
-                }
-
-                .unit-slot[data-pos="1"] .unit-shadow,
-                .unit-slot[data-pos="4"] .unit-shadow {
-                    width: 28px;
-                    height: 7px;
-                }
-
-                .unit-sprite-wrapper {
-                    bottom: 17px;
-                    transform: translateX(-50%) scale(1.15);
-                }
-
-                .unit-slot[data-pos="1"] .unit-sprite-wrapper,
-                .unit-slot[data-pos="4"] .unit-sprite-wrapper {
-                    transform: translateX(-50%) scale(1.25);
-                }
-
-                @keyframes spriteFloat {
-                    0%, 100% { transform: translateX(-50%) scale(1.15) translateY(0); }
-                    50% { transform: translateX(-50%) scale(1.15) translateY(-1px); }
-                }
-
-                @keyframes spriteFloatCenter {
-                    0%, 100% { transform: translateX(-50%) scale(1.25) translateY(0); }
-                    50% { transform: translateX(-50%) scale(1.25) translateY(-1px); }
-                }
-
-                .unit-hp-container { bottom: 2px; }
-                .mini-hp-bar { width: 38px; height: 3px; }
-                .mini-hp-text { font-size: 10px; }
             }
         `;
         document.head.appendChild(style);
