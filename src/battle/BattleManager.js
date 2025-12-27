@@ -560,29 +560,47 @@ export default class BattleManager {
 
         banner.add([bgGlow, bg, leftDeco, text, rightDeco]);
 
-        // AP 소모량 알갱이 표시 (왼쪽 1-5, 오른쪽 6-10)
-        const dotSize = 8;
-        const dotGap = 12;
-        const dotY = 0;
+        // AP 소모량 알갱이 표시 (5개 단위로 그룹핑, 중앙 정렬)
+        if (apCost > 0) {
+            const dotSize = 8;
+            const dotGap = 12;         // 그룹 내 알갱이 간격
+            const groupGap = 24;       // 그룹 간 간격
+            const dotY = 0;
 
-        // 왼쪽 알갱이 (1-5)
-        const leftDots = Math.min(5, apCost);
-        for (let i = 0; i < leftDots; i++) {
-            const dotX = -145 - (4 - i) * dotGap;
-            const dot = this.scene.add.circle(dotX, dotY, dotSize / 2, 0xffcc66);
-            dot.setScrollFactor(0);
-            dot.setStrokeStyle(1, 0xffaa44);
-            banner.add(dot);
-        }
+            // 왼쪽 그룹 (1-5개)
+            const leftGroupCount = Math.min(5, apCost);
+            // 오른쪽 그룹 (6-10개)
+            const rightGroupCount = Math.max(0, Math.min(5, apCost - 5));
 
-        // 오른쪽 알갱이 (6-10)
-        const rightDots = Math.max(0, Math.min(5, apCost - 5));
-        for (let i = 0; i < rightDots; i++) {
-            const dotX = 145 + i * dotGap;
-            const dot = this.scene.add.circle(dotX, dotY, dotSize / 2, 0xffcc66);
-            dot.setScrollFactor(0);
-            dot.setStrokeStyle(1, 0xffaa44);
-            banner.add(dot);
+            // 전체 너비 계산
+            const leftGroupWidth = leftGroupCount > 0 ? (leftGroupCount - 1) * dotGap : 0;
+            const rightGroupWidth = rightGroupCount > 0 ? (rightGroupCount - 1) * dotGap : 0;
+            const totalWidth = leftGroupWidth + (rightGroupCount > 0 ? groupGap + rightGroupWidth : 0);
+
+            // 중앙 정렬을 위한 오프셋
+            const offsetX = -totalWidth / 2;
+
+            // 왼쪽 그룹 그리기 (왼쪽에서 오른쪽으로)
+            let currentX = offsetX;
+            for (let i = 0; i < leftGroupCount; i++) {
+                const dotX = currentX + i * dotGap;
+                const dot = this.scene.add.circle(dotX, dotY, dotSize / 2, 0xffcc66);
+                dot.setScrollFactor(0);
+                dot.setStrokeStyle(1, 0xffaa44);
+                banner.add(dot);
+            }
+
+            // 오른쪽 그룹 그리기 (그룹 간격 적용)
+            if (rightGroupCount > 0) {
+                currentX = offsetX + leftGroupWidth + groupGap;
+                for (let i = 0; i < rightGroupCount; i++) {
+                    const dotX = currentX + i * dotGap;
+                    const dot = this.scene.add.circle(dotX, dotY, dotSize / 2, 0xffcc66);
+                    dot.setScrollFactor(0);
+                    dot.setStrokeStyle(1, 0xffaa44);
+                    banner.add(dot);
+                }
+            }
         }
 
         // 등장 애니메이션

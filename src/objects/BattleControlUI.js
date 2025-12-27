@@ -74,7 +74,9 @@ export default class BattleControlUI {
             <div id="speed-badge">1x</div>
         `;
 
-        const posX = this.isMobile ? 1220 : 1240;
+        const width = this.scene.scale.width;
+        const height = this.scene.scale.height;
+        const posX = this.isMobile ? width - 60 : width - 40;
         const posY = this.isMobile ? 50 : 40;
         this.speedBadge = this.scene.add.dom(posX, posY).createFromHTML(html);
         this.speedBadge.setOrigin(0.5, 0.5);
@@ -157,14 +159,31 @@ export default class BattleControlUI {
         `;
 
         // 우하단 배치 (모바일에서 약간 위로)
-        const posX = this.isMobile ? 1210 : 1230;
-        const posY = this.isMobile ? 540 : 580;
+        const width = this.scene.scale.width;
+        const height = this.scene.scale.height;
+        const posX = this.isMobile ? width - 70 : width - 50;
+        const posY = this.isMobile ? height - 180 : height - 140;
         this.controlPanel = this.scene.add.dom(posX, posY).createFromHTML(html);
         this.controlPanel.setOrigin(1, 0);
         this.controlPanel.setDepth(2000);
         this.controlPanel.setScrollFactor(0);  // 카메라 워킹 영향 안받음
 
         this.setupControlEvents();
+    }
+
+    // 화면 크기 변경 시 UI 재배치
+    reposition(width, height) {
+        if (this.speedBadge) {
+            const posX = this.isMobile ? width - 60 : width - 40;
+            const posY = this.isMobile ? 50 : 40;
+            this.speedBadge.setPosition(posX, posY);
+        }
+
+        if (this.controlPanel) {
+            const posX = this.isMobile ? width - 70 : width - 50;
+            const posY = this.isMobile ? height - 180 : height - 140;
+            this.controlPanel.setPosition(posX, posY);
+        }
     }
 
     setupControlEvents() {
