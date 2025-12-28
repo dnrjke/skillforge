@@ -266,9 +266,11 @@ export default class FieldStatusUI {
 
     // ===== AP 반딧불 시스템 =====
     createFireflies() {
+        // 반딧불 컨테이너 (캐릭터 위치 + 아래 오프셋)
+        this.fireflyOffsetY = 30;  // 아래로 이동
         this.fireflyContainer = this.scene.add.container(
             this.character.x,
-            this.character.y
+            this.character.y + this.fireflyOffsetY
         );
 
         if (this.parentContainer) {
@@ -411,11 +413,11 @@ export default class FieldStatusUI {
             firefly.currentPos.x += firefly.velocity.x;
             firefly.currentPos.y += firefly.velocity.y;
 
-            // Y 좌표 기반 원근감
+            // Y 좌표 기반 원근감 (크기 변화 폭 축소)
             const normalizedY = (firefly.currentPos.y + params.b) / (params.b * 2);
-            const depthScale = 0.7 + normalizedY * 0.6;  // 0.7 ~ 1.3
-            const depthAlpha = 0.5 + normalizedY * 0.5;  // 뒤쪽 흐림
-            const depthBlur = (1 - normalizedY) * 2;     // 뒤쪽 블러
+            const depthScale = 0.85 + normalizedY * 0.3;  // 0.85 ~ 1.15 (변화 폭 축소)
+            const depthAlpha = 0.6 + normalizedY * 0.4;   // 0.6 ~ 1.0 (흐림 축소)
+            const depthBlur = (1 - normalizedY) * 1;      // 블러 축소
 
             // 맥동(Pulse) 효과
             firefly.pulsePhase += deltaSeconds * 3;
@@ -445,7 +447,7 @@ export default class FieldStatusUI {
         this.lastCharacterPos.y = this.character.y;
 
         // 컨테이너 위치 업데이트
-        this.fireflyContainer.setPosition(this.character.x, this.character.y);
+        this.fireflyContainer.setPosition(this.character.x, this.character.y + this.fireflyOffsetY);
     }
 
     updateFireflyTrail(firefly) {
