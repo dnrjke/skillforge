@@ -447,7 +447,7 @@ export default class FieldStatusUI {
      * 전장 UI 숨기기 (사망 시 호출)
      */
     hide() {
-        // 컨테이너 숨기기
+        // 컨테이너 숨기기 (HP바, 행동게이지 등)
         if (this.container) {
             this.scene.tweens.add({
                 targets: this.container,
@@ -457,10 +457,12 @@ export default class FieldStatusUI {
             });
         }
 
-        // 반딧불 시스템 정리
+        // 반딧불은 삭제하지 않고 잔류 모드로 전환
+        // - alpha 0.3으로 감소
+        // - 사망 위치에 머묾 (캐릭터 추적 중지)
+        // - 유영 속도 20%로 감소
         if (this.fireflySystem) {
-            this.fireflySystem.destroy();
-            this.fireflySystem = null;
+            this.fireflySystem.setLingeringMode();
         }
     }
 

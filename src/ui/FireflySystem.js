@@ -34,6 +34,11 @@ export default class FireflySystem {
         // 가시성 모드: 'hidden', 'scatter', 'all'
         this.visibilityMode = 'all';
 
+        // 잔류 모드 (사망 시)
+        this.isLingering = false;
+        this.lingeringAlpha = 0.3;
+        this.lingeringSpeedMultiplier = 0.2;
+
         this.createFireflies();
     }
 
@@ -263,9 +268,11 @@ export default class FireflySystem {
             }
 
             // 일반 궤도 업데이트 (월드 좌표 기준)
-            firefly.angle += params.speed * deltaSeconds;
-            const noiseX = this.noise(time * 0.5 + params.noiseOffset) * 9;
-            const noiseY = this.noise(time * 0.7 + params.noiseOffset + 100) * 7;
+            // 잔류 모드에서는 속도 20%로 감소
+            const speedMult = this.isLingering ? this.lingeringSpeedMultiplier : 1.0;
+            firefly.angle += params.speed * deltaSeconds * speedMult;
+            const noiseX = this.noise(time * 0.5 + params.noiseOffset) * 9 * speedMult;
+            const noiseY = this.noise(time * 0.7 + params.noiseOffset + 100) * 7 * speedMult;
 
             // 상대 좌표 목표
             const targetRelX = Math.sin(firefly.angle * params.freqX) * params.a + noiseX;
@@ -292,9 +299,14 @@ export default class FireflySystem {
             // 원근감
             const normalizedY = (firefly.relativePos.y + params.b) / (params.b * 2);
             const depthScale = 0.85 + normalizedY * 0.3;
-            const depthAlpha = 0.6 + normalizedY * 0.4;
+            let depthAlpha = 0.6 + normalizedY * 0.4;
 
-            firefly.pulsePhase += deltaSeconds * 3;
+            // 잔류 모드에서는 alpha 고정
+            if (this.isLingering) {
+                depthAlpha = this.lingeringAlpha;
+            }
+
+            firefly.pulsePhase += deltaSeconds * 3 * speedMult;
             const pulse = 1 + Math.sin(firefly.pulsePhase) * 0.15;
 
             firefly.sprite.setPosition(firefly.worldPos.x, firefly.worldPos.y);
@@ -508,6 +520,37 @@ export default class FireflySystem {
 
     getMaxAp() {
         return this.maxAp;
+    }
+
+    /**
+     * 잔류 모드 설정 (사망 시 호출)
+     * - 캐릭터 추적 중지, 사망 위치에 머묾
+     * - alpha 0.3으로 감소
+     * - 유영 속도 20%로 감소
+     */
+    setLingeringMode() {
+        this.isLingering = true;
+
+        // 모든 반딧불에 잔류 상태 적용
+        this.fireflies.forEach(f => {
+            // alpha 페이드
+            if (f.sprite) {
+                this.scene.tweens.add({
+                    targets: f.sprite,
+                    alpha: this.lingeringAlpha,
+                    duration: 500,
+                    ease: 'Power2'
+                });
+            }
+            if (f.glow) {
+                this.scene.tweens.add({
+                    targets: f.glow,
+                    alpha: this.lingeringAlpha * 0.4,
+                    duration: 500,
+                    ease: 'Power2'
+                });
+            }
+        });
     }
 
     destroy() {
