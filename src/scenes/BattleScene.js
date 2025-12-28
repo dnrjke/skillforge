@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import LogWindow from '../ui/LogWindow.js';
-import FieldStatusUI from '../ui/FieldStatusUI.js';
+import FieldStatusUI from '../ui/FieldStatusUI';
 import BattleControlUI from '../ui/BattleControlUI.js';
 import PartyStatusUI from '../ui/PartyStatusUI.js';
 import BattleManager from '../systems/BattleManager.js';
