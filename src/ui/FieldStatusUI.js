@@ -299,19 +299,31 @@ export default class FieldStatusUI {
     }
 
     createSingleFirefly(index, total, isBig) {
+        // 대형 AP: 주황색, 크기 10 / 소형 AP: 노란색, 크기 5
         const size = isBig ? 10 : 5;
-        // 대형 AP: 주황색 / 소형 AP: 노란색
         const color = isBig ? 0xff9900 : 0xffcc00;
 
-        // Lissajous 궤도 파라미터 (불규칙성)
-        const orbitParams = {
-            a: 40 + Math.random() * 20,      // X 반경
-            b: 25 + Math.random() * 15,      // Y 반경
-            freqX: 1 + Math.random() * 0.5,  // X 주파수
-            freqY: 1.5 + Math.random() * 0.5, // Y 주파수
+        // 대형: 넓은 반경, 느린 속도 (Heavy) / 소형: 좁은 반경, 빠른 속도 (Light)
+        const orbitParams = isBig ? {
+            a: 55 + Math.random() * 15,       // X 반경 (넓음)
+            b: 35 + Math.random() * 10,       // Y 반경 (넓음)
+            freqX: 0.8 + Math.random() * 0.3, // 느린 주파수
+            freqY: 1.2 + Math.random() * 0.3,
             phase: (index / total) * Math.PI * 2 + Math.random() * 0.5,
-            speed: 0.8 + Math.random() * 0.4,
-            noiseOffset: Math.random() * 1000
+            speed: 0.4 + Math.random() * 0.2, // 느린 속도
+            noiseOffset: Math.random() * 1000,
+            damping: 0.04,                    // 낮은 감쇠 (더 부드럽게)
+            inertia: 0.96                     // 높은 관성 (무거움)
+        } : {
+            a: 25 + Math.random() * 15,       // X 반경 (좁음)
+            b: 18 + Math.random() * 10,       // Y 반경 (좁음)
+            freqX: 1.2 + Math.random() * 0.5, // 빠른 주파수
+            freqY: 1.8 + Math.random() * 0.5,
+            phase: (index / total) * Math.PI * 2 + Math.random() * 0.8,
+            speed: 1.0 + Math.random() * 0.5, // 빠른 속도
+            noiseOffset: Math.random() * 1000,
+            damping: 0.10,                    // 높은 감쇠 (민첩하게)
+            inertia: 0.90                     // 낮은 관성 (가벼움)
         };
 
         // 반딧불 스프라이트 (원형)
@@ -340,6 +352,7 @@ export default class FieldStatusUI {
             currentPos: { x: 0, y: 0 },
             targetPos: { x: 0, y: 0 },
             velocity: { x: 0, y: 0 },
+            acceleration: { x: 0, y: 0 },  // 가속도 추가
             trailPositions: [],
             pulsePhase: Math.random() * Math.PI * 2,
             isConsuming: false
@@ -377,19 +390,24 @@ export default class FieldStatusUI {
             firefly.targetPos.x = targetX;
             firefly.targetPos.y = targetY;
 
-            // 관성(Damping) 적용 - Late Follow
-            const damping = 0.08;
-            const inertia = 0.92;
+            // 가속도 기반 물리 (부드러운 곡선 유영)
+            // 목표 지점으로의 방향 벡터
+            const dx = firefly.targetPos.x - firefly.currentPos.x;
+            const dy = firefly.targetPos.y - firefly.currentPos.y;
 
-            firefly.velocity.x = firefly.velocity.x * inertia +
-                (firefly.targetPos.x - firefly.currentPos.x) * damping;
-            firefly.velocity.y = firefly.velocity.y * inertia +
-                (firefly.targetPos.y - firefly.currentPos.y) * damping;
+            // 가속도 = 목표 방향 * damping (스프링 힘처럼 작용)
+            firefly.acceleration.x = dx * params.damping;
+            firefly.acceleration.y = dy * params.damping;
+
+            // 속도 = 이전 속도 * 관성 + 가속도
+            firefly.velocity.x = firefly.velocity.x * params.inertia + firefly.acceleration.x;
+            firefly.velocity.y = firefly.velocity.y * params.inertia + firefly.acceleration.y;
 
             // 캐릭터 이동에 대한 지연 반응
-            firefly.velocity.x -= charDeltaX * 0.3;
-            firefly.velocity.y -= charDeltaY * 0.3;
+            firefly.velocity.x -= charDeltaX * 0.25;
+            firefly.velocity.y -= charDeltaY * 0.25;
 
+            // 위치 업데이트
             firefly.currentPos.x += firefly.velocity.x;
             firefly.currentPos.y += firefly.velocity.y;
 
