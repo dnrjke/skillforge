@@ -21,6 +21,39 @@ export default class APScatterManager {
         this.scatterDamping = -0.01;  // 음수 damping = 흩어짐
         this.scatterDuration = 3000;   // 3초 후 소멸
         this.fadeStartTime = 2000;     // 2초 후부터 페이드 시작
+
+        // 화면 경계 마진 (잔상 효과가 자연스럽게 사라지도록)
+        this.boundaryMargin = 100;     // 화면 바깥 100px 여유 공간
+    }
+
+    /**
+     * 현재 화면 경계 계산 (반응형)
+     * @returns {Object} { left, right, top, bottom }
+     */
+    getScreenBounds() {
+        const camera = this.scene.cameras.main;
+        const margin = this.boundaryMargin;
+
+        return {
+            left: camera.scrollX - margin,
+            right: camera.scrollX + camera.width + margin,
+            top: camera.scrollY - margin,
+            bottom: camera.scrollY + camera.height + margin
+        };
+    }
+
+    /**
+     * 반딧불이 화면 경계를 벗어났는지 확인
+     * @param {Object} firefly - 반딧불 객체
+     * @returns {boolean} 경계 벗어남 여부
+     */
+    isOutOfBounds(firefly) {
+        const bounds = this.getScreenBounds();
+        const x = firefly.worldPos.x;
+        const y = firefly.worldPos.y;
+
+        return x < bounds.left || x > bounds.right ||
+               y < bounds.top || y > bounds.bottom;
     }
 
     /**
@@ -83,8 +116,8 @@ export default class APScatterManager {
         this.scatteringFireflies.forEach((firefly, index) => {
             const elapsed = currentTime - firefly.scatterStartTime;
 
-            // 3초 경과 시 소멸
-            if (elapsed >= this.scatterDuration) {
+            // 3초 경과 또는 화면 경계 이탈 시 소멸
+            if (elapsed >= this.scatterDuration || this.isOutOfBounds(firefly)) {
                 toRemove.push(index);
                 return;
             }
