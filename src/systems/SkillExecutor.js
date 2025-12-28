@@ -234,6 +234,11 @@ export default class SkillExecutor {
             this.log(`${target.name}이(가) 쓰러졌다!`, 'system');
             this.presentation.playDeathAnimation(target);
 
+            // 전장 UI 숨기기 (반딧불은 잔류 모드로)
+            if (target.sprite && target.sprite.statusBar) {
+                target.sprite.statusBar.hide();
+            }
+
             const particleEffects = this.battleManager.particleEffects;
             if (particleEffects) {
                 const remainingEnemies = target.isEnemy
