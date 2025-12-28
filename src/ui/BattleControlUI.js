@@ -600,20 +600,12 @@ export default class BattleControlUI {
                 }
 
                 .firefly-mode-desc {
-                    height: 0;
-                    overflow: hidden;
-                    margin: 0;
+                    height: 16px;
+                    margin-top: 6px;
                     padding: 0 10px;
                     font-size: 11px;
                     color: #888;
                     text-align: center;
-                    transition: height 0.15s, padding 0.15s, margin 0.15s;
-                }
-
-                .firefly-mode-desc.visible {
-                    height: 18px;
-                    margin-top: 6px;
-                    padding: 2px 10px;
                 }
 
                 .firefly-mode-desc em {
@@ -646,8 +638,8 @@ export default class BattleControlUI {
                         <button data-mode="scatter" class="${this.settings.fireflyMode === 'scatter' ? 'active' : ''}">비산 효과</button>
                         <button data-mode="hidden" class="${this.settings.fireflyMode === 'hidden' ? 'active' : ''}">숨김</button>
                     </div>
-                    <div class="firefly-mode-desc ${this.settings.fireflyMode === 'scatter' ? 'visible' : ''}" id="firefly-mode-desc">
-                        <em>스킬 사용 시 에너지가 흩어지는 연출만 표시합니다</em>
+                    <div class="firefly-mode-desc" id="firefly-mode-desc">
+                        <em>${this.settings.fireflyMode === 'scatter' ? 'AP 소모 시 발생하는 비산 이펙트만 활성화합니다.' : ''}</em>
                     </div>
                 </div>
 
@@ -695,9 +687,12 @@ export default class BattleControlUI {
                 fireflyButtons.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 this.settings.fireflyMode = btn.dataset.mode;
-                // 비산 효과 모드일 때만 설명 표시
+                // 비산 효과 모드일 때만 설명 표시 (고정 높이, 내용만 변경)
                 if (fireflyDesc) {
-                    fireflyDesc.classList.toggle('visible', btn.dataset.mode === 'scatter');
+                    const descText = btn.dataset.mode === 'scatter'
+                        ? 'AP 소모 시 발생하는 비산 이펙트만 활성화합니다.'
+                        : '';
+                    fireflyDesc.innerHTML = `<em>${descText}</em>`;
                 }
                 this.saveSettings();
                 this.applySettings();
