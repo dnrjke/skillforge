@@ -621,9 +621,9 @@ export default class BattleControlUI {
                 <div class="settings-section">
                     <label>AP 반딧불</label>
                     <div class="segmented-control" id="firefly-mode">
-                        <button data-mode="hidden" class="${this.settings.fireflyMode === 'hidden' ? 'active' : ''}">숨김</button>
-                        <button data-mode="scatter" class="${this.settings.fireflyMode === 'scatter' ? 'active' : ''}">비산만</button>
                         <button data-mode="all" class="${this.settings.fireflyMode === 'all' ? 'active' : ''}">전체</button>
+                        <button data-mode="scatter" class="${this.settings.fireflyMode === 'scatter' ? 'active' : ''}">비산만</button>
+                        <button data-mode="hidden" class="${this.settings.fireflyMode === 'hidden' ? 'active' : ''}">숨김</button>
                     </div>
                 </div>
 

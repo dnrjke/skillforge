@@ -441,9 +441,9 @@ export default class FireflySystem {
             if (big.glow) big.glow.destroy();
             if (big.trail) big.trail.destroy();
 
-            // 5개 작은 AP 생성
+            // 5개 작은 AP 생성 - 작은 반경으로 짧게 탁 터지고 기존 궤도에 합류
             const angles = [0, 72, 144, 216, 288];
-            const radius = 8;
+            const radius = 2; // 아주 작은 분열 반경
 
             for (let i = 0; i < 5; i++) {
                 const angle = (angles[i] * Math.PI) / 180;
@@ -463,8 +463,9 @@ export default class FireflySystem {
                     }
                 );
 
-                newFirefly.velocity.x = offX * 0.15;
-                newFirefly.velocity.y = offY * 0.15;
+                // 짧은 burst 후 즉시 궤도 합류
+                newFirefly.velocity.x = offX * 0.3;
+                newFirefly.velocity.y = offY * 0.3;
 
                 this.fireflies.push(newFirefly);
                 // 분열로 생성된 반딧불에 가시성 적용
