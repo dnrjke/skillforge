@@ -328,9 +328,10 @@ export default class FieldStatusUI {
             inertia: 0.88                     // 낮은 관성 (가벼움)
         };
 
-        // 반딧불 스프라이트 (원형)
-        const sprite = this.scene.add.circle(0, 0, size / 2, color);
-        sprite.setBlendMode(Phaser.BlendModes.ADD);
+        // 반딧불 스프라이트 (원형) - 대형은 주황색 코어
+        const coreColor = isBig ? 0xff8800 : color;  // 대형: 밝은 주황 코어
+        const sprite = this.scene.add.circle(0, 0, size / 2, coreColor);
+        sprite.setBlendMode(Phaser.BlendModes.NORMAL);  // 노말 블렌드로 색상 유지
 
         // 발광 효과 (대형은 더 큰 글로우)
         const glowSize = isBig ? size * 1.8 : size;
