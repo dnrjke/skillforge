@@ -17,13 +17,41 @@ export default class BattleControlUI {
 
         this.speedBadge = null;
         this.controlPanel = null;
+        this.settingsModal = null;
+
+        // 설정 상태 (localStorage에서 로드)
+        this.settings = this.loadSettings();
 
         // 모바일 감지
         this.isMobile = this.detectMobile();
         this.scale = this.isMobile ? 1.0 : 1.0;
 
         this.createSpeedBadge();
+        this.createSettingsButton();
         this.createControlPanel();
+        this.createSettingsModal();
+        this.applySettings();
+    }
+
+    loadSettings() {
+        const defaults = {
+            partyStatusMode: 'normal',  // normal, compact, hidden
+            showBattleLog: true
+        };
+        try {
+            const saved = localStorage.getItem('battleSettings');
+            return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
+        } catch (e) {
+            return defaults;
+        }
+    }
+
+    saveSettings() {
+        try {
+            localStorage.setItem('battleSettings', JSON.stringify(this.settings));
+        } catch (e) {
+            console.warn('Failed to save settings:', e);
+        }
     }
 
     detectMobile() {
@@ -108,6 +136,64 @@ export default class BattleControlUI {
         }, { passive: true });
 
         badge.addEventListener('keydown', (e) => e.stopPropagation());
+    }
+
+    // 배속 버튼 옆 설정 버튼
+    createSettingsButton() {
+        const size = Math.round(50 * this.scale);
+        const fontSize = Math.round(18 * this.scale);
+        const borderWidth = Math.round(3 * this.scale);
+
+        const btn = document.createElement('div');
+        btn.id = 'settings-btn';
+        btn.textContent = '⚙';
+
+        btn.style.cssText = `
+            position: absolute;
+            top: ${this.isMobile ? '5%' : '5.5%'};
+            right: ${this.isMobile ? 'calc(4% + 58px)' : 'calc(3% + 60px)'};
+            width: ${size}px;
+            height: ${size}px;
+            border-radius: 50%;
+            background: rgba(50, 50, 50, 0.9);
+            border: ${borderWidth}px solid #666;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            font-size: ${fontSize}px;
+            color: #fff;
+            transition: all 0.15s;
+            touch-action: manipulation;
+            pointer-events: auto;
+            z-index: 100;
+        `;
+
+        const uiOverlay = document.getElementById('ui-overlay');
+        uiOverlay.appendChild(btn);
+        this.settingsButtonElement = btn;
+
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.openSettingsModal();
+        });
+
+        btn.addEventListener('mouseenter', () => {
+            btn.style.transform = 'scale(1.1)';
+            btn.style.borderColor = '#88aaff';
+        });
+
+        btn.addEventListener('mouseleave', () => {
+            btn.style.transform = 'scale(1)';
+            btn.style.borderColor = '#666';
+        });
+
+        btn.addEventListener('touchstart', (e) => {
+            e.stopPropagation();
+        }, { passive: true });
+
+        btn.addEventListener('keydown', (e) => e.stopPropagation());
     }
 
     // 우하단 컨트롤 패널 (순수 HTML - 게임 컨테이너 기준)
@@ -343,5 +429,300 @@ export default class BattleControlUI {
 
         const statusEl = this.controlPanelElement.querySelector('#battle-status');
         statusEl.textContent = `종료: ${result}`;
+    }
+
+    // ==========================================
+    // 설정 모달
+    // ==========================================
+
+    createSettingsModal() {
+        // 스타일 주입
+        if (!document.getElementById('settings-modal-style')) {
+            const style = document.createElement('style');
+            style.id = 'settings-modal-style';
+            style.textContent = `
+                #settings-modal-overlay {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.6);
+                    display: none;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 200;
+                    pointer-events: auto;
+                }
+
+                #settings-modal-overlay.active {
+                    display: flex;
+                }
+
+                #settings-modal {
+                    background: linear-gradient(180deg, #2a2a3a 0%, #1a1a2a 100%);
+                    border: 2px solid #555;
+                    border-radius: 12px;
+                    padding: 20px 24px;
+                    min-width: 280px;
+                    max-width: 90%;
+                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+                    font-family: 'Alexandria', sans-serif;
+                    color: #fff;
+                }
+
+                #settings-modal h2 {
+                    margin: 0 0 16px 0;
+                    font-size: 18px;
+                    text-align: center;
+                    color: #ddd;
+                    border-bottom: 1px solid #444;
+                    padding-bottom: 12px;
+                }
+
+                .settings-section {
+                    margin-bottom: 16px;
+                }
+
+                .settings-section label {
+                    display: block;
+                    font-size: 13px;
+                    color: #aaa;
+                    margin-bottom: 8px;
+                }
+
+                /* Segmented Control */
+                .segmented-control {
+                    display: flex;
+                    background: #1a1a2a;
+                    border-radius: 8px;
+                    overflow: hidden;
+                    border: 1px solid #444;
+                }
+
+                .segmented-control button {
+                    flex: 1;
+                    padding: 10px 8px;
+                    border: none;
+                    background: transparent;
+                    color: #888;
+                    font-size: 12px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    font-family: 'Alexandria', sans-serif;
+                }
+
+                .segmented-control button:not(:last-child) {
+                    border-right: 1px solid #444;
+                }
+
+                .segmented-control button:hover {
+                    background: rgba(100, 150, 255, 0.1);
+                    color: #aaa;
+                }
+
+                .segmented-control button.active {
+                    background: linear-gradient(180deg, #4a6090 0%, #3a4a70 100%);
+                    color: #fff;
+                }
+
+                /* Toggle Switch */
+                .toggle-row {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 8px 0;
+                }
+
+                .toggle-row span {
+                    font-size: 14px;
+                    color: #ccc;
+                }
+
+                .toggle-switch {
+                    position: relative;
+                    width: 48px;
+                    height: 26px;
+                    background: #333;
+                    border-radius: 13px;
+                    cursor: pointer;
+                    transition: background 0.3s;
+                    border: 1px solid #555;
+                }
+
+                .toggle-switch.active {
+                    background: #4a8050;
+                    border-color: #5a9060;
+                }
+
+                .toggle-switch::after {
+                    content: '';
+                    position: absolute;
+                    top: 2px;
+                    left: 2px;
+                    width: 20px;
+                    height: 20px;
+                    background: #ddd;
+                    border-radius: 50%;
+                    transition: transform 0.3s;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+                }
+
+                .toggle-switch.active::after {
+                    transform: translateX(22px);
+                }
+
+                /* Close Button */
+                #settings-close-btn {
+                    display: block;
+                    width: 100%;
+                    margin-top: 16px;
+                    padding: 12px;
+                    border: none;
+                    border-radius: 8px;
+                    background: linear-gradient(180deg, #555 0%, #444 100%);
+                    color: #fff;
+                    font-size: 14px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    font-family: 'Alexandria', sans-serif;
+                }
+
+                #settings-close-btn:hover {
+                    background: linear-gradient(180deg, #666 0%, #555 100%);
+                }
+
+                #settings-close-btn:active {
+                    transform: scale(0.98);
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // 모달 생성
+        const overlay = document.createElement('div');
+        overlay.id = 'settings-modal-overlay';
+        overlay.innerHTML = `
+            <div id="settings-modal">
+                <h2>⚙ 설정</h2>
+
+                <div class="settings-section">
+                    <label>파티 현황판 모드</label>
+                    <div class="segmented-control" id="party-status-mode">
+                        <button data-mode="normal" class="${this.settings.partyStatusMode === 'normal' ? 'active' : ''}">Normal</button>
+                        <button data-mode="compact" class="${this.settings.partyStatusMode === 'compact' ? 'active' : ''}">Compact</button>
+                        <button data-mode="hidden" class="${this.settings.partyStatusMode === 'hidden' ? 'active' : ''}">Hidden</button>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <div class="toggle-row">
+                        <span>전투 로그 표시</span>
+                        <div class="toggle-switch ${this.settings.showBattleLog ? 'active' : ''}" id="toggle-battle-log"></div>
+                    </div>
+                </div>
+
+                <button id="settings-close-btn">닫기</button>
+            </div>
+        `;
+
+        const uiOverlay = document.getElementById('ui-overlay');
+        uiOverlay.appendChild(overlay);
+        this.settingsModalElement = overlay;
+
+        // 이벤트 리스너
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                this.closeSettingsModal();
+            }
+        });
+
+        // PartyStatusUI 모드 선택
+        const modeButtons = overlay.querySelectorAll('#party-status-mode button');
+        modeButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                modeButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.settings.partyStatusMode = btn.dataset.mode;
+                this.saveSettings();
+                this.applySettings();
+            });
+        });
+
+        // 전투 로그 토글
+        const logToggle = overlay.querySelector('#toggle-battle-log');
+        logToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            logToggle.classList.toggle('active');
+            this.settings.showBattleLog = logToggle.classList.contains('active');
+            this.saveSettings();
+            this.applySettings();
+        });
+
+        // 닫기 버튼
+        overlay.querySelector('#settings-close-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.closeSettingsModal();
+        });
+
+        // ESC 키로 닫기
+        overlay.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.closeSettingsModal();
+            }
+            e.stopPropagation();
+        });
+    }
+
+    openSettingsModal() {
+        if (this.settingsModalElement) {
+            this.settingsModalElement.classList.add('active');
+        }
+    }
+
+    closeSettingsModal() {
+        if (this.settingsModalElement) {
+            this.settingsModalElement.classList.remove('active');
+        }
+    }
+
+    applySettings() {
+        // 1. PartyStatusUI 모드 적용
+        const battlefieldPanels = document.querySelectorAll('.battlefield-panel');
+        battlefieldPanels.forEach(panel => {
+            panel.classList.remove('mode-normal', 'mode-compact', 'mode-hidden');
+            panel.classList.add(`mode-${this.settings.partyStatusMode}`);
+
+            // hidden 모드는 display: none
+            if (this.settings.partyStatusMode === 'hidden') {
+                panel.style.display = 'none';
+            } else {
+                panel.style.display = '';
+            }
+
+            // compact 모드는 스케일 축소
+            if (this.settings.partyStatusMode === 'compact') {
+                panel.style.transform = 'scale(0.75)';
+                panel.style.transformOrigin = panel.classList.contains('ally')
+                    ? 'bottom left'
+                    : 'bottom right';
+            } else {
+                panel.style.transform = '';
+            }
+        });
+
+        // 2. 전투 로그 표시/숨김
+        const logWindow = document.querySelector('.log-window');
+        if (logWindow) {
+            logWindow.style.display = this.settings.showBattleLog ? '' : 'none';
+        }
+
+        // 3. 게임 엔진에 이벤트 전달
+        if (this.scene && this.scene.events) {
+            this.scene.events.emit('settingsChanged', this.settings);
+        }
     }
 }

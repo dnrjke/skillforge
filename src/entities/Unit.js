@@ -36,7 +36,7 @@ export default class Unit {
         this.currentPp = config.currentPp ?? this.maxPp;
 
         // AP 회복량 (대기 시)
-        this.apRecovery = config.apRecovery || 3;
+        this.apRecovery = config.apRecovery || 6;
 
         // 상태
         this.isAlive = true;

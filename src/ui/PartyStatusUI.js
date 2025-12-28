@@ -450,7 +450,15 @@ export default class PartyStatusUI {
                     transform: translateX(-50%) scale(1.1);
                 }
 
-                /* 모바일 HP UI */
+                /* 모바일 HP UI - 숫자를 바에 더 붙임 */
+                .unit-hp-container {
+                    gap: 0;
+                }
+
+                .mini-hp-text {
+                    margin-top: -2px;
+                }
+
                 .unit-slot[data-pos="0"] .unit-hp-container,
                 .unit-slot[data-pos="1"] .unit-hp-container,
                 .unit-slot[data-pos="2"] .unit-hp-container {

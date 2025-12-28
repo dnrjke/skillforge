@@ -40,7 +40,7 @@ export default class BattleManager {
     // ==========================================
 
     initializeUnits(allySprites, enemySprites) {
-        const MAX_AP = 8;
+        const MAX_AP = 18;
 
         const allyConfigs = [
             { name: '아군1', skillSet: 'WARRIOR', speed: 12, maxAp: MAX_AP },
