@@ -301,39 +301,41 @@ export default class FieldStatusUI {
     }
 
     createSingleFirefly(index, total, isBig) {
-        // 대형 AP: 주황색, 크기 10 / 소형 AP: 노란색, 크기 5
-        const size = isBig ? 10 : 5;
-        const color = isBig ? 0xff9900 : 0xffcc00;
+        // 대형 AP: 주황색, 크기 14 / 소형 AP: 노란색, 크기 5
+        const size = isBig ? 14 : 5;
+        const color = isBig ? 0xff6600 : 0xffdd44;  // 대형: 진한 주황 / 소형: 밝은 노랑
 
         // 대형: 넓은 반경, 느린 속도 (Heavy) / 소형: 좁은 반경, 빠른 속도 (Light)
         const orbitParams = isBig ? {
-            a: 55 + Math.random() * 15,       // X 반경 (넓음)
-            b: 35 + Math.random() * 10,       // Y 반경 (넓음)
-            freqX: 0.8 + Math.random() * 0.3, // 느린 주파수
-            freqY: 1.2 + Math.random() * 0.3,
+            a: 60 + Math.random() * 20,       // X 반경 (넓음)
+            b: 40 + Math.random() * 15,       // Y 반경 (넓음)
+            freqX: 0.6 + Math.random() * 0.2, // 느린 주파수
+            freqY: 0.9 + Math.random() * 0.2,
             phase: (index / total) * Math.PI * 2 + Math.random() * 0.5,
-            speed: 0.4 + Math.random() * 0.2, // 느린 속도
+            speed: 0.3 + Math.random() * 0.15, // 더 느린 속도
             noiseOffset: Math.random() * 1000,
-            damping: 0.04,                    // 낮은 감쇠 (더 부드럽게)
-            inertia: 0.96                     // 높은 관성 (무거움)
+            damping: 0.03,                    // 낮은 감쇠 (더 부드럽게)
+            inertia: 0.97                     // 높은 관성 (무거움)
         } : {
-            a: 25 + Math.random() * 15,       // X 반경 (좁음)
-            b: 18 + Math.random() * 10,       // Y 반경 (좁음)
-            freqX: 1.2 + Math.random() * 0.5, // 빠른 주파수
-            freqY: 1.8 + Math.random() * 0.5,
+            a: 20 + Math.random() * 12,       // X 반경 (좁음)
+            b: 15 + Math.random() * 8,        // Y 반경 (좁음)
+            freqX: 1.5 + Math.random() * 0.6, // 빠른 주파수
+            freqY: 2.0 + Math.random() * 0.6,
             phase: (index / total) * Math.PI * 2 + Math.random() * 0.8,
-            speed: 1.0 + Math.random() * 0.5, // 빠른 속도
+            speed: 1.2 + Math.random() * 0.6, // 빠른 속도
             noiseOffset: Math.random() * 1000,
-            damping: 0.10,                    // 높은 감쇠 (민첩하게)
-            inertia: 0.90                     // 낮은 관성 (가벼움)
+            damping: 0.12,                    // 높은 감쇠 (민첩하게)
+            inertia: 0.88                     // 낮은 관성 (가벼움)
         };
 
         // 반딧불 스프라이트 (원형)
         const sprite = this.scene.add.circle(0, 0, size / 2, color);
         sprite.setBlendMode(Phaser.BlendModes.ADD);
 
-        // 발광 효과
-        const glow = this.scene.add.circle(0, 0, size, color, 0.4);
+        // 발광 효과 (대형은 더 큰 글로우)
+        const glowSize = isBig ? size * 1.8 : size;
+        const glowAlpha = isBig ? 0.5 : 0.35;
+        const glow = this.scene.add.circle(0, 0, glowSize, color, glowAlpha);
         glow.setBlendMode(Phaser.BlendModes.ADD);
 
         // 빛 꼬리 (Motion Trail)
