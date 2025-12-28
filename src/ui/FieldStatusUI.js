@@ -58,7 +58,10 @@ export default class FieldStatusUI {
         // AP 반딧불 시스템
         this.fireflies = [];
         this.fireflyContainer = null;
-        this.lastCharacterPos = { x: character.x, y: character.y };
+
+        // 에너지 잔류 시스템: 앵커 포인트
+        this.anchorPos = { x: character.x, y: character.y };
+        this.anchorLerpSpeed = 0.03;  // 앵커가 캐릭터를 따라가는 속도 (낮을수록 잔류 효과)
 
         // 비산 설정
         this.scatterDuration = 3000;    // 3초 후 소멸
@@ -393,9 +396,9 @@ export default class FieldStatusUI {
         const time = this.scene.time.now / 1000;
         const currentTime = this.scene.time.now;
 
-        // 캐릭터 이동 감지
-        const charDeltaX = this.character.x - this.lastCharacterPos.x;
-        const charDeltaY = this.character.y - this.lastCharacterPos.y;
+        // 에너지 잔류: 앵커가 캐릭터를 천천히 따라감 (Lerp)
+        this.anchorPos.x += (this.character.x - this.anchorPos.x) * this.anchorLerpSpeed;
+        this.anchorPos.y += (this.character.y - this.anchorPos.y) * this.anchorLerpSpeed;
 
         // 소멸 대상 수집
         const toRemove = [];
@@ -457,17 +460,13 @@ export default class FieldStatusUI {
             firefly.targetPos.x = targetX;
             firefly.targetPos.y = targetY;
 
-            // 가속도 기반 물리
+            // 가속도 기반 물리 (앵커 주변 궤도)
             const dx = firefly.targetPos.x - firefly.currentPos.x;
             const dy = firefly.targetPos.y - firefly.currentPos.y;
             firefly.acceleration.x = dx * params.damping;
             firefly.acceleration.y = dy * params.damping;
             firefly.velocity.x = firefly.velocity.x * params.inertia + firefly.acceleration.x;
             firefly.velocity.y = firefly.velocity.y * params.inertia + firefly.acceleration.y;
-
-            // 캐릭터 이동에 대한 지연 반응 (부드럽게 뒤따라옴)
-            firefly.velocity.x -= charDeltaX * 0.08;
-            firefly.velocity.y -= charDeltaY * 0.08;
 
             // 위치 업데이트
             firefly.currentPos.x += firefly.velocity.x;
@@ -503,12 +502,8 @@ export default class FieldStatusUI {
             this.destroyFirefly(index);
         });
 
-        // 캐릭터 위치 저장
-        this.lastCharacterPos.x = this.character.x;
-        this.lastCharacterPos.y = this.character.y;
-
-        // 컨테이너 위치 업데이트
-        this.fireflyContainer.setPosition(this.character.x, this.character.y + this.fireflyOffsetY);
+        // 컨테이너가 앵커를 따라감 (에너지 잔류 효과)
+        this.fireflyContainer.setPosition(this.anchorPos.x, this.anchorPos.y + this.fireflyOffsetY);
     }
 
     // 화면 경계 체크 - 월드 좌표 (비산용)
@@ -688,9 +683,9 @@ export default class FieldStatusUI {
      * @param {Object} firefly - 비산할 반딧불
      */
     startScatterAnimation(firefly) {
-        // 1. 월드 좌표 계산 (현재 컨테이너 위치 + 상대 위치)
-        const worldX = this.character.x + firefly.currentPos.x;
-        const worldY = this.character.y + this.fireflyOffsetY + firefly.currentPos.y;
+        // 1. 월드 좌표 계산 (앵커 위치 + 상대 위치)
+        const worldX = this.anchorPos.x + firefly.currentPos.x;
+        const worldY = this.anchorPos.y + this.fireflyOffsetY + firefly.currentPos.y;
 
         // 2. 스프라이트를 fireflyContainer에서 제거 → parentContainer(월드)로 이동
         if (this.parentContainer) {
