@@ -600,13 +600,20 @@ export default class BattleControlUI {
                 }
 
                 .firefly-mode-desc {
-                    margin-top: 8px;
-                    padding: 6px 10px;
-                    background: rgba(0, 0, 0, 0.3);
-                    border-radius: 6px;
+                    height: 0;
+                    overflow: hidden;
+                    margin: 0;
+                    padding: 0 10px;
                     font-size: 11px;
-                    color: #aaa;
+                    color: #888;
                     text-align: center;
+                    transition: height 0.15s, padding 0.15s, margin 0.15s;
+                }
+
+                .firefly-mode-desc.visible {
+                    height: 18px;
+                    margin-top: 6px;
+                    padding: 2px 10px;
                 }
 
                 .firefly-mode-desc em {
@@ -639,7 +646,7 @@ export default class BattleControlUI {
                         <button data-mode="scatter" class="${this.settings.fireflyMode === 'scatter' ? 'active' : ''}">비산 효과</button>
                         <button data-mode="hidden" class="${this.settings.fireflyMode === 'hidden' ? 'active' : ''}">숨김</button>
                     </div>
-                    <div class="firefly-mode-desc" id="firefly-mode-desc" style="display: ${this.settings.fireflyMode === 'scatter' ? 'block' : 'none'}">
+                    <div class="firefly-mode-desc ${this.settings.fireflyMode === 'scatter' ? 'visible' : ''}" id="firefly-mode-desc">
                         <em>스킬 사용 시 에너지가 흩어지는 연출만 표시합니다</em>
                     </div>
                 </div>
@@ -690,7 +697,7 @@ export default class BattleControlUI {
                 this.settings.fireflyMode = btn.dataset.mode;
                 // 비산 효과 모드일 때만 설명 표시
                 if (fireflyDesc) {
-                    fireflyDesc.style.display = btn.dataset.mode === 'scatter' ? 'block' : 'none';
+                    fireflyDesc.classList.toggle('visible', btn.dataset.mode === 'scatter');
                 }
                 this.saveSettings();
                 this.applySettings();
