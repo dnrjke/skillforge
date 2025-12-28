@@ -56,11 +56,12 @@ export default class FieldStatusUI {
 
         // AP 반딧불 시스템
         this.fireflies = [];
-        this.fireflyContainer = null;
+        this.fireflyBackContainer = null;   // 캐릭터 뒤 레이어
+        this.fireflyFrontContainer = null;  // 캐릭터 앞 레이어
         this.lastCharacterPos = { x: character.x, y: character.y };
 
-        // 캐릭터 중심점 (반딧불 레이어링용)
-        this.characterCenterY = 0;
+        // 캐릭터 깊이 (반딧불 레이어링용)
+        this.characterDepth = character.depth || 10;
 
         this.create();
         this.createFireflies();
@@ -266,13 +267,23 @@ export default class FieldStatusUI {
 
     // ===== AP 반딧불 시스템 =====
     createFireflies() {
-        this.fireflyContainer = this.scene.add.container(
+        // 뒤쪽 컨테이너 (캐릭터보다 낮은 depth)
+        this.fireflyBackContainer = this.scene.add.container(
             this.character.x,
             this.character.y
         );
+        this.fireflyBackContainer.setDepth(this.character.depth - 1);
+
+        // 앞쪽 컨테이너 (캐릭터보다 높은 depth)
+        this.fireflyFrontContainer = this.scene.add.container(
+            this.character.x,
+            this.character.y
+        );
+        this.fireflyFrontContainer.setDepth(this.character.depth + 1);
 
         if (this.parentContainer) {
-            this.parentContainer.add(this.fireflyContainer);
+            this.parentContainer.add(this.fireflyBackContainer);
+            this.parentContainer.add(this.fireflyFrontContainer);
         }
 
         this.updateFireflies();
@@ -284,6 +295,8 @@ export default class FieldStatusUI {
             if (f.sprite) f.sprite.destroy();
             if (f.trail) f.trail.destroy();
             if (f.glow) f.glow.destroy();
+            if (f.innerGlow) f.innerGlow.destroy();
+            if (f.outerGlow) f.outerGlow.destroy();
         });
         this.fireflies = [];
 
@@ -299,41 +312,67 @@ export default class FieldStatusUI {
     }
 
     createSingleFirefly(index, total, isBig) {
-        const size = isBig ? 8 : 5;
-        const color = isBig ? 0xffee44 : 0xffcc00;
+        const size = isBig ? 10 : 5;
+        // 대형: 진한 오렌지 / 소형: 밝은 노란색
+        const coreColor = isBig ? 0xffffc0 : 0xffcc00;      // 대형 중심: 밝은 노랑-흰색
+        const mainColor = isBig ? 0xff8800 : 0xffaa00;      // 대형: 진한 오렌지
+        const glowColor = isBig ? 0xff6600 : 0xffcc00;      // 대형: 오렌지 외곽광
 
-        // Lissajous 궤도 파라미터 (불규칙성)
+        // 부드러운 타원 궤도 파라미터 (노이즈 대폭 축소)
         const orbitParams = {
-            a: 40 + Math.random() * 20,      // X 반경
-            b: 25 + Math.random() * 15,      // Y 반경
-            freqX: 1 + Math.random() * 0.5,  // X 주파수
-            freqY: 1.5 + Math.random() * 0.5, // Y 주파수
-            phase: (index / total) * Math.PI * 2 + Math.random() * 0.5,
-            speed: 0.8 + Math.random() * 0.4,
-            noiseOffset: Math.random() * 1000
+            a: 45 + Math.random() * 10,       // X 반경 (안정적)
+            b: 30 + Math.random() * 8,        // Y 반경 (안정적)
+            freqX: 1.0,                        // 고정 X 주파수
+            freqY: 1.0,                        // 고정 Y 주파수 (원형에 가깝게)
+            phase: (index / total) * Math.PI * 2,  // 균등 분포
+            speed: 0.6 + Math.random() * 0.2,  // 느린 속도
+            noiseScale: 0.03                   // 노이즈 스케일 (대폭 축소)
         };
-
-        // 반딧불 스프라이트 (원형)
-        const sprite = this.scene.add.circle(0, 0, size / 2, color);
-        sprite.setBlendMode(Phaser.BlendModes.ADD);
-
-        // 발광 효과
-        const glow = this.scene.add.circle(0, 0, size, color, 0.4);
-        glow.setBlendMode(Phaser.BlendModes.ADD);
 
         // 빛 꼬리 (Motion Trail)
         const trail = this.scene.add.graphics();
         trail.setBlendMode(Phaser.BlendModes.ADD);
 
-        this.fireflyContainer.add([trail, glow, sprite]);
+        let outerGlow = null;
+        let innerGlow = null;
+
+        if (isBig) {
+            // 대형 AP: 외곽 오렌지 광선
+            outerGlow = this.scene.add.circle(0, 0, size * 2.5, glowColor, 0.25);
+            outerGlow.setBlendMode(Phaser.BlendModes.ADD);
+
+            // 대형 AP: 중간 레이어 (오렌지)
+            innerGlow = this.scene.add.circle(0, 0, size * 1.5, mainColor, 0.5);
+            innerGlow.setBlendMode(Phaser.BlendModes.ADD);
+        }
+
+        // 발광 효과 (일반)
+        const glow = this.scene.add.circle(0, 0, size * (isBig ? 1.2 : 1), mainColor, isBig ? 0.6 : 0.4);
+        glow.setBlendMode(Phaser.BlendModes.ADD);
+
+        // 반딧불 코어 (원형)
+        const sprite = this.scene.add.circle(0, 0, size / 2, coreColor);
+        sprite.setBlendMode(Phaser.BlendModes.ADD);
+
+        // 앞쪽 컨테이너에 추가 (초기)
+        const elements = [trail];
+        if (outerGlow) elements.push(outerGlow);
+        if (innerGlow) elements.push(innerGlow);
+        elements.push(glow, sprite);
+
+        this.fireflyFrontContainer.add(elements);
 
         return {
             sprite,
             glow,
+            innerGlow,
+            outerGlow,
             trail,
             isBig,
             size,
-            color,
+            coreColor,
+            mainColor,
+            glowColor,
             orbitParams,
             angle: orbitParams.phase,
             currentPos: { x: 0, y: 0 },
@@ -341,7 +380,8 @@ export default class FieldStatusUI {
             velocity: { x: 0, y: 0 },
             trailPositions: [],
             pulsePhase: Math.random() * Math.PI * 2,
-            isConsuming: false
+            isConsuming: false,
+            isInFront: true  // 현재 앞쪽에 있는지
         };
     }
 
@@ -365,20 +405,20 @@ export default class FieldStatusUI {
 
             const params = firefly.orbitParams;
 
-            // Lissajous 궤도 계산 + Perlin noise 변조
+            // 부드러운 타원 궤도 (노이즈 최소화)
             firefly.angle += params.speed * deltaSeconds;
-            const noiseX = this.noise(time * 0.5 + params.noiseOffset) * 10;
-            const noiseY = this.noise(time * 0.7 + params.noiseOffset + 100) * 8;
+            // 아주 미세한 유동성만 (노이즈 대폭 축소)
+            const microNoise = Math.sin(time * 0.3 + index) * 3 * params.noiseScale;
 
-            const targetX = Math.sin(firefly.angle * params.freqX) * params.a + noiseX;
-            const targetY = Math.cos(firefly.angle * params.freqY) * params.b + noiseY;
+            const targetX = Math.sin(firefly.angle * params.freqX) * params.a + microNoise;
+            const targetY = Math.cos(firefly.angle * params.freqY) * params.b + microNoise * 0.5;
 
             firefly.targetPos.x = targetX;
             firefly.targetPos.y = targetY;
 
-            // 관성(Damping) 적용 - Late Follow
-            const damping = 0.08;
-            const inertia = 0.92;
+            // 관성(Damping) 적용 - 더 부드럽게
+            const damping = 0.06;
+            const inertia = 0.94;
 
             firefly.velocity.x = firefly.velocity.x * inertia +
                 (firefly.targetPos.x - firefly.currentPos.x) * damping;
@@ -386,21 +426,28 @@ export default class FieldStatusUI {
                 (firefly.targetPos.y - firefly.currentPos.y) * damping;
 
             // 캐릭터 이동에 대한 지연 반응
-            firefly.velocity.x -= charDeltaX * 0.3;
-            firefly.velocity.y -= charDeltaY * 0.3;
+            firefly.velocity.x -= charDeltaX * 0.25;
+            firefly.velocity.y -= charDeltaY * 0.25;
 
             firefly.currentPos.x += firefly.velocity.x;
             firefly.currentPos.y += firefly.velocity.y;
 
-            // Y 좌표 기반 원근감
-            const normalizedY = (firefly.currentPos.y + params.b) / (params.b * 2);
-            const depthScale = 0.7 + normalizedY * 0.6;  // 0.7 ~ 1.3
-            const depthAlpha = 0.5 + normalizedY * 0.5;  // 뒤쪽 흐림
-            const depthBlur = (1 - normalizedY) * 2;     // 뒤쪽 블러
+            // Y 좌표 기반 원근감 (드라마틱하게 - 0.6x ~ 1.4x)
+            // Y가 음수(위쪽) = 뒤쪽, Y가 양수(아래쪽) = 앞쪽
+            const normalizedY = (firefly.currentPos.y + params.b) / (params.b * 2);  // 0 ~ 1
+            const depthScale = 0.6 + normalizedY * 0.8;   // 0.6 ~ 1.4
+            const depthAlpha = 0.4 + normalizedY * 0.6;   // 뒤쪽 흐림 (0.4 ~ 1.0)
+
+            // 앞/뒤 컨테이너 전환 (Y > 0 이면 앞쪽)
+            const shouldBeInFront = firefly.currentPos.y > 0;
+            if (shouldBeInFront !== firefly.isInFront) {
+                this.switchFireflyLayer(firefly, shouldBeInFront);
+                firefly.isInFront = shouldBeInFront;
+            }
 
             // 맥동(Pulse) 효과
-            firefly.pulsePhase += deltaSeconds * 3;
-            const pulse = 1 + Math.sin(firefly.pulsePhase) * 0.15;
+            firefly.pulsePhase += deltaSeconds * 2.5;
+            const pulse = 1 + Math.sin(firefly.pulsePhase) * 0.12;
 
             // 스프라이트 업데이트
             firefly.sprite.setPosition(firefly.currentPos.x, firefly.currentPos.y);
@@ -409,16 +456,23 @@ export default class FieldStatusUI {
 
             // Glow 업데이트
             firefly.glow.setPosition(firefly.currentPos.x, firefly.currentPos.y);
-            firefly.glow.setScale(depthScale * pulse * 1.5);
-            firefly.glow.setAlpha(depthAlpha * 0.4);
+            firefly.glow.setScale(depthScale * pulse * (firefly.isBig ? 1.3 : 1.2));
+            firefly.glow.setAlpha(depthAlpha * (firefly.isBig ? 0.6 : 0.4));
 
-            // Z-index (캐릭터 앞/뒤)
-            const isInFront = firefly.currentPos.y > 0;
-            firefly.sprite.setDepth(isInFront ? 1001 : 999);
-            firefly.glow.setDepth(isInFront ? 1000 : 998);
+            // 대형 AP 추가 레이어 업데이트
+            if (firefly.innerGlow) {
+                firefly.innerGlow.setPosition(firefly.currentPos.x, firefly.currentPos.y);
+                firefly.innerGlow.setScale(depthScale * pulse * 1.1);
+                firefly.innerGlow.setAlpha(depthAlpha * 0.5);
+            }
+            if (firefly.outerGlow) {
+                firefly.outerGlow.setPosition(firefly.currentPos.x, firefly.currentPos.y);
+                firefly.outerGlow.setScale(depthScale * pulse * 1.4);
+                firefly.outerGlow.setAlpha(depthAlpha * 0.25);
+            }
 
             // Motion Trail 업데이트
-            this.updateFireflyTrail(firefly);
+            this.updateFireflyTrail(firefly, depthAlpha);
         });
 
         // 캐릭터 위치 저장
@@ -426,18 +480,41 @@ export default class FieldStatusUI {
         this.lastCharacterPos.y = this.character.y;
 
         // 컨테이너 위치 업데이트
-        this.fireflyContainer.setPosition(this.character.x, this.character.y);
+        this.fireflyBackContainer.setPosition(this.character.x, this.character.y);
+        this.fireflyFrontContainer.setPosition(this.character.x, this.character.y);
+
+        // 컨테이너 depth 동기화 (캐릭터 depth가 변경될 수 있음)
+        this.fireflyBackContainer.setDepth(this.character.depth - 1);
+        this.fireflyFrontContainer.setDepth(this.character.depth + 1);
     }
 
-    updateFireflyTrail(firefly) {
+    // 반딧불을 앞/뒤 컨테이너 간 전환
+    switchFireflyLayer(firefly, toFront) {
+        const fromContainer = toFront ? this.fireflyBackContainer : this.fireflyFrontContainer;
+        const toContainer = toFront ? this.fireflyFrontContainer : this.fireflyBackContainer;
+
+        // 모든 요소를 새 컨테이너로 이동
+        const elements = [firefly.trail, firefly.glow, firefly.sprite];
+        if (firefly.outerGlow) elements.unshift(firefly.outerGlow);
+        if (firefly.innerGlow) elements.splice(1, 0, firefly.innerGlow);
+
+        elements.forEach(el => {
+            if (el && fromContainer.exists(el)) {
+                fromContainer.remove(el);
+                toContainer.add(el);
+            }
+        });
+    }
+
+    updateFireflyTrail(firefly, depthAlpha = 1) {
         // 트레일 위치 기록
         firefly.trailPositions.unshift({
             x: firefly.currentPos.x,
             y: firefly.currentPos.y
         });
 
-        // 최대 8개 포인트
-        if (firefly.trailPositions.length > 8) {
+        // 최대 6개 포인트 (짧게)
+        if (firefly.trailPositions.length > 6) {
             firefly.trailPositions.pop();
         }
 
@@ -445,10 +522,11 @@ export default class FieldStatusUI {
         firefly.trail.clear();
         if (firefly.trailPositions.length > 1) {
             for (let i = 1; i < firefly.trailPositions.length; i++) {
-                const alpha = 0.3 * (1 - i / firefly.trailPositions.length);
-                const width = firefly.size * 0.5 * (1 - i / firefly.trailPositions.length);
+                const fadeRatio = 1 - i / firefly.trailPositions.length;
+                const alpha = 0.25 * fadeRatio * depthAlpha;
+                const width = firefly.size * 0.4 * fadeRatio;
 
-                firefly.trail.lineStyle(width, firefly.color, alpha);
+                firefly.trail.lineStyle(width, firefly.mainColor, alpha);
                 firefly.trail.beginPath();
                 firefly.trail.moveTo(
                     firefly.trailPositions[i - 1].x,
@@ -519,16 +597,30 @@ export default class FieldStatusUI {
                     const progress = tween.progress;
                     // 회전하며 상승
                     const spiralX = startX + Math.sin(progress * Math.PI * 4) * 20 * (1 - progress);
+                    const currentY = firefly.sprite.y;
+
                     firefly.sprite.x = spiralX;
-                    firefly.glow.x = spiralX;
-                    firefly.glow.y = firefly.sprite.y;
+                    firefly.glow.setPosition(spiralX, currentY);
                     firefly.glow.alpha = (1 - progress) * 0.4;
                     firefly.glow.scale = firefly.sprite.scale * 1.5;
+
+                    if (firefly.innerGlow) {
+                        firefly.innerGlow.setPosition(spiralX, currentY);
+                        firefly.innerGlow.alpha = (1 - progress) * 0.5;
+                        firefly.innerGlow.scale = firefly.sprite.scale * 1.2;
+                    }
+                    if (firefly.outerGlow) {
+                        firefly.outerGlow.setPosition(spiralX, currentY);
+                        firefly.outerGlow.alpha = (1 - progress) * 0.25;
+                        firefly.outerGlow.scale = firefly.sprite.scale * 1.8;
+                    }
                 },
                 onComplete: () => {
                     firefly.sprite.destroy();
                     firefly.glow.destroy();
                     firefly.trail.destroy();
+                    if (firefly.innerGlow) firefly.innerGlow.destroy();
+                    if (firefly.outerGlow) firefly.outerGlow.destroy();
                 }
             });
         });
@@ -730,9 +822,12 @@ export default class FieldStatusUI {
             if (f.sprite) f.sprite.destroy();
             if (f.trail) f.trail.destroy();
             if (f.glow) f.glow.destroy();
+            if (f.innerGlow) f.innerGlow.destroy();
+            if (f.outerGlow) f.outerGlow.destroy();
         });
 
-        if (this.fireflyContainer) this.fireflyContainer.destroy();
+        if (this.fireflyBackContainer) this.fireflyBackContainer.destroy();
+        if (this.fireflyFrontContainer) this.fireflyFrontContainer.destroy();
         if (this.container) this.container.destroy();
     }
 }
