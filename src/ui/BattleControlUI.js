@@ -37,7 +37,7 @@ export default class BattleControlUI {
         const defaults = {
             partyStatusMode: 'normal',  // normal, compact, hidden
             showBattleLog: true,
-            showFireflies: true
+            fireflyMode: 'all'  // hidden, scatter, all
         };
         try {
             const saved = localStorage.getItem('battleSettings');
@@ -619,13 +619,18 @@ export default class BattleControlUI {
                 </div>
 
                 <div class="settings-section">
+                    <label>AP 반딧불</label>
+                    <div class="segmented-control" id="firefly-mode">
+                        <button data-mode="hidden" class="${this.settings.fireflyMode === 'hidden' ? 'active' : ''}">숨김</button>
+                        <button data-mode="scatter" class="${this.settings.fireflyMode === 'scatter' ? 'active' : ''}">비산만</button>
+                        <button data-mode="all" class="${this.settings.fireflyMode === 'all' ? 'active' : ''}">전체</button>
+                    </div>
+                </div>
+
+                <div class="settings-section">
                     <div class="toggle-row">
                         <span>전투 로그 표시</span>
                         <div class="toggle-switch ${this.settings.showBattleLog ? 'active' : ''}" id="toggle-battle-log"></div>
-                    </div>
-                    <div class="toggle-row">
-                        <span>AP 반딧불 표시</span>
-                        <div class="toggle-switch ${this.settings.showFireflies ? 'active' : ''}" id="toggle-fireflies"></div>
                     </div>
                 </div>
 
@@ -657,22 +662,25 @@ export default class BattleControlUI {
             });
         });
 
+        // 반딧불 모드 선택
+        const fireflyButtons = overlay.querySelectorAll('#firefly-mode button');
+        fireflyButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                fireflyButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.settings.fireflyMode = btn.dataset.mode;
+                this.saveSettings();
+                this.applySettings();
+            });
+        });
+
         // 전투 로그 토글
         const logToggle = overlay.querySelector('#toggle-battle-log');
         logToggle.addEventListener('click', (e) => {
             e.stopPropagation();
             logToggle.classList.toggle('active');
             this.settings.showBattleLog = logToggle.classList.contains('active');
-            this.saveSettings();
-            this.applySettings();
-        });
-
-        // 반딧불 토글
-        const fireflyToggle = overlay.querySelector('#toggle-fireflies');
-        fireflyToggle.addEventListener('click', (e) => {
-            e.stopPropagation();
-            fireflyToggle.classList.toggle('active');
-            this.settings.showFireflies = fireflyToggle.classList.contains('active');
             this.saveSettings();
             this.applySettings();
         });
@@ -740,15 +748,11 @@ export default class BattleControlUI {
             this.scene.events.emit('settingsChanged', this.settings);
         }
 
-        // 4. 반딧불 표시/숨김 (Phaser 스프라이트)
+        // 4. 반딧불 모드 적용 (hidden: 전체 숨김, scatter: 비산만, all: 전체 표시)
         if (this.scene && this.scene.statusBars) {
             this.scene.statusBars.forEach(bar => {
-                if (bar.fireflySystem && bar.fireflySystem.fireflies) {
-                    bar.fireflySystem.fireflies.forEach(f => {
-                        if (f.sprite) f.sprite.setVisible(this.settings.showFireflies);
-                        if (f.glow) f.glow.setVisible(this.settings.showFireflies);
-                        if (f.trail) f.trail.setVisible(this.settings.showFireflies);
-                    });
+                if (bar.fireflySystem) {
+                    bar.fireflySystem.setVisibilityMode(this.settings.fireflyMode);
                 }
             });
         }

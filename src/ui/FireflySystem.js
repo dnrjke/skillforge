@@ -31,7 +31,53 @@ export default class FireflySystem {
         // 콜백 (AP 변경 시 외부 알림)
         this.onApChanged = config.onApChanged || null;
 
+        // 가시성 모드: 'hidden', 'scatter', 'all'
+        this.visibilityMode = 'all';
+
         this.createFireflies();
+    }
+
+    /**
+     * 가시성 모드 설정
+     * @param {string} mode - 'hidden': 전체 숨김, 'scatter': 비산만, 'all': 전체 표시
+     */
+    setVisibilityMode(mode) {
+        this.visibilityMode = mode;
+        this.applyVisibility();
+    }
+
+    /**
+     * 현재 모드에 따라 모든 반딧불 가시성 적용
+     */
+    applyVisibility() {
+        this.fireflies.forEach(f => {
+            this.applyFireflyVisibility(f);
+        });
+    }
+
+    /**
+     * 개별 반딧불에 가시성 적용
+     */
+    applyFireflyVisibility(firefly) {
+        let visible = false;
+
+        switch (this.visibilityMode) {
+            case 'hidden':
+                visible = false;
+                break;
+            case 'scatter':
+                // 비산 중인 것만 표시
+                visible = firefly.isScattering;
+                break;
+            case 'all':
+            default:
+                visible = true;
+                break;
+        }
+
+        if (firefly.sprite) firefly.sprite.setVisible(visible);
+        if (firefly.glow) firefly.glow.setVisible(visible);
+        if (firefly.trail) firefly.trail.setVisible(visible);
     }
 
     // ===== 반딧불 생성 =====
@@ -71,6 +117,8 @@ export default class FireflySystem {
                 worldAnchor: { x: anchorX, y: anchorY }
             });
             this.fireflies.push(firefly);
+            // 새로 생성된 반딧불에 가시성 적용
+            this.applyFireflyVisibility(firefly);
         }
     }
 
@@ -357,6 +405,8 @@ export default class FireflySystem {
                 f.velocity.x = Math.cos(angle) * 0.5;
                 f.velocity.y = Math.sin(angle) * 0.5;
             }
+            // 비산 시작 시 가시성 갱신 (scatter 모드에서 표시되도록)
+            this.applyFireflyVisibility(f);
         });
 
         // AP 값 업데이트
@@ -417,6 +467,8 @@ export default class FireflySystem {
                 newFirefly.velocity.y = offY * 0.15;
 
                 this.fireflies.push(newFirefly);
+                // 분열로 생성된 반딧불에 가시성 적용
+                this.applyFireflyVisibility(newFirefly);
             }
 
             needed -= 5;
