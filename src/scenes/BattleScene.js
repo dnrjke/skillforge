@@ -177,8 +177,8 @@ export default class BattleScene extends Phaser.Scene {
         const fieldStatusUI = new FieldStatusUI(this, character, {
             maxHp: 100,
             currentHp: 100,
-            maxAp: 15,
-            currentAp: 15,
+            maxAp: 18,
+            currentAp: 18,  // 대형 3개 (15) + 소형 3개 (3) = 18
             maxPp: 3,
             currentPp: 3,
             offsetY: 20,  // 캐릭터 중심 아래
