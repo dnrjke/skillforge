@@ -602,7 +602,6 @@ export default class BattleControlUI {
                 .firefly-mode-desc {
                     height: 16px;
                     margin-top: 6px;
-                    padding: 0 10px;
                     font-size: 11px;
                     color: #888;
                     text-align: center;
@@ -625,9 +624,9 @@ export default class BattleControlUI {
                 <div class="settings-section">
                     <label>파티 현황판 모드</label>
                     <div class="segmented-control" id="party-status-mode">
-                        <button data-mode="normal" class="${this.settings.partyStatusMode === 'normal' ? 'active' : ''}">Normal</button>
-                        <button data-mode="compact" class="${this.settings.partyStatusMode === 'compact' ? 'active' : ''}">Compact</button>
-                        <button data-mode="hidden" class="${this.settings.partyStatusMode === 'hidden' ? 'active' : ''}">Hidden</button>
+                        <button data-mode="normal" class="${this.settings.partyStatusMode === 'normal' ? 'active' : ''}">일반</button>
+                        <button data-mode="compact" class="${this.settings.partyStatusMode === 'compact' ? 'active' : ''}">축소</button>
+                        <button data-mode="hidden" class="${this.settings.partyStatusMode === 'hidden' ? 'active' : ''}">숨김</button>
                     </div>
                 </div>
 
