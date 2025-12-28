@@ -403,12 +403,12 @@ export default class FieldStatusUI {
         this.fireflies.forEach((firefly, index) => {
             const params = firefly.orbitParams;
 
-            // 비산 중인 경우: 시간/경계 체크
+            // 비산 중인 경우: 월드 좌표 기준으로 처리
             if (firefly.isScattering) {
                 const elapsed = currentTime - firefly.scatterStartTime;
 
                 // 3초 경과 또는 화면 경계 이탈 시 소멸
-                if (elapsed >= this.scatterDuration || this.isOutOfBounds(firefly)) {
+                if (elapsed >= this.scatterDuration || this.isOutOfBoundsWorld(firefly)) {
                     toRemove.push(index);
                     return;
                 }
@@ -419,29 +419,30 @@ export default class FieldStatusUI {
                     fadeAlpha = 1.0 - (elapsed - this.fadeStartTime) / (this.scatterDuration - this.fadeStartTime);
                 }
 
-                // 비산 물리: 기존 로직 그대로 (damping이 음수라 확산됨)
-                const dx = firefly.targetPos.x - firefly.currentPos.x;
-                const dy = firefly.targetPos.y - firefly.currentPos.y;
+                // 비산 물리: 월드 좌표 기준 (damping 음수로 확산)
+                // targetPos는 고정 (비산 시작 시점 기준), 현재 위치와 차이로 반발력 생성
+                const dx = firefly.targetPos.x - firefly.worldPos.x;
+                const dy = firefly.targetPos.y - firefly.worldPos.y;
                 firefly.acceleration.x = dx * params.damping;
                 firefly.acceleration.y = dy * params.damping;
                 firefly.velocity.x = firefly.velocity.x * params.inertia + firefly.acceleration.x;
                 firefly.velocity.y = firefly.velocity.y * params.inertia + firefly.acceleration.y;
-                firefly.currentPos.x += firefly.velocity.x;
-                firefly.currentPos.y += firefly.velocity.y;
+                firefly.worldPos.x += firefly.velocity.x;
+                firefly.worldPos.y += firefly.velocity.y;
 
                 // 맥동 효과
                 firefly.pulsePhase += deltaSeconds * 2;
                 const pulse = 1 + Math.sin(firefly.pulsePhase) * 0.1;
 
-                // 스프라이트 업데이트 (페이드 적용)
-                firefly.sprite.setPosition(firefly.currentPos.x, firefly.currentPos.y);
+                // 스프라이트 업데이트 (월드 좌표, 페이드 적용)
+                firefly.sprite.setPosition(firefly.worldPos.x, firefly.worldPos.y);
                 firefly.sprite.setScale(pulse);
                 firefly.sprite.setAlpha(fadeAlpha);
-                firefly.glow.setPosition(firefly.currentPos.x, firefly.currentPos.y);
+                firefly.glow.setPosition(firefly.worldPos.x, firefly.worldPos.y);
                 firefly.glow.setScale(pulse * 1.5);
                 firefly.glow.setAlpha(fadeAlpha * 0.4);
 
-                this.updateFireflyTrail(firefly, fadeAlpha);
+                this.updateScatterTrail(firefly, fadeAlpha);
                 return;
             }
 
@@ -510,17 +511,15 @@ export default class FieldStatusUI {
         this.fireflyContainer.setPosition(this.character.x, this.character.y + this.fireflyOffsetY);
     }
 
-    // 화면 경계 체크 (반응형)
-    isOutOfBounds(firefly) {
+    // 화면 경계 체크 - 월드 좌표 (비산용)
+    isOutOfBoundsWorld(firefly) {
         const camera = this.scene.cameras.main;
         const margin = this.boundaryMargin;
-        const worldX = this.character.x + firefly.currentPos.x;
-        const worldY = this.character.y + this.fireflyOffsetY + firefly.currentPos.y;
 
-        return worldX < camera.scrollX - margin ||
-               worldX > camera.scrollX + camera.width + margin ||
-               worldY < camera.scrollY - margin ||
-               worldY > camera.scrollY + camera.height + margin;
+        return firefly.worldPos.x < camera.scrollX - margin ||
+               firefly.worldPos.x > camera.scrollX + camera.width + margin ||
+               firefly.worldPos.y < camera.scrollY - margin ||
+               firefly.worldPos.y > camera.scrollY + camera.height + margin;
     }
 
     // 반딧불 소멸
@@ -535,23 +534,53 @@ export default class FieldStatusUI {
     }
 
     updateFireflyTrail(firefly, fadeAlpha = 1.0) {
-        // 트레일 위치 기록
+        // 트레일 위치 기록 (로컬 좌표)
         firefly.trailPositions.unshift({
             x: firefly.currentPos.x,
             y: firefly.currentPos.y
         });
 
-        // 최대 8개 포인트
         if (firefly.trailPositions.length > 8) {
             firefly.trailPositions.pop();
         }
 
-        // 트레일 그리기
         firefly.trail.clear();
         if (firefly.trailPositions.length > 1) {
             for (let i = 1; i < firefly.trailPositions.length; i++) {
                 const alpha = 0.3 * (1 - i / firefly.trailPositions.length) * fadeAlpha;
                 const width = firefly.size * 0.5 * (1 - i / firefly.trailPositions.length);
+
+                firefly.trail.lineStyle(width, firefly.color, alpha);
+                firefly.trail.beginPath();
+                firefly.trail.moveTo(
+                    firefly.trailPositions[i - 1].x,
+                    firefly.trailPositions[i - 1].y
+                );
+                firefly.trail.lineTo(
+                    firefly.trailPositions[i].x,
+                    firefly.trailPositions[i].y
+                );
+                firefly.trail.strokePath();
+            }
+        }
+    }
+
+    // 비산용 트레일 (월드 좌표)
+    updateScatterTrail(firefly, fadeAlpha) {
+        firefly.trailPositions.unshift({
+            x: firefly.worldPos.x,
+            y: firefly.worldPos.y
+        });
+
+        if (firefly.trailPositions.length > 6) {
+            firefly.trailPositions.pop();
+        }
+
+        firefly.trail.clear();
+        if (firefly.trailPositions.length > 1) {
+            for (let i = 1; i < firefly.trailPositions.length; i++) {
+                const alpha = 0.2 * (1 - i / firefly.trailPositions.length) * fadeAlpha;
+                const width = firefly.size * 0.4 * (1 - i / firefly.trailPositions.length);
 
                 firefly.trail.lineStyle(width, firefly.color, alpha);
                 firefly.trail.beginPath();
@@ -655,29 +684,54 @@ export default class FieldStatusUI {
     }
 
     /**
-     * 비산 연출 시작 - damping만 변경하여 기존 물리로 흩어짐
+     * 비산 연출 시작 - 컨테이너에서 분리 후 damping 변경
      * @param {Object} firefly - 비산할 반딧불
      */
     startScatterAnimation(firefly) {
-        // 비산 damping 적용 (대형: -0.01, 소형: -0.02)
+        // 1. 월드 좌표 계산 (현재 컨테이너 위치 + 상대 위치)
+        const worldX = this.character.x + firefly.currentPos.x;
+        const worldY = this.character.y + this.fireflyOffsetY + firefly.currentPos.y;
+
+        // 2. 스프라이트를 fireflyContainer에서 제거 → parentContainer(월드)로 이동
+        if (this.parentContainer) {
+            if (firefly.sprite.parentContainer) {
+                firefly.sprite.parentContainer.remove(firefly.sprite);
+            }
+            if (firefly.glow.parentContainer) {
+                firefly.glow.parentContainer.remove(firefly.glow);
+            }
+            if (firefly.trail.parentContainer) {
+                firefly.trail.parentContainer.remove(firefly.trail);
+            }
+
+            this.parentContainer.add(firefly.trail);
+            this.parentContainer.add(firefly.glow);
+            this.parentContainer.add(firefly.sprite);
+        }
+
+        // 3. 월드 좌표로 위치 설정
+        firefly.worldPos = { x: worldX, y: worldY };
+        firefly.targetPos = { x: worldX, y: worldY };  // 비산 기준점
+        firefly.sprite.setPosition(worldX, worldY);
+        firefly.glow.setPosition(worldX, worldY);
+
+        // 4. 비산 damping 적용 (대형: -0.01, 소형: -0.02)
         firefly.orbitParams.damping = firefly.isBig ? -0.01 : -0.02;
 
-        // 비산 상태 표시
+        // 5. 비산 상태 표시
         firefly.isScattering = true;
         firefly.scatterStartTime = this.scene.time.now;
 
-        // 속도 크기만 초기화, 방향은 유지 (자연스러운 비산)
+        // 6. 속도 크기만 초기화, 방향은 유지 (자연스러운 비산)
         const speed = Math.sqrt(
             firefly.velocity.x * firefly.velocity.x +
             firefly.velocity.y * firefly.velocity.y
         );
         if (speed > 0.1) {
-            // 현재 방향 유지, 속도 크기만 초기값으로
             const initialSpeed = 0.5 + Math.random() * 0.5;
             firefly.velocity.x = (firefly.velocity.x / speed) * initialSpeed;
             firefly.velocity.y = (firefly.velocity.y / speed) * initialSpeed;
         } else {
-            // 거의 정지 상태면 랜덤 방향
             const randomAngle = Math.random() * Math.PI * 2;
             firefly.velocity.x = Math.cos(randomAngle) * 0.5;
             firefly.velocity.y = Math.sin(randomAngle) * 0.5;
