@@ -261,7 +261,7 @@ export default class PartyStatusUI {
             .unit-slot[data-pos="0"] .unit-hp-container,
             .unit-slot[data-pos="1"] .unit-hp-container,
             .unit-slot[data-pos="2"] .unit-hp-container {
-                flex-direction: column;
+                flex-direction: column-reverse;
                 top: -8px;
                 left: 50%;
                 transform: translateX(-50%);
