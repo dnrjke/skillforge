@@ -485,6 +485,10 @@ export default class BattleControlUI {
                     margin-bottom: 16px;
                 }
 
+                .settings-section.no-margin {
+                    margin-bottom: 0;
+                }
+
                 .settings-section label {
                     display: block;
                     font-size: 13px;
@@ -630,7 +634,7 @@ export default class BattleControlUI {
                     </div>
                 </div>
 
-                <div class="settings-section">
+                <div class="settings-section no-margin">
                     <label>AP 반딧불</label>
                     <div class="segmented-control" id="firefly-mode">
                         <button data-mode="all" class="${this.settings.fireflyMode === 'all' ? 'active' : ''}">전체</button>
