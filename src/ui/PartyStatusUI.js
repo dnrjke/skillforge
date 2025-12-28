@@ -58,7 +58,7 @@ export default class PartyStatusUI {
         style.id = 'battlefield-panel-style';
         style.textContent = `
             /* ===== Google Fonts ===== */
-            @import url('https://fonts.googleapis.com/css2?family=Alexandria:wght@400;700&family=Almendra+SC:wght@400;700&family=Almendra:wght@400;700&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Alexandria:wght@400;700&family=Almendra+SC&family=Almendra:wght@400;700&display=swap');
 
             /* ===== 글로벌 데미지 숫자 폰트 ===== */
             .damage-number, .damage-text, [class*="damage-num"] {
@@ -283,13 +283,13 @@ export default class PartyStatusUI {
                 right: 30px;
             }
 
-            /* 작은 HP바 (숫자 위에) */
+            /* HP바 */
             .mini-hp-bar {
                 width: 46px;
-                height: 4px;
+                height: 8px;
                 background: #080404;
                 border: 1px solid #222;
-                border-radius: 2px;
+                border-radius: 3px;
                 overflow: hidden;
                 box-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
             }
@@ -316,24 +316,24 @@ export default class PartyStatusUI {
             /* HP 숫자 컨테이너 */
             .mini-hp-text {
                 font-family: 'Almendra SC', serif;
-                font-size: 13px;
-                font-weight: 700;
+                font-size: 26px;
+                font-weight: 400;
                 color: #fff;
                 text-shadow:
                     -1px -1px 0 #000,
                     1px -1px 0 #000,
                     -1px 1px 0 #000,
                     1px 1px 0 #000,
-                    0 0 4px rgba(0, 0, 0, 0.9);
+                    0 0 6px rgba(0, 0, 0, 0.9);
                 transition: all 0.15s ease;
                 white-space: nowrap;
                 line-height: 1.1;
-                letter-spacing: -1px;
+                letter-spacing: -2px;
             }
 
             /* 최대 체력 숫자 (작게) */
             .hp-max {
-                font-size: 10px;
+                font-size: 20px;
             }
 
             .mini-hp-text.low { color: #fa5; }
@@ -462,8 +462,9 @@ export default class PartyStatusUI {
                     right: 24px;
                 }
 
-                .mini-hp-bar { width: 38px; height: 3px; }
-                .mini-hp-text { font-size: 10px; }
+                .mini-hp-bar { width: 38px; height: 6px; }
+                .mini-hp-text { font-size: 20px; }
+                .hp-max { font-size: 15px; }
             }
         `;
         document.head.appendChild(style);
