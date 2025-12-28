@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import APScatterManager from './APScatterManager.js';
 
 /**
  * FieldStatusUI - 필드 캐릭터용 상태 UI
@@ -10,7 +9,7 @@ import APScatterManager from './APScatterManager.js';
  * - AP: 알갱이 방식 (5개 = 1 대형)
  * - PP: 알갱이 방식 (압축 없음)
  * - AP 반딧불: Lissajous 궤도, 원근감, 관성 이동
- * - AP 비산: 소모 시 월드 좌표로 분리되어 흩어지는 연출
+ * - AP 비산: damping 음수로 전환하여 기존 물리로 흩어짐
  */
 export default class FieldStatusUI {
     constructor(scene, character, config = {}) {
@@ -61,17 +60,13 @@ export default class FieldStatusUI {
         this.fireflyContainer = null;
         this.lastCharacterPos = { x: character.x, y: character.y };
 
-        // AP 비산 관리자
-        this.scatterManager = null;
-
-        // 분열로 생성된 AP (합치기 예외)
-        this.noMergeFireflies = new Set();
+        // 비산 설정
+        this.scatterDuration = 3000;    // 3초 후 소멸
+        this.fadeStartTime = 2000;      // 2초 후 페이드 시작
+        this.boundaryMargin = 100;      // 화면 바깥 마진
 
         this.create();
         this.createFireflies();
-
-        // 비산 관리자 초기화 (parentContainer에 추가)
-        this.scatterManager = new APScatterManager(scene, this.parentContainer);
     }
 
     create() {
@@ -318,7 +313,6 @@ export default class FieldStatusUI {
 
         // 분열로 생성된 경우 초기 위치 지정
         const initialPos = options.initialPos || null;
-        const noMerge = options.noMerge || false;
 
         // 대형: 느린 속도 (Heavy) / 소형: 빠른 속도 (Light)
         const orbitParams = isBig ? {
@@ -329,7 +323,8 @@ export default class FieldStatusUI {
             phase: (index / total) * Math.PI * 2 + Math.random() * 0.5,
             speed: 0.5 + Math.random() * 0.15, // 더 느린 속도
             noiseOffset: Math.random() * 1000,
-            damping: 0.01,                    // 낮은 감쇠 (더 부드럽게)
+            baseDamping: 0.01,                // 기본 감쇠 (idle용)
+            damping: 0.01,                    // 현재 감쇠 (비산 시 변경됨)
             inertia: 0.97                     // 높은 관성 (무거움)
         } : {
             a: 40 + Math.random() * 20,       // X 반경
@@ -339,7 +334,8 @@ export default class FieldStatusUI {
             phase: (index / total) * Math.PI * 2 + Math.random() * 0.8,
             speed: 1.2 + Math.random() * 0.6, // 빠른 속도
             noiseOffset: Math.random() * 1000,
-            damping: 0.12,                    // 높은 감쇠 (민첩하게)
+            baseDamping: 0.12,                // 기본 감쇠 (idle용)
+            damping: 0.12,                    // 현재 감쇠 (비산 시 변경됨)
             inertia: 0.88                     // 낮은 관성 (가벼움)
         };
 
@@ -379,9 +375,8 @@ export default class FieldStatusUI {
             acceleration: { x: 0, y: 0 },
             trailPositions: [],
             pulsePhase: Math.random() * Math.PI * 2,
-            isConsuming: false,  // 비산 진행 중 여부
-            isSpent: false,      // 소모 대상으로 표시됨 (비산 예정)
-            noMerge: noMerge,    // 합치기 예외 플래그
+            isScattering: false,     // 비산 중 여부
+            scatterStartTime: 0,     // 비산 시작 시간
             spawnOffsetY: spawnOffsetY
         };
     }
@@ -396,17 +391,61 @@ export default class FieldStatusUI {
     updateFireflyPositions(delta) {
         const deltaSeconds = delta / 1000;
         const time = this.scene.time.now / 1000;
+        const currentTime = this.scene.time.now;
 
         // 캐릭터 이동 감지
         const charDeltaX = this.character.x - this.lastCharacterPos.x;
         const charDeltaY = this.character.y - this.lastCharacterPos.y;
 
-        this.fireflies.forEach((firefly, index) => {
-            if (firefly.isConsuming) return;
+        // 소멸 대상 수집
+        const toRemove = [];
 
+        this.fireflies.forEach((firefly, index) => {
             const params = firefly.orbitParams;
 
-            // Lissajous 궤도 계산 + Perlin noise 변조
+            // 비산 중인 경우: 시간/경계 체크
+            if (firefly.isScattering) {
+                const elapsed = currentTime - firefly.scatterStartTime;
+
+                // 3초 경과 또는 화면 경계 이탈 시 소멸
+                if (elapsed >= this.scatterDuration || this.isOutOfBounds(firefly)) {
+                    toRemove.push(index);
+                    return;
+                }
+
+                // 페이드 아웃 계산
+                let fadeAlpha = 1.0;
+                if (elapsed >= this.fadeStartTime) {
+                    fadeAlpha = 1.0 - (elapsed - this.fadeStartTime) / (this.scatterDuration - this.fadeStartTime);
+                }
+
+                // 비산 물리: 기존 로직 그대로 (damping이 음수라 확산됨)
+                const dx = firefly.targetPos.x - firefly.currentPos.x;
+                const dy = firefly.targetPos.y - firefly.currentPos.y;
+                firefly.acceleration.x = dx * params.damping;
+                firefly.acceleration.y = dy * params.damping;
+                firefly.velocity.x = firefly.velocity.x * params.inertia + firefly.acceleration.x;
+                firefly.velocity.y = firefly.velocity.y * params.inertia + firefly.acceleration.y;
+                firefly.currentPos.x += firefly.velocity.x;
+                firefly.currentPos.y += firefly.velocity.y;
+
+                // 맥동 효과
+                firefly.pulsePhase += deltaSeconds * 2;
+                const pulse = 1 + Math.sin(firefly.pulsePhase) * 0.1;
+
+                // 스프라이트 업데이트 (페이드 적용)
+                firefly.sprite.setPosition(firefly.currentPos.x, firefly.currentPos.y);
+                firefly.sprite.setScale(pulse);
+                firefly.sprite.setAlpha(fadeAlpha);
+                firefly.glow.setPosition(firefly.currentPos.x, firefly.currentPos.y);
+                firefly.glow.setScale(pulse * 1.5);
+                firefly.glow.setAlpha(fadeAlpha * 0.4);
+
+                this.updateFireflyTrail(firefly, fadeAlpha);
+                return;
+            }
+
+            // 일반 궤도 업데이트
             firefly.angle += params.speed * deltaSeconds;
             const noiseX = this.noise(time * 0.5 + params.noiseOffset) * 9;
             const noiseY = this.noise(time * 0.7 + params.noiseOffset + 100) * 7;
@@ -417,34 +456,28 @@ export default class FieldStatusUI {
             firefly.targetPos.x = targetX;
             firefly.targetPos.y = targetY;
 
-            // 가속도 기반 물리 (부드러운 곡선 유영)
-            // 목표 지점으로의 방향 벡터
+            // 가속도 기반 물리
             const dx = firefly.targetPos.x - firefly.currentPos.x;
             const dy = firefly.targetPos.y - firefly.currentPos.y;
-
-            // 가속도 = 목표 방향 * damping (스프링 힘처럼 작용)
             firefly.acceleration.x = dx * params.damping;
             firefly.acceleration.y = dy * params.damping;
-
-            // 속도 = 이전 속도 * 관성 + 가속도
             firefly.velocity.x = firefly.velocity.x * params.inertia + firefly.acceleration.x;
             firefly.velocity.y = firefly.velocity.y * params.inertia + firefly.acceleration.y;
 
-            // 캐릭터 이동에 대한 지연 반응
-            firefly.velocity.x -= charDeltaX * 0.25;
-            firefly.velocity.y -= charDeltaY * 0.25;
+            // 캐릭터 이동에 대한 지연 반응 (부드럽게 뒤따라옴)
+            firefly.velocity.x -= charDeltaX * 0.08;
+            firefly.velocity.y -= charDeltaY * 0.08;
 
             // 위치 업데이트
             firefly.currentPos.x += firefly.velocity.x;
             firefly.currentPos.y += firefly.velocity.y;
 
-            // Y 좌표 기반 원근감 (크기 변화 폭 축소)
+            // Y 좌표 기반 원근감
             const normalizedY = (firefly.currentPos.y + params.b) / (params.b * 2);
-            const depthScale = 0.85 + normalizedY * 0.3;  // 0.85 ~ 1.15 (변화 폭 축소)
-            const depthAlpha = 0.6 + normalizedY * 0.4;   // 0.6 ~ 1.0 (흐림 축소)
-            const depthBlur = (1 - normalizedY) * 1;      // 블러 축소
+            const depthScale = 0.85 + normalizedY * 0.3;
+            const depthAlpha = 0.6 + normalizedY * 0.4;
 
-            // 맥동(Pulse) 효과
+            // 맥동 효과
             firefly.pulsePhase += deltaSeconds * 3;
             const pulse = 1 + Math.sin(firefly.pulsePhase) * 0.15;
 
@@ -452,19 +485,21 @@ export default class FieldStatusUI {
             firefly.sprite.setPosition(firefly.currentPos.x, firefly.currentPos.y);
             firefly.sprite.setScale(depthScale * pulse);
             firefly.sprite.setAlpha(depthAlpha);
-
-            // Glow 업데이트
             firefly.glow.setPosition(firefly.currentPos.x, firefly.currentPos.y);
             firefly.glow.setScale(depthScale * pulse * 1.5);
             firefly.glow.setAlpha(depthAlpha * 0.4);
 
-            // Z-index (캐릭터 앞/뒤)
+            // Z-index
             const isInFront = firefly.currentPos.y > 0;
             firefly.sprite.setDepth(isInFront ? 1001 : 999);
             firefly.glow.setDepth(isInFront ? 1000 : 998);
 
-            // Motion Trail 업데이트
             this.updateFireflyTrail(firefly);
+        });
+
+        // 소멸된 반딧불 제거 (역순)
+        toRemove.reverse().forEach(index => {
+            this.destroyFirefly(index);
         });
 
         // 캐릭터 위치 저장
@@ -475,7 +510,31 @@ export default class FieldStatusUI {
         this.fireflyContainer.setPosition(this.character.x, this.character.y + this.fireflyOffsetY);
     }
 
-    updateFireflyTrail(firefly) {
+    // 화면 경계 체크 (반응형)
+    isOutOfBounds(firefly) {
+        const camera = this.scene.cameras.main;
+        const margin = this.boundaryMargin;
+        const worldX = this.character.x + firefly.currentPos.x;
+        const worldY = this.character.y + this.fireflyOffsetY + firefly.currentPos.y;
+
+        return worldX < camera.scrollX - margin ||
+               worldX > camera.scrollX + camera.width + margin ||
+               worldY < camera.scrollY - margin ||
+               worldY > camera.scrollY + camera.height + margin;
+    }
+
+    // 반딧불 소멸
+    destroyFirefly(index) {
+        const firefly = this.fireflies[index];
+        if (firefly) {
+            if (firefly.sprite) { firefly.sprite.destroy(); firefly.sprite = null; }
+            if (firefly.glow) { firefly.glow.destroy(); firefly.glow = null; }
+            if (firefly.trail) { firefly.trail.destroy(); firefly.trail = null; }
+            this.fireflies.splice(index, 1);
+        }
+    }
+
+    updateFireflyTrail(firefly, fadeAlpha = 1.0) {
         // 트레일 위치 기록
         firefly.trailPositions.unshift({
             x: firefly.currentPos.x,
@@ -491,7 +550,7 @@ export default class FieldStatusUI {
         firefly.trail.clear();
         if (firefly.trailPositions.length > 1) {
             for (let i = 1; i < firefly.trailPositions.length; i++) {
-                const alpha = 0.3 * (1 - i / firefly.trailPositions.length);
+                const alpha = 0.3 * (1 - i / firefly.trailPositions.length) * fadeAlpha;
                 const width = firefly.size * 0.5 * (1 - i / firefly.trailPositions.length);
 
                 firefly.trail.lineStyle(width, firefly.color, alpha);
@@ -519,22 +578,20 @@ export default class FieldStatusUI {
         const toConsume = Math.min(amount, this.currentAp);
         if (toConsume <= 0) return 0;
 
-        // 1. 선-분열 (Pre-split): 큰 AP를 작은 AP로 분열
-        //    분열된 AP 중 소모될 것은 isSpent=true, 남을 것은 isSpent=false
+        // 1. 선-분열: 큰 AP를 작은 AP로 분열 (필요 시)
         this.preSplitForConsume(toConsume);
 
-        // 2. 소모할 반딧불 선택 (isSpent=true인 것만)
-        const consumeFireflies = this.fireflies.filter(f => f.isSpent === true);
+        // 2. 소모할 반딧불 선택 (뒤에서부터)
+        let remaining = toConsume;
+        for (let i = this.fireflies.length - 1; i >= 0 && remaining > 0; i--) {
+            const firefly = this.fireflies[i];
+            if (!firefly.isScattering) {
+                this.startScatterAnimation(firefly);
+                remaining--;
+            }
+        }
 
-        // 3. 비산 연출 시작 (월드 좌표로 이전)
-        consumeFireflies.forEach((firefly) => {
-            this.startScatterAnimation(firefly);
-        });
-
-        // 4. fireflies 배열에서 소모된 반딧불 제거 (isSpent=true인 것만)
-        this.fireflies = this.fireflies.filter(f => f.isSpent !== true);
-
-        // 5. AP 값 즉시 업데이트
+        // 3. AP 값 업데이트
         this.currentAp -= toConsume;
         this.updateApPellets();
 
@@ -542,105 +599,89 @@ export default class FieldStatusUI {
     }
 
     /**
-     * 선-분열: 소모에 필요한 만큼 큰 AP를 작은 AP 5개로 분열
-     * 분열된 AP 중 소모될 것만 isSpent=true 표시
+     * 선-분열: 큰 AP를 작은 AP 5개로 분열 (짧은 스프레드 후 idle 편입)
      * @param {number} requiredAmount - 필요한 AP 양
      */
     preSplitForConsume(requiredAmount) {
-        // 현재 유효한 작은 AP 개수 확인 (isSpent가 아닌 것만)
-        const availableSmall = this.fireflies.filter(
-            f => !f.isBig && !f.isConsuming && f.isSpent !== true
-        );
-        let remaining = requiredAmount;
+        // 사용 가능한 작은 AP 개수
+        const availableSmall = this.fireflies.filter(f => !f.isBig && !f.isScattering).length;
 
-        // 1. 먼저 기존 작은 AP에서 소모 대상 표시
-        for (let i = availableSmall.length - 1; i >= 0 && remaining > 0; i--) {
-            availableSmall[i].isSpent = true;
-            remaining--;
-        }
+        if (availableSmall >= requiredAmount) return;  // 충분함
 
-        if (remaining <= 0) return;  // 충분한 작은 AP가 있었음
-
-        // 2. 부족한 만큼 큰 AP를 분열
-        const bigFireflies = this.fireflies.filter(
-            f => f.isBig && !f.isConsuming && f.isSpent !== true
-        );
+        // 부족한 만큼 큰 AP 분열
+        let needed = requiredAmount - availableSmall;
+        const bigFireflies = this.fireflies.filter(f => f.isBig && !f.isScattering);
 
         for (const bigFirefly of bigFireflies) {
-            if (remaining <= 0) break;
+            if (needed <= 0) break;
 
-            // 분열 위치 (큰 AP의 현재 위치)
             const splitX = bigFirefly.currentPos.x;
             const splitY = bigFirefly.currentPos.y;
 
-            // 큰 AP 제거 (스프라이트 파괴)
-            bigFirefly.isConsuming = true;
+            // 큰 AP 제거
             if (bigFirefly.sprite) bigFirefly.sprite.destroy();
             if (bigFirefly.glow) bigFirefly.glow.destroy();
             if (bigFirefly.trail) bigFirefly.trail.destroy();
 
-            // 작은 AP 5개 생성 (퍼지는 분열 연출)
-            const splitAngles = [0, 72, 144, 216, 288];  // 5방향으로 퍼짐
-            const splitRadius = 15;
-
-            // 소모될 개수와 남을 개수 결정
-            const toSpendCount = Math.min(5, remaining);
+            // 작은 AP 5개 생성 (짧은 스프레드)
+            const splitAngles = [0, 72, 144, 216, 288];
+            const splitRadius = 8;  // 짧은 스프레드
 
             for (let i = 0; i < 5; i++) {
                 const angle = (splitAngles[i] * Math.PI) / 180;
                 const offsetX = Math.cos(angle) * splitRadius;
                 const offsetY = Math.sin(angle) * splitRadius;
 
-                // 앞에서부터 toSpendCount개는 소모 대상
-                const willSpend = i < toSpendCount;
-
                 const newFirefly = this.createSingleFirefly(
                     this.fireflies.length,
                     this.fireflies.length + 5,
-                    false,  // 작은 AP
-                    {
-                        initialPos: { x: splitX + offsetX, y: splitY + offsetY },
-                        noMerge: true  // 합치기 예외
-                    }
+                    false,
+                    { initialPos: { x: splitX + offsetX, y: splitY + offsetY } }
                 );
 
-                // 상태 설정
-                newFirefly.isSpent = willSpend;  // 소모될 것인지 명확히 표시
-                newFirefly.isConsuming = false;  // 아직 비산 시작 안함
-
-                // 분열 속도 부여
-                newFirefly.velocity.x = offsetX * 0.1;
-                newFirefly.velocity.y = offsetY * 0.1;
+                // 짧은 초기 속도만 부여 (탁! 퍼짐 후 idle 편입)
+                newFirefly.velocity.x = offsetX * 0.15;
+                newFirefly.velocity.y = offsetY * 0.15;
 
                 this.fireflies.push(newFirefly);
-
-                // 남을 AP는 noMergeFireflies에 추가 (합치기 예외)
-                if (!willSpend) {
-                    this.noMergeFireflies.add(newFirefly);
-                }
             }
 
-            remaining -= toSpendCount;
-        }
+            // 큰 AP를 배열에서 제거
+            const idx = this.fireflies.indexOf(bigFirefly);
+            if (idx !== -1) this.fireflies.splice(idx, 1);
 
-        // 소모된 큰 AP 제거
-        this.fireflies = this.fireflies.filter(f => !(f.isConsuming && f.isBig));
+            needed -= 5;
+        }
     }
 
     /**
-     * 비산 연출 시작 - 반딧불을 월드 좌표로 이전
+     * 비산 연출 시작 - damping만 변경하여 기존 물리로 흩어짐
      * @param {Object} firefly - 비산할 반딧불
      */
     startScatterAnimation(firefly) {
-        // 월드 좌표 계산 (컨테이너 위치 + 상대 위치)
-        const worldX = this.character.x + firefly.currentPos.x;
-        const worldY = this.character.y + this.fireflyOffsetY + firefly.currentPos.y;
+        // 비산 damping 적용 (대형: -0.01, 소형: -0.02)
+        firefly.orbitParams.damping = firefly.isBig ? -0.01 : -0.02;
 
-        // isConsuming 상태로 표시 (업데이트 루프에서 제외)
-        firefly.isConsuming = true;
+        // 비산 상태 표시
+        firefly.isScattering = true;
+        firefly.scatterStartTime = this.scene.time.now;
 
-        // APScatterManager로 이전
-        this.scatterManager.addFirefly(firefly, worldX, worldY);
+        // 속도 크기만 초기화, 방향은 유지 (자연스러운 비산)
+        const speed = Math.sqrt(
+            firefly.velocity.x * firefly.velocity.x +
+            firefly.velocity.y * firefly.velocity.y
+        );
+        if (speed > 0.1) {
+            // 현재 방향 유지, 속도 크기만 초기값으로
+            const initialSpeed = 0.5 + Math.random() * 0.5;
+            firefly.velocity.x = (firefly.velocity.x / speed) * initialSpeed;
+            firefly.velocity.y = (firefly.velocity.y / speed) * initialSpeed;
+        } else {
+            // 거의 정지 상태면 랜덤 방향
+            const randomAngle = Math.random() * Math.PI * 2;
+            firefly.velocity.x = Math.cos(randomAngle) * 0.5;
+            firefly.velocity.y = Math.sin(randomAngle) * 0.5;
+        }
     }
 
     // ===== 공개 메서드 =====
@@ -652,13 +693,8 @@ export default class FieldStatusUI {
             this.character.y + this.offsetY
         );
 
-        // 반딧불 위치 업데이트 (궤도 유영 중인 것만)
+        // 반딧불 위치 업데이트 (궤도 + 비산 모두 처리)
         this.updateFireflyPositions(delta || 16);
-
-        // 비산 중인 반딧불 업데이트 (월드 좌표 기준)
-        if (this.scatterManager) {
-            this.scatterManager.update(delta || 16);
-        }
     }
 
     setHp(value, animate = true) {
@@ -847,15 +883,6 @@ export default class FieldStatusUI {
             if (f.glow) f.glow.destroy();
         });
         this.fireflies = [];
-
-        // 비산 관리자 정리
-        if (this.scatterManager) {
-            this.scatterManager.destroy();
-            this.scatterManager = null;
-        }
-
-        // 합치기 예외 목록 정리
-        this.noMergeFireflies.clear();
 
         if (this.fireflyContainer) this.fireflyContainer.destroy();
         if (this.container) this.container.destroy();
