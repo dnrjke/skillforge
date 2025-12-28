@@ -36,7 +36,8 @@ export default class BattleControlUI {
     loadSettings() {
         const defaults = {
             partyStatusMode: 'normal',  // normal, compact, hidden
-            showBattleLog: true
+            showBattleLog: true,
+            showFireflies: true
         };
         try {
             const saved = localStorage.getItem('battleSettings');
@@ -70,11 +71,11 @@ export default class BattleControlUI {
         badge.id = 'speed-badge';
         badge.textContent = '1x';
 
-        // CSS로 게임 컨테이너 기준 절대 위치
+        // CSS로 게임 컨테이너 기준 절대 위치 (설정 버튼 왼쪽에 배치)
         badge.style.cssText = `
             position: absolute;
             top: ${this.isMobile ? '5%' : '5.5%'};
-            right: ${this.isMobile ? '4%' : '3%'};
+            right: ${this.isMobile ? 'calc(4% + 58px)' : 'calc(3% + 60px)'};
             width: ${size}px;
             height: ${size}px;
             border-radius: 50%;
@@ -151,7 +152,7 @@ export default class BattleControlUI {
         btn.style.cssText = `
             position: absolute;
             top: ${this.isMobile ? '5%' : '5.5%'};
-            right: ${this.isMobile ? 'calc(4% + 58px)' : 'calc(3% + 60px)'};
+            right: ${this.isMobile ? '4%' : '3%'};
             width: ${size}px;
             height: ${size}px;
             border-radius: 50%;
@@ -451,7 +452,7 @@ export default class BattleControlUI {
                     display: none;
                     justify-content: center;
                     align-items: center;
-                    z-index: 200;
+                    z-index: 1000;
                     pointer-events: auto;
                 }
 
@@ -622,6 +623,10 @@ export default class BattleControlUI {
                         <span>전투 로그 표시</span>
                         <div class="toggle-switch ${this.settings.showBattleLog ? 'active' : ''}" id="toggle-battle-log"></div>
                     </div>
+                    <div class="toggle-row">
+                        <span>AP 반딧불 표시</span>
+                        <div class="toggle-switch ${this.settings.showFireflies ? 'active' : ''}" id="toggle-fireflies"></div>
+                    </div>
                 </div>
 
                 <button id="settings-close-btn">닫기</button>
@@ -658,6 +663,16 @@ export default class BattleControlUI {
             e.stopPropagation();
             logToggle.classList.toggle('active');
             this.settings.showBattleLog = logToggle.classList.contains('active');
+            this.saveSettings();
+            this.applySettings();
+        });
+
+        // 반딧불 토글
+        const fireflyToggle = overlay.querySelector('#toggle-fireflies');
+        fireflyToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            fireflyToggle.classList.toggle('active');
+            this.settings.showFireflies = fireflyToggle.classList.contains('active');
             this.saveSettings();
             this.applySettings();
         });
@@ -715,14 +730,27 @@ export default class BattleControlUI {
         });
 
         // 2. 전투 로그 표시/숨김
-        const logWindow = document.querySelector('.log-window');
+        const logWindow = document.querySelector('#log-window-container');
         if (logWindow) {
             logWindow.style.display = this.settings.showBattleLog ? '' : 'none';
         }
 
-        // 3. 게임 엔진에 이벤트 전달
+        // 3. 게임 엔진에 이벤트 전달 (반딧불 등)
         if (this.scene && this.scene.events) {
             this.scene.events.emit('settingsChanged', this.settings);
+        }
+
+        // 4. 반딧불 표시/숨김 (Phaser 스프라이트)
+        if (this.scene && this.scene.statusBars) {
+            this.scene.statusBars.forEach(bar => {
+                if (bar.fireflySystem && bar.fireflySystem.fireflies) {
+                    bar.fireflySystem.fireflies.forEach(f => {
+                        if (f.sprite) f.sprite.setVisible(this.settings.showFireflies);
+                        if (f.glow) f.glow.setVisible(this.settings.showFireflies);
+                        if (f.trail) f.trail.setVisible(this.settings.showFireflies);
+                    });
+                }
+            });
         }
     }
 }
