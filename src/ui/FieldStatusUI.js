@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import APScatterManager from './APScatterManager.js';
 
 /**
  * FieldStatusUI - 필드 캐릭터용 상태 UI
@@ -9,6 +10,7 @@ import Phaser from 'phaser';
  * - AP: 알갱이 방식 (5개 = 1 대형)
  * - PP: 알갱이 방식 (압축 없음)
  * - AP 반딧불: Lissajous 궤도, 원근감, 관성 이동
+ * - AP 비산: 소모 시 월드 좌표로 분리되어 흩어지는 연출
  */
 export default class FieldStatusUI {
     constructor(scene, character, config = {}) {
@@ -59,11 +61,17 @@ export default class FieldStatusUI {
         this.fireflyContainer = null;
         this.lastCharacterPos = { x: character.x, y: character.y };
 
-        // 캐릭터 중심점 (반딧불 레이어링용)
-        this.characterCenterY = 0;
+        // AP 비산 관리자
+        this.scatterManager = null;
+
+        // 분열로 생성된 AP (합치기 예외)
+        this.noMergeFireflies = new Set();
 
         this.create();
         this.createFireflies();
+
+        // 비산 관리자 초기화 (parentContainer에 추가)
+        this.scatterManager = new APScatterManager(scene, this.parentContainer);
     }
 
     create() {
@@ -300,10 +308,17 @@ export default class FieldStatusUI {
         }
     }
 
-    createSingleFirefly(index, total, isBig) {
+    createSingleFirefly(index, total, isBig, options = {}) {
         // 대형 AP: 주황색, 크기 14 / 소형 AP: 노란색, 크기 5
         const size = isBig ? 14 : 5;
         const color = isBig ? 0xff6600 : 0xffdd44;  // 대형: 진한 주황 / 소형: 밝은 노랑
+
+        // 대형 AP는 2px 아래에서 출현
+        const spawnOffsetY = isBig ? 2 : 0;
+
+        // 분열로 생성된 경우 초기 위치 지정
+        const initialPos = options.initialPos || null;
+        const noMerge = options.noMerge || false;
 
         // 대형: 느린 속도 (Heavy) / 소형: 빠른 속도 (Light)
         const orbitParams = isBig ? {
@@ -345,6 +360,10 @@ export default class FieldStatusUI {
 
         this.fireflyContainer.add([trail, glow, sprite]);
 
+        // 초기 위치 설정 (분열 시 또는 기본)
+        const startX = initialPos ? initialPos.x : 0;
+        const startY = initialPos ? initialPos.y : spawnOffsetY;
+
         return {
             sprite,
             glow,
@@ -354,13 +373,16 @@ export default class FieldStatusUI {
             color,
             orbitParams,
             angle: orbitParams.phase,
-            currentPos: { x: 0, y: 0 },
+            currentPos: { x: startX, y: startY },
             targetPos: { x: 0, y: 0 },
             velocity: { x: 0, y: 0 },
-            acceleration: { x: 0, y: 0 },  // 가속도 추가
+            acceleration: { x: 0, y: 0 },
             trailPositions: [],
             pulsePhase: Math.random() * Math.PI * 2,
-            isConsuming: false
+            isConsuming: false,  // 비산 진행 중 여부
+            isSpent: false,      // 소모 대상으로 표시됨 (비산 예정)
+            noMerge: noMerge,    // 합치기 예외 플래그
+            spawnOffsetY: spawnOffsetY
         };
     }
 
@@ -487,75 +509,138 @@ export default class FieldStatusUI {
         }
     }
 
-    // AP 소모 연출 (회오리 상승 + 소멸)
+    // ===== AP 소모 및 비산 시스템 =====
+
+    /**
+     * AP 소모 - 선분열 후 비산 연출
+     * @param {number} amount - 소모할 AP 양
+     */
     consumeAp(amount) {
         const toConsume = Math.min(amount, this.currentAp);
-        if (toConsume <= 0) return;
+        if (toConsume <= 0) return 0;
 
-        // 소모할 반딧불 선택 (뒤에서부터)
-        const consumeFireflies = [];
-        let remaining = toConsume;
+        // 1. 선-분열 (Pre-split): 큰 AP를 작은 AP로 분열
+        //    분열된 AP 중 소모될 것은 isSpent=true, 남을 것은 isSpent=false
+        this.preSplitForConsume(toConsume);
 
-        for (let i = this.fireflies.length - 1; i >= 0 && remaining > 0; i--) {
-            const firefly = this.fireflies[i];
-            if (!firefly.isConsuming) {
-                const value = firefly.isBig ? 5 : 1;
-                if (value <= remaining) {
-                    consumeFireflies.push(firefly);
-                    firefly.isConsuming = true;
-                    remaining -= value;
-                }
-            }
-        }
+        // 2. 소모할 반딧불 선택 (isSpent=true인 것만)
+        const consumeFireflies = this.fireflies.filter(f => f.isSpent === true);
 
-        // 소모 애니메이션
-        consumeFireflies.forEach((firefly, index) => {
-            this.playConsumeAnimation(firefly, index * 50);
+        // 3. 비산 연출 시작 (월드 좌표로 이전)
+        consumeFireflies.forEach((firefly) => {
+            this.startScatterAnimation(firefly);
         });
 
-        // AP 값 업데이트
+        // 4. fireflies 배열에서 소모된 반딧불 제거 (isSpent=true인 것만)
+        this.fireflies = this.fireflies.filter(f => f.isSpent !== true);
+
+        // 5. AP 값 즉시 업데이트
         this.currentAp -= toConsume;
         this.updateApPellets();
-
-        // 일정 시간 후 반딧불 재구성
-        this.scene.time.delayedCall(600, () => {
-            this.updateFireflies();
-        });
 
         return toConsume;
     }
 
-    playConsumeAnimation(firefly, delay) {
-        this.scene.time.delayedCall(delay, () => {
-            const startX = firefly.currentPos.x;
-            const startY = firefly.currentPos.y;
+    /**
+     * 선-분열: 소모에 필요한 만큼 큰 AP를 작은 AP 5개로 분열
+     * 분열된 AP 중 소모될 것만 isSpent=true 표시
+     * @param {number} requiredAmount - 필요한 AP 양
+     */
+    preSplitForConsume(requiredAmount) {
+        // 현재 유효한 작은 AP 개수 확인 (isSpent가 아닌 것만)
+        const availableSmall = this.fireflies.filter(
+            f => !f.isBig && !f.isConsuming && f.isSpent !== true
+        );
+        let remaining = requiredAmount;
 
-            // 회오리 상승 애니메이션
-            this.scene.tweens.add({
-                targets: firefly.sprite,
-                x: startX,
-                y: startY - 80,
-                scale: 0,
-                alpha: 0,
-                duration: 500,
-                ease: 'Power2.easeIn',
-                onUpdate: (tween) => {
-                    const progress = tween.progress;
-                    // 회전하며 상승
-                    const spiralX = startX + Math.sin(progress * Math.PI * 4) * 20 * (1 - progress);
-                    firefly.sprite.x = spiralX;
-                    firefly.glow.x = spiralX;
-                    firefly.glow.y = firefly.sprite.y;
-                    firefly.glow.alpha = (1 - progress) * 0.4;
-                    firefly.glow.scale = firefly.sprite.scale * 1.5;
-                },
-                onComplete: () => {
-                    firefly.sprite.destroy();
-                    firefly.glow.destroy();
-                    firefly.trail.destroy();
+        // 1. 먼저 기존 작은 AP에서 소모 대상 표시
+        for (let i = availableSmall.length - 1; i >= 0 && remaining > 0; i--) {
+            availableSmall[i].isSpent = true;
+            remaining--;
+        }
+
+        if (remaining <= 0) return;  // 충분한 작은 AP가 있었음
+
+        // 2. 부족한 만큼 큰 AP를 분열
+        const bigFireflies = this.fireflies.filter(
+            f => f.isBig && !f.isConsuming && f.isSpent !== true
+        );
+
+        for (const bigFirefly of bigFireflies) {
+            if (remaining <= 0) break;
+
+            // 분열 위치 (큰 AP의 현재 위치)
+            const splitX = bigFirefly.currentPos.x;
+            const splitY = bigFirefly.currentPos.y;
+
+            // 큰 AP 제거 (스프라이트 파괴)
+            bigFirefly.isConsuming = true;
+            if (bigFirefly.sprite) bigFirefly.sprite.destroy();
+            if (bigFirefly.glow) bigFirefly.glow.destroy();
+            if (bigFirefly.trail) bigFirefly.trail.destroy();
+
+            // 작은 AP 5개 생성 (퍼지는 분열 연출)
+            const splitAngles = [0, 72, 144, 216, 288];  // 5방향으로 퍼짐
+            const splitRadius = 15;
+
+            // 소모될 개수와 남을 개수 결정
+            const toSpendCount = Math.min(5, remaining);
+
+            for (let i = 0; i < 5; i++) {
+                const angle = (splitAngles[i] * Math.PI) / 180;
+                const offsetX = Math.cos(angle) * splitRadius;
+                const offsetY = Math.sin(angle) * splitRadius;
+
+                // 앞에서부터 toSpendCount개는 소모 대상
+                const willSpend = i < toSpendCount;
+
+                const newFirefly = this.createSingleFirefly(
+                    this.fireflies.length,
+                    this.fireflies.length + 5,
+                    false,  // 작은 AP
+                    {
+                        initialPos: { x: splitX + offsetX, y: splitY + offsetY },
+                        noMerge: true  // 합치기 예외
+                    }
+                );
+
+                // 상태 설정
+                newFirefly.isSpent = willSpend;  // 소모될 것인지 명확히 표시
+                newFirefly.isConsuming = false;  // 아직 비산 시작 안함
+
+                // 분열 속도 부여
+                newFirefly.velocity.x = offsetX * 0.1;
+                newFirefly.velocity.y = offsetY * 0.1;
+
+                this.fireflies.push(newFirefly);
+
+                // 남을 AP는 noMergeFireflies에 추가 (합치기 예외)
+                if (!willSpend) {
+                    this.noMergeFireflies.add(newFirefly);
                 }
-            });
-        });
+            }
+
+            remaining -= toSpendCount;
+        }
+
+        // 소모된 큰 AP 제거
+        this.fireflies = this.fireflies.filter(f => !(f.isConsuming && f.isBig));
+    }
+
+    /**
+     * 비산 연출 시작 - 반딧불을 월드 좌표로 이전
+     * @param {Object} firefly - 비산할 반딧불
+     */
+    startScatterAnimation(firefly) {
+        // 월드 좌표 계산 (컨테이너 위치 + 상대 위치)
+        const worldX = this.character.x + firefly.currentPos.x;
+        const worldY = this.character.y + this.fireflyOffsetY + firefly.currentPos.y;
+
+        // isConsuming 상태로 표시 (업데이트 루프에서 제외)
+        firefly.isConsuming = true;
+
+        // APScatterManager로 이전
+        this.scatterManager.addFirefly(firefly, worldX, worldY);
     }
 
     // ===== 공개 메서드 =====
@@ -567,8 +652,13 @@ export default class FieldStatusUI {
             this.character.y + this.offsetY
         );
 
-        // 반딧불 위치 업데이트
+        // 반딧불 위치 업데이트 (궤도 유영 중인 것만)
         this.updateFireflyPositions(delta || 16);
+
+        // 비산 중인 반딧불 업데이트 (월드 좌표 기준)
+        if (this.scatterManager) {
+            this.scatterManager.update(delta || 16);
+        }
     }
 
     setHp(value, animate = true) {
@@ -750,11 +840,22 @@ export default class FieldStatusUI {
         this.stopGlowPulse();
         if (this.hpHideTimer) this.hpHideTimer.remove();
 
+        // 반딧불 정리
         this.fireflies.forEach(f => {
             if (f.sprite) f.sprite.destroy();
             if (f.trail) f.trail.destroy();
             if (f.glow) f.glow.destroy();
         });
+        this.fireflies = [];
+
+        // 비산 관리자 정리
+        if (this.scatterManager) {
+            this.scatterManager.destroy();
+            this.scatterManager = null;
+        }
+
+        // 합치기 예외 목록 정리
+        this.noMergeFireflies.clear();
 
         if (this.fireflyContainer) this.fireflyContainer.destroy();
         if (this.container) this.container.destroy();
