@@ -605,17 +605,22 @@ export default class FieldStatusUI {
         // 1. 선-분열: 큰 AP를 작은 AP로 분열 (필요 시)
         this.preSplitForConsume(toConsume);
 
-        // 2. 소모할 반딧불 선택 (뒤에서부터)
-        let remaining = toConsume;
-        for (let i = this.fireflies.length - 1; i >= 0 && remaining > 0; i--) {
+        // 2. 소모할 반딧불 선택 (작은 AP만, 뒤에서부터)
+        const toScatter = [];
+        for (let i = this.fireflies.length - 1; i >= 0 && toScatter.length < toConsume; i--) {
             const firefly = this.fireflies[i];
-            if (!firefly.isScattering) {
-                this.startScatterAnimation(firefly);
-                remaining--;
+            if (!firefly.isBig && !firefly.isScattering) {
+                toScatter.push(firefly);
             }
         }
 
-        // 3. AP 값 업데이트
+        // 3. 먼저 모두 isScattering 표시 (중복 선택 방지)
+        toScatter.forEach(f => { f.isScattering = true; });
+
+        // 4. 비산 연출 시작
+        toScatter.forEach(f => this.startScatterAnimation(f));
+
+        // 5. AP 값 업데이트
         this.currentAp -= toConsume;
         this.updateApPellets();
 
@@ -642,14 +647,18 @@ export default class FieldStatusUI {
             const splitX = bigFirefly.currentPos.x;
             const splitY = bigFirefly.currentPos.y;
 
-            // 큰 AP 제거
+            // 큰 AP를 배열에서 먼저 제거
+            const idx = this.fireflies.indexOf(bigFirefly);
+            if (idx !== -1) this.fireflies.splice(idx, 1);
+
+            // 스프라이트 제거
             if (bigFirefly.sprite) bigFirefly.sprite.destroy();
             if (bigFirefly.glow) bigFirefly.glow.destroy();
             if (bigFirefly.trail) bigFirefly.trail.destroy();
 
             // 작은 AP 5개 생성 (짧은 스프레드)
             const splitAngles = [0, 72, 144, 216, 288];
-            const splitRadius = 8;  // 짧은 스프레드
+            const splitRadius = 8;
 
             for (let i = 0; i < 5; i++) {
                 const angle = (splitAngles[i] * Math.PI) / 180;
@@ -670,10 +679,6 @@ export default class FieldStatusUI {
                 this.fireflies.push(newFirefly);
             }
 
-            // 큰 AP를 배열에서 제거
-            const idx = this.fireflies.indexOf(bigFirefly);
-            if (idx !== -1) this.fireflies.splice(idx, 1);
-
             needed -= 5;
         }
     }
@@ -683,6 +688,8 @@ export default class FieldStatusUI {
      * @param {Object} firefly - 비산할 반딧불
      */
     startScatterAnimation(firefly) {
+        // isScattering은 이미 consumeAp에서 설정됨
+
         // 1. 월드 좌표 계산 (앵커 위치 + 상대 위치)
         const worldX = this.anchorPos.x + firefly.currentPos.x;
         const worldY = this.anchorPos.y + this.fireflyOffsetY + firefly.currentPos.y;
@@ -710,11 +717,10 @@ export default class FieldStatusUI {
         firefly.sprite.setPosition(worldX, worldY);
         firefly.glow.setPosition(worldX, worldY);
 
-        // 4. 비산 damping 적용 (대형: -0.01, 소형: -0.02)
-        firefly.orbitParams.damping = firefly.isBig ? -0.01 : -0.02;
+        // 4. 비산 damping 적용 (소형만 비산, -0.02)
+        firefly.orbitParams.damping = -0.02;
 
-        // 5. 비산 상태 표시
-        firefly.isScattering = true;
+        // 5. 비산 시작 시간 기록
         firefly.scatterStartTime = this.scene.time.now;
 
         // 6. 속도 크기만 초기화, 방향은 유지 (자연스러운 비산)
