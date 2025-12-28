@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import LogWindow from '../ui/LogWindow.js';
-import StatusBar from '../ui/StatusBar.js';
+import FieldStatusUI from '../ui/FieldStatusUI.js';
 import BattleControlUI from '../ui/BattleControlUI.js';
 import PartyStatusUI from '../ui/PartyStatusUI.js';
 import BattleManager from '../systems/BattleManager.js';
@@ -90,9 +90,9 @@ export default class BattleScene extends Phaser.Scene {
         this.addLog('스페이스바: 테스트 | Enter: 자동전투 | +/-: 줌', 'info');
     }
 
-    update() {
-        // 상태바 위치 업데이트
-        this.statusBars.forEach(bar => bar.update());
+    update(time, delta) {
+        // 필드 상태 UI 업데이트 (반딧불 애니메이션 포함)
+        this.statusBars.forEach(bar => bar.update(delta));
     }
 
     setupContainers() {
@@ -173,18 +173,21 @@ export default class BattleScene extends Phaser.Scene {
         // 캐릭터를 월드 컨테이너에 추가
         this.worldContainer.add(character);
 
-        // 상태바 생성 (캐릭터 머리 위)
-        const statusBar = new StatusBar(this, character, {
+        // 필드 상태 UI 생성 (HP바 + AP/PP 반딧불)
+        const fieldStatusUI = new FieldStatusUI(this, character, {
             maxHp: 100,
             currentHp: 100,
-            maxAp: 10,
-            currentAp: 0,
-            offsetY: -110,
+            maxAp: 15,
+            currentAp: 15,
+            maxPp: 3,
+            currentPp: 3,
+            offsetY: 20,  // 캐릭터 중심 아래
             speed: 10,
+            isEnemy: isEnemy,
             parentContainer: this.worldContainer
         });
-        character.statusBar = statusBar;
-        this.statusBars.push(statusBar);
+        character.statusBar = fieldStatusUI;
+        this.statusBars.push(fieldStatusUI);
 
         return character;
     }
