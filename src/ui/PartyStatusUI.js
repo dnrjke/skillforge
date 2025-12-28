@@ -266,13 +266,21 @@ export default class PartyStatusUI {
                 transform: translateX(-50%);
             }
 
-            /* 아랫줄 (3, 4, 5): 발 아래, 캐릭터 중심 정렬 */
+            /* 아랫줄 (3, 4, 5): 발 아래, 오른쪽으로 이동 */
             .unit-slot[data-pos="3"] .unit-hp-container,
             .unit-slot[data-pos="4"] .unit-hp-container,
             .unit-slot[data-pos="5"] .unit-hp-container {
                 bottom: -8px;
-                left: 50%;
-                transform: translateX(-50%);
+                left: 30px;
+                transform: none;
+            }
+
+            /* 적군 아랫줄: 좌우 대칭 (왼쪽으로 이동) */
+            .enemy .unit-slot[data-pos="3"] .unit-hp-container,
+            .enemy .unit-slot[data-pos="4"] .unit-hp-container,
+            .enemy .unit-slot[data-pos="5"] .unit-hp-container {
+                left: auto;
+                right: 30px;
             }
 
             /* 작은 HP바 (숫자 위에) */
@@ -440,6 +448,15 @@ export default class PartyStatusUI {
                 .unit-slot[data-pos="4"] .unit-hp-container,
                 .unit-slot[data-pos="5"] .unit-hp-container {
                     bottom: -6px;
+                    left: 24px;
+                }
+
+                /* 모바일 적군 아랫줄: 좌우 대칭 */
+                .enemy .unit-slot[data-pos="3"] .unit-hp-container,
+                .enemy .unit-slot[data-pos="4"] .unit-hp-container,
+                .enemy .unit-slot[data-pos="5"] .unit-hp-container {
+                    left: auto;
+                    right: 24px;
                 }
 
                 .mini-hp-bar { width: 38px; height: 3px; }
