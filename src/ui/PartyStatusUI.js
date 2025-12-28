@@ -251,17 +251,18 @@ export default class PartyStatusUI {
             .unit-hp-container {
                 position: absolute;
                 display: flex;
-                flex-direction: column;
+                flex-direction: column-reverse;
                 align-items: center;
-                gap: 1px;
+                gap: 0;
                 z-index: 10;
             }
 
-            /* 윗줄 (0, 1, 2): 머리 위 */
+            /* 윗줄 (0, 1, 2): 머리 위 - 숫자가 바 위에 */
             .unit-slot[data-pos="0"] .unit-hp-container,
             .unit-slot[data-pos="1"] .unit-hp-container,
             .unit-slot[data-pos="2"] .unit-hp-container {
-                top: -5px;
+                flex-direction: column;
+                top: -8px;
                 left: 50%;
                 transform: translateX(-50%);
             }
@@ -286,10 +287,10 @@ export default class PartyStatusUI {
             /* HP바 */
             .mini-hp-bar {
                 width: 46px;
-                height: 8px;
+                height: 4px;
                 background: #080404;
                 border: 1px solid #222;
-                border-radius: 3px;
+                border-radius: 2px;
                 overflow: hidden;
                 box-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
             }
@@ -316,7 +317,7 @@ export default class PartyStatusUI {
             /* HP 숫자 컨테이너 */
             .mini-hp-text {
                 font-family: 'Almendra SC', serif;
-                font-size: 26px;
+                font-size: 20px;
                 font-weight: 400;
                 color: #fff;
                 text-shadow:
@@ -324,16 +325,16 @@ export default class PartyStatusUI {
                     1px -1px 0 #000,
                     -1px 1px 0 #000,
                     1px 1px 0 #000,
-                    0 0 6px rgba(0, 0, 0, 0.9);
+                    0 0 4px rgba(0, 0, 0, 0.9);
                 transition: all 0.15s ease;
                 white-space: nowrap;
-                line-height: 1.1;
-                letter-spacing: -2px;
+                line-height: 1;
+                letter-spacing: -1.5px;
             }
 
             /* 최대 체력 숫자 (작게) */
             .hp-max {
-                font-size: 20px;
+                font-size: 14px;
             }
 
             .mini-hp-text.low { color: #fa5; }
@@ -402,56 +403,56 @@ export default class PartyStatusUI {
                 .battlefield-panel.enemy { right: 0.5%; bottom: 1%; }
 
                 .board-sprite {
-                    width: 200px;
-                    height: 78px;
+                    width: 180px;
+                    height: 70px;
                 }
 
                 .units-container {
-                    width: 200px;
-                    height: 78px;
+                    width: 180px;
+                    height: 70px;
                 }
 
                 .unit-slot {
-                    width: 48px;
-                    height: 56px;
+                    width: 42px;
+                    height: 50px;
                 }
 
-                /* 모바일 타일 좌표 (200x78px, 데스크탑의 0.714배, X -20px 보정 적용) */
-                .unit-slot[data-pos="0"] { left: 41px; top: 7px; }
-                .unit-slot[data-pos="1"] { left: 70px; top: -4px; }
-                .unit-slot[data-pos="2"] { left: 101px; top: -14px; }
-                .unit-slot[data-pos="3"] { left: 51px; top: 23px; }
-                .unit-slot[data-pos="4"] { left: 83px; top: 11px; }
-                .unit-slot[data-pos="5"] { left: 114px; top: -1px; }
+                /* 모바일 타일 좌표 (180x70px, 데스크탑의 0.643배, X -20px 보정 적용) */
+                .unit-slot[data-pos="0"] { left: 37px; top: 6px; }
+                .unit-slot[data-pos="1"] { left: 63px; top: -3px; }
+                .unit-slot[data-pos="2"] { left: 91px; top: -13px; }
+                .unit-slot[data-pos="3"] { left: 46px; top: 21px; }
+                .unit-slot[data-pos="4"] { left: 75px; top: 10px; }
+                .unit-slot[data-pos="5"] { left: 102px; top: -1px; }
 
                 .unit-shadow {
-                    bottom: 16px;
-                    width: 24px;
-                    height: 6px;
+                    bottom: 14px;
+                    width: 20px;
+                    height: 5px;
                 }
 
                 .unit-sprite-wrapper {
-                    bottom: 17px;
-                    transform: translateX(-50%) scale(1.15);
+                    bottom: 15px;
+                    transform: translateX(-50%) scale(1.0);
                 }
 
                 .unit-slot[data-pos="1"] .unit-sprite-wrapper,
                 .unit-slot[data-pos="4"] .unit-sprite-wrapper {
-                    transform: translateX(-50%) scale(1.25);
+                    transform: translateX(-50%) scale(1.1);
                 }
 
                 /* 모바일 HP UI */
                 .unit-slot[data-pos="0"] .unit-hp-container,
                 .unit-slot[data-pos="1"] .unit-hp-container,
                 .unit-slot[data-pos="2"] .unit-hp-container {
-                    top: -4px;
+                    top: -6px;
                 }
 
                 .unit-slot[data-pos="3"] .unit-hp-container,
                 .unit-slot[data-pos="4"] .unit-hp-container,
                 .unit-slot[data-pos="5"] .unit-hp-container {
-                    bottom: -6px;
-                    left: 24px;
+                    bottom: -5px;
+                    left: 20px;
                 }
 
                 /* 모바일 적군 아랫줄: 좌우 대칭 */
@@ -459,12 +460,12 @@ export default class PartyStatusUI {
                 .enemy .unit-slot[data-pos="4"] .unit-hp-container,
                 .enemy .unit-slot[data-pos="5"] .unit-hp-container {
                     left: auto;
-                    right: 24px;
+                    right: 20px;
                 }
 
-                .mini-hp-bar { width: 38px; height: 6px; }
-                .mini-hp-text { font-size: 20px; }
-                .hp-max { font-size: 15px; }
+                .mini-hp-bar { width: 34px; height: 3px; }
+                .mini-hp-text { font-size: 14px; }
+                .hp-max { font-size: 10px; }
             }
         `;
         document.head.appendChild(style);
