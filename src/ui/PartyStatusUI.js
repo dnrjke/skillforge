@@ -58,7 +58,7 @@ export default class PartyStatusUI {
         style.id = 'battlefield-panel-style';
         style.textContent = `
             /* ===== Google Fonts ===== */
-            @import url('https://fonts.googleapis.com/css2?family=Alexandria:wght@400;700&family=Almendra:wght@400;700&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Alexandria:wght@400;700&family=Almendra+SC:wght@400;700&family=Almendra:wght@400;700&display=swap');
 
             /* ===== 글로벌 데미지 숫자 폰트 ===== */
             .damage-number, .damage-text, [class*="damage-num"] {
@@ -313,12 +313,12 @@ export default class PartyStatusUI {
                 animation: hpPulse 0.4s ease-in-out infinite;
             }
 
-            /* 큰 HP 숫자 */
+            /* HP 숫자 컨테이너 */
             .mini-hp-text {
-                font-family: 'Alexandria', sans-serif;
+                font-family: 'Almendra SC', serif;
                 font-size: 13px;
                 font-weight: 700;
-                color: #4e4;
+                color: #fff;
                 text-shadow:
                     -1px -1px 0 #000,
                     1px -1px 0 #000,
@@ -328,10 +328,14 @@ export default class PartyStatusUI {
                 transition: all 0.15s ease;
                 white-space: nowrap;
                 line-height: 1.1;
-                letter-spacing: -0.5px;
+                letter-spacing: -1px;
             }
 
-            .mini-hp-text.enemy-text { color: #f66; }
+            /* 최대 체력 숫자 (작게) */
+            .hp-max {
+                font-size: 10px;
+            }
+
             .mini-hp-text.low { color: #fa5; }
             .mini-hp-text.critical {
                 color: #f55;
@@ -340,7 +344,6 @@ export default class PartyStatusUI {
 
             .mini-hp-text.hp-changed {
                 transform: scale(1.15);
-                color: #fff !important;
             }
 
             .mini-hp-text.damage {
@@ -495,7 +498,7 @@ export default class PartyStatusUI {
                     <div class="mini-hp-fill ${this.isEnemy ? 'enemy-hp' : ''}"
                          style="width: ${(unit.currentHp / unit.maxHp) * 100}%"></div>
                 </div>
-                <span class="mini-hp-text ${this.isEnemy ? 'enemy-text' : ''}">${unit.currentHp}/${unit.maxHp}</span>
+                <span class="mini-hp-text"><span class="hp-current">${unit.currentHp}</span><span class="hp-max">/${unit.maxHp}</span></span>
             `;
 
             // 유닛 스프라이트
@@ -515,6 +518,7 @@ export default class PartyStatusUI {
                 slot: slot,
                 hpBar: hpContainer.querySelector('.mini-hp-fill'),
                 hpText: hpContainer.querySelector('.mini-hp-text'),
+                hpCurrent: hpContainer.querySelector('.hp-current'),
                 sprite: spriteWrapper.querySelector('.unit-sprite'),
                 unit: unit
             });
@@ -547,7 +551,7 @@ export default class PartyStatusUI {
                 const isDamage = currentHp < prevHp;
                 const isHeal = currentHp > prevHp;
 
-                elements.hpText.textContent = `${currentHp}/${maxHp}`;
+                elements.hpCurrent.textContent = currentHp;
                 elements.hpBar.style.width = `${hpRatio * 100}%`;
 
                 elements.hpText.classList.add('hp-changed');
