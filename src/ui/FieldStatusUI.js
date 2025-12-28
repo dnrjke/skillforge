@@ -299,8 +299,9 @@ export default class FieldStatusUI {
     }
 
     createSingleFirefly(index, total, isBig) {
-        const size = isBig ? 10 : 5;  // 대형 크기 약간 증가
-        const color = isBig ? 0xffdd66 : 0xffcc00;  // 대형: 연한 오렌지 + 노란색 혼합
+        const size = isBig ? 10 : 5;
+        // 대형 AP: 주황색 / 소형 AP: 노란색
+        const color = isBig ? 0xff9900 : 0xffcc00;
 
         // Lissajous 궤도 파라미터 (불규칙성)
         const orbitParams = {
@@ -365,10 +366,10 @@ export default class FieldStatusUI {
 
             const params = firefly.orbitParams;
 
-            // Lissajous 궤도 계산 + Perlin noise 변조 (노이즈 약간 축소)
+            // Lissajous 궤도 계산 + Perlin noise 변조
             firefly.angle += params.speed * deltaSeconds;
-            const noiseX = this.noise(time * 0.5 + params.noiseOffset) * 6;
-            const noiseY = this.noise(time * 0.7 + params.noiseOffset + 100) * 5;
+            const noiseX = this.noise(time * 0.5 + params.noiseOffset) * 9;
+            const noiseY = this.noise(time * 0.7 + params.noiseOffset + 100) * 7;
 
             const targetX = Math.sin(firefly.angle * params.freqX) * params.a + noiseX;
             const targetY = Math.cos(firefly.angle * params.freqY) * params.b + noiseY;
