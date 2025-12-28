@@ -262,7 +262,7 @@ export default class PartyStatusUI {
             .unit-slot[data-pos="1"] .unit-hp-container,
             .unit-slot[data-pos="2"] .unit-hp-container {
                 flex-direction: column-reverse;
-                top: -8px;
+                top: -22px;
                 left: 50%;
                 transform: translateX(-50%);
             }
@@ -271,8 +271,8 @@ export default class PartyStatusUI {
             .unit-slot[data-pos="3"] .unit-hp-container,
             .unit-slot[data-pos="4"] .unit-hp-container,
             .unit-slot[data-pos="5"] .unit-hp-container {
-                bottom: -8px;
-                left: 30px;
+                bottom: 6px;
+                left: 44px;
                 transform: none;
             }
 
@@ -281,7 +281,7 @@ export default class PartyStatusUI {
             .enemy .unit-slot[data-pos="4"] .unit-hp-container,
             .enemy .unit-slot[data-pos="5"] .unit-hp-container {
                 left: auto;
-                right: 30px;
+                right: 44px;
             }
 
             /* HP바 */
@@ -445,14 +445,14 @@ export default class PartyStatusUI {
                 .unit-slot[data-pos="0"] .unit-hp-container,
                 .unit-slot[data-pos="1"] .unit-hp-container,
                 .unit-slot[data-pos="2"] .unit-hp-container {
-                    top: -6px;
+                    top: -15px;
                 }
 
                 .unit-slot[data-pos="3"] .unit-hp-container,
                 .unit-slot[data-pos="4"] .unit-hp-container,
                 .unit-slot[data-pos="5"] .unit-hp-container {
-                    bottom: -5px;
-                    left: 20px;
+                    bottom: 4px;
+                    left: 29px;
                 }
 
                 /* 모바일 적군 아랫줄: 좌우 대칭 */
@@ -460,7 +460,7 @@ export default class PartyStatusUI {
                 .enemy .unit-slot[data-pos="4"] .unit-hp-container,
                 .enemy .unit-slot[data-pos="5"] .unit-hp-container {
                     left: auto;
-                    right: 20px;
+                    right: 29px;
                 }
 
                 .mini-hp-bar { width: 34px; height: 3px; }
