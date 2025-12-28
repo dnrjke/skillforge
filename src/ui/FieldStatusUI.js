@@ -443,6 +443,27 @@ export default class FieldStatusUI {
         return this.currentHp;
     }
 
+    /**
+     * 전장 UI 숨기기 (사망 시 호출)
+     */
+    hide() {
+        // 컨테이너 숨기기
+        if (this.container) {
+            this.scene.tweens.add({
+                targets: this.container,
+                alpha: 0,
+                duration: 300,
+                ease: 'Power2'
+            });
+        }
+
+        // 반딧불 시스템 정리
+        if (this.fireflySystem) {
+            this.fireflySystem.destroy();
+            this.fireflySystem = null;
+        }
+    }
+
     destroy() {
         this.stopGlowPulse();
         if (this.hpHideTimer) this.hpHideTimer.remove();

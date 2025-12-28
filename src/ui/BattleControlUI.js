@@ -598,6 +598,20 @@ export default class BattleControlUI {
                 #settings-close-btn:active {
                     transform: scale(0.98);
                 }
+
+                .firefly-mode-desc {
+                    margin-top: 8px;
+                    padding: 6px 10px;
+                    background: rgba(0, 0, 0, 0.3);
+                    border-radius: 6px;
+                    font-size: 11px;
+                    color: #aaa;
+                    text-align: center;
+                }
+
+                .firefly-mode-desc em {
+                    font-style: italic;
+                }
             `;
             document.head.appendChild(style);
         }
@@ -622,8 +636,11 @@ export default class BattleControlUI {
                     <label>AP 반딧불</label>
                     <div class="segmented-control" id="firefly-mode">
                         <button data-mode="all" class="${this.settings.fireflyMode === 'all' ? 'active' : ''}">전체</button>
-                        <button data-mode="scatter" class="${this.settings.fireflyMode === 'scatter' ? 'active' : ''}">비산만</button>
+                        <button data-mode="scatter" class="${this.settings.fireflyMode === 'scatter' ? 'active' : ''}">비산 효과</button>
                         <button data-mode="hidden" class="${this.settings.fireflyMode === 'hidden' ? 'active' : ''}">숨김</button>
+                    </div>
+                    <div class="firefly-mode-desc" id="firefly-mode-desc" style="display: ${this.settings.fireflyMode === 'scatter' ? 'block' : 'none'}">
+                        <em>스킬 사용 시 에너지가 흩어지는 연출만 표시합니다</em>
                     </div>
                 </div>
 
@@ -664,12 +681,17 @@ export default class BattleControlUI {
 
         // 반딧불 모드 선택
         const fireflyButtons = overlay.querySelectorAll('#firefly-mode button');
+        const fireflyDesc = overlay.querySelector('#firefly-mode-desc');
         fireflyButtons.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 fireflyButtons.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 this.settings.fireflyMode = btn.dataset.mode;
+                // 비산 효과 모드일 때만 설명 표시
+                if (fireflyDesc) {
+                    fireflyDesc.style.display = btn.dataset.mode === 'scatter' ? 'block' : 'none';
+                }
                 this.saveSettings();
                 this.applySettings();
             });

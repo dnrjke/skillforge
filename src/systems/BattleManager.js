@@ -367,6 +367,11 @@ export default class BattleManager {
             this.log(`${target.name}이(가) 쓰러졌다!`, 'system');
             this.presentation.playDeathAnimation(target);
             this.particleEffects.playDeathEffect(target.sprite.x, target.sprite.y, target.isEnemy);
+
+            // 전장 UI 숨기기
+            if (target.sprite && target.sprite.statusBar) {
+                target.sprite.statusBar.hide();
+            }
         }
 
         this.scene.logWindow.endBatch();
