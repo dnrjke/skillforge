@@ -605,7 +605,8 @@ export default class BattleControlUI {
 
                 .firefly-mode-desc {
                     height: 16px;
-                    margin-top: 6px;
+                    margin-top: 4px;
+                    margin-bottom: 2px;
                     font-size: 11px;
                     color: #888;
                     text-align: center;
