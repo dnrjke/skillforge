@@ -320,7 +320,9 @@ export default class FireflySystem {
             firefly.sprite.setDepth(isInFront ? 1001 : 999);
             firefly.glow.setDepth(isInFront ? 1000 : 998);
 
-            this.updateTrail(firefly);
+            // 잔류 모드에서는 trail도 희미하게
+            const trailAlpha = this.isLingering ? this.lingeringAlpha : 1.0;
+            this.updateTrail(firefly, trailAlpha);
         });
 
         // 역순 제거
