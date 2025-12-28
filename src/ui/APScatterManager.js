@@ -93,11 +93,15 @@ export default class APScatterManager {
         firefly.originalDamping = firefly.orbitParams.damping;
         firefly.orbitParams.damping = this.scatterDamping;
 
-        // 초기 비산 속도 부여 (현재 속도 + 랜덤 방향)
+        // 기존 궤도 속도 초기화 (캐릭터 이동 관성 제거)
+        firefly.velocity.x = 0;
+        firefly.velocity.y = 0;
+
+        // 순수 비산 속도만 적용 (랜덤 방향)
         const randomAngle = Math.random() * Math.PI * 2;
         const randomSpeed = 0.5 + Math.random() * 1.0;
-        firefly.velocity.x += Math.cos(randomAngle) * randomSpeed;
-        firefly.velocity.y += Math.sin(randomAngle) * randomSpeed;
+        firefly.velocity.x = Math.cos(randomAngle) * randomSpeed;
+        firefly.velocity.y = Math.sin(randomAngle) * randomSpeed;
 
         this.scatteringFireflies.push(firefly);
     }
