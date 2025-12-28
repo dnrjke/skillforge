@@ -32,8 +32,8 @@ const FORMATION = {
     ]
 };
 
-// 테스트용 6vs6 전투 슬롯 (모든 슬롯 사용)
-const ACTIVE_SLOTS = [0, 1, 2, 3, 4, 5]; // 전체 슬롯
+// 3vs3 전투에서 사용할 슬롯 인덱스 (편성에 따라 변경 가능)
+const ACTIVE_SLOTS = [1, 2, 4]; // 뒷줄 하단, 중열 상단, 전열 상단
 
 export default class BattleScene extends Phaser.Scene {
     constructor() {

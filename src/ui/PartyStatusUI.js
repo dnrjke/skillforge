@@ -9,7 +9,8 @@ export default class PartyStatusUI {
 
         this.isEnemy = options.isEnemy || false;
         this.maxSlots = options.maxSlots || 6;
-        this.activeSlots = options.activeSlots || [0, 1, 2, 3, 4, 5]; // 테스트용 6슬롯
+        // activeSlots: 편성에 따라 외부에서 전달, 없으면 유닛 수만큼 순차 배치
+        this.activeSlots = options.activeSlots || this.generateDefaultSlots();
 
         this.containerElement = null;
         this.unitElements = new Map();
@@ -19,6 +20,14 @@ export default class PartyStatusUI {
 
         this.create();
         this.setupEventListeners();
+    }
+
+    // 기본 슬롯 배열 생성 (유닛 수에 맞춰 동적 생성)
+    generateDefaultSlots() {
+        const units = this.isEnemy
+            ? this.battleManager.enemies
+            : this.battleManager.allies;
+        return units.map((_, index) => index);
     }
 
     detectMobile() {
@@ -588,6 +597,19 @@ export default class PartyStatusUI {
                 elements.slot.classList.add('dead');
             }
         });
+    }
+
+    // 편성 변경 시 UI 갱신
+    updateFormation(newActiveSlots) {
+        this.activeSlots = newActiveSlots;
+
+        // 기존 유닛 요소 제거
+        this.unitsContainer.innerHTML = '';
+        this.unitElements.clear();
+        this.previousHp.clear();
+
+        // 새 편성으로 재렌더링
+        this.renderUnits();
     }
 
     destroy() {
