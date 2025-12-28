@@ -314,7 +314,7 @@ export default class FieldStatusUI {
         const newAp = Math.max(0, Math.min(this.maxAp, value));
 
         if (this.fireflySystem) {
-            this.fireflySystem.setAp(newAp);
+            this.fireflySystem.setAp(newAp, animate);
             this.currentAp = this.fireflySystem.getAp();
         } else {
             this.currentAp = newAp;

@@ -425,12 +425,18 @@ export default class FireflySystem {
 
     // ===== 공개 메서드 =====
 
-    setAp(value) {
+    setAp(value, animate = true) {
         const oldAp = this.currentAp;
         const newAp = Math.max(0, Math.min(this.maxAp, value));
 
         if (newAp < oldAp) {
-            this.consumeAp(oldAp - newAp);
+            if (animate) {
+                this.consumeAp(oldAp - newAp);
+            } else {
+                // 비산 없이 즉시 동기화
+                this.currentAp = newAp;
+                this.syncFireflies();
+            }
         } else if (newAp > oldAp) {
             this.currentAp = newAp;
             this.syncFireflies();
