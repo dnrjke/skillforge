@@ -493,16 +493,10 @@ export default class PartyStatusUI {
             ? this.battleManager.enemies
             : this.battleManager.allies;
 
-        // 디버그: 유닛 매핑 확인
-        console.log(`[PartyStatusUI] Rendering ${this.isEnemy ? 'enemy' : 'ally'} units:`,
-            units.map((u, i) => `${i}: ${u.id} (HP: ${u.currentHp})`));
-        console.log(`[PartyStatusUI] activeSlots:`, this.activeSlots);
-
         // 슬롯 매핑: activeSlots 값을 보드 위치로 직접 사용
+        // activeSlots[i] = FORMATION 인덱스 = PartyStatusUI 슬롯 위치
         units.forEach((unit, unitIndex) => {
             const gridIndex = this.activeSlots[unitIndex];
-
-            console.log(`[PartyStatusUI] Mapping unit ${unit.id} (index ${unitIndex}) to grid position ${gridIndex}`);
 
             // 유닛 슬롯 생성
             const slot = document.createElement('div');
@@ -568,10 +562,7 @@ export default class PartyStatusUI {
 
         units.forEach(unit => {
             const elements = this.unitElements.get(unit.id);
-            if (!elements) {
-                console.warn(`[PartyStatusUI] No elements found for unit ${unit.id}`);
-                return;
-            }
+            if (!elements) return;
 
             const prevHp = this.previousHp.get(unit.id);
             const currentHp = unit.currentHp;
@@ -581,9 +572,6 @@ export default class PartyStatusUI {
             if (prevHp !== currentHp) {
                 const isDamage = currentHp < prevHp;
                 const isHeal = currentHp > prevHp;
-
-                // 디버그: HP 변동 추적
-                console.log(`[PartyStatusUI] HP change for ${unit.id}: ${prevHp} → ${currentHp} (slot pos: ${elements.slot.dataset.pos})`);
 
 
                 elements.hpCurrent.textContent = currentHp;
@@ -617,8 +605,14 @@ export default class PartyStatusUI {
                 elements.hpBar.classList.add('low');
             }
 
-            if (!unit.isAlive) {
+            // 사망 체크: isAlive 플래그 또는 HP 0 이하 (예외 발생 시에도 사망 처리 보장)
+            if (!unit.isAlive || unit.currentHp <= 0) {
                 elements.slot.classList.add('dead');
+                // isAlive 동기화 (HP 기반으로 복구)
+                if (unit.currentHp <= 0 && unit.isAlive) {
+                    unit.isAlive = false;
+                    console.warn(`[PartyStatusUI] Fixed isAlive state for ${unit.id} (HP: ${unit.currentHp})`);
+                }
             }
         });
     }

@@ -34,15 +34,8 @@ const FORMATION = {
 
 // 3vs3 전투에서 사용할 슬롯 인덱스 (편성에 따라 변경 가능)
 // FORMATION 인덱스: 0-1=후열, 2-3=중열, 4-5=전열
-const ACTIVE_SLOTS = [1, 2, 4]; // 뒷줄 하단, 중열 상단, 전열 상단
-
-// PartyStatusUI용 슬롯 매핑 (FORMATION과 다른 레이아웃)
-// PartyStatusUI: 0-2=뒷줄(대각선 상향), 3-5=앞줄(대각선 상향)
-// 필드 배치와 시각적으로 일치하도록 매핑:
-// - ally_0 (후열, x:150, 화면 왼쪽) → slot 0 (뒷줄 좌측)
-// - ally_1 (중열, x:260, 화면 중앙) → slot 3 (앞줄 좌측)
-// - ally_2 (전열, x:400, 화면 오른쪽) → slot 4 (앞줄 중앙)
-const PARTY_STATUS_SLOTS = [0, 3, 4];
+// PartyStatusUI도 동일한 슬롯 사용 (파티 현황판 슬롯 = 전장 FORMATION 슬롯)
+const ACTIVE_SLOTS = [1, 2, 4]; // 후열 하단, 중열 상단, 전열 상단
 
 export default class BattleScene extends Phaser.Scene {
     constructor() {
@@ -228,16 +221,16 @@ export default class BattleScene extends Phaser.Scene {
 
     setupPartyStatusUI() {
         // 아군 현황판 (좌하단)
-        // PARTY_STATUS_SLOTS를 사용하여 필드 배치와 시각적으로 일치시킴
+        // ACTIVE_SLOTS를 사용 (파티 현황판 슬롯 = 전장 FORMATION 슬롯)
         this.allyStatusUI = new PartyStatusUI(this, this.battleManager, {
             isEnemy: false,
-            activeSlots: PARTY_STATUS_SLOTS
+            activeSlots: ACTIVE_SLOTS
         });
 
         // 적군 현황판 (우하단)
         this.enemyStatusUI = new PartyStatusUI(this, this.battleManager, {
             isEnemy: true,
-            activeSlots: PARTY_STATUS_SLOTS
+            activeSlots: ACTIVE_SLOTS
         });
     }
 
