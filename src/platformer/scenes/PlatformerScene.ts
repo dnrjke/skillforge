@@ -217,7 +217,21 @@ export default class PlatformerScene extends Phaser.Scene {
     }
 
     private setupCamera(): void {
-        this.cameras.main.setBounds(0, 0, 1280, 720);
+        const mapWidth = this.mapData.width || 1280;
+        const mapHeight = this.mapData.height || 720;
+
+        // 카메라 바운드 설정
+        this.cameras.main.setBounds(0, 0, mapWidth, mapHeight);
+
+        // 맵이 화면보다 크면 플레이어 따라가기
+        if (mapWidth > 1280 || mapHeight > 720) {
+            this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+            // 데드존 설정 (플레이어가 중앙에서 벗어나야 카메라 이동)
+            this.cameras.main.setDeadzone(200, 150);
+        }
+
+        // 물리 월드 바운드도 설정
+        this.physics.world.setBounds(0, 0, mapWidth, mapHeight);
     }
 
     private addDebugInstructions(): void {
@@ -293,8 +307,9 @@ export default class PlatformerScene extends Phaser.Scene {
     }
 
     private checkFallOff(): void {
-        // 화면 아래로 떨어지면 리스폰
-        if (this.player.y > 800) {
+        // 맵 아래로 떨어지면 리스폰
+        const mapHeight = this.mapData.height || 720;
+        if (this.player.y > mapHeight + 80) {
             this.player.setPosition(this.mapData.playerStart.x, this.mapData.playerStart.y);
             this.player.setVelocity(0, 0);
             this.player.resetFireflies();

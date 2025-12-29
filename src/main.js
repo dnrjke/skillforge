@@ -12,6 +12,8 @@ const PLATFORMER_MAPS = [
     { id: 'vertical', name: '수직 탑', desc: '위로 올라가기', icon: '🗼' },
     { id: 'obstacle', name: '장애물 코스', desc: '종합 테스트', icon: '🏃' },
     { id: 'fireflyManagement', name: '반딧불 관리', desc: '자원 관리 연습', icon: '🔥' },
+    { id: 'wideScroll', name: '횡스크롤 (가로)', desc: '가로로 긴 맵', icon: '↔️' },
+    { id: 'tallTower', name: '높은 탑', desc: '세로로 높은 맵', icon: '↕️' },
 ];
 
 // 게임 모드 감지 (URL 파라미터로 전환)
