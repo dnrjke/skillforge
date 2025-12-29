@@ -2,31 +2,23 @@
  * FormationMapping.ts - 전장 ↔ 파티 현황판 좌표 매핑
  *
  * ## 시각적 순서 012345 배치
- * 전→중→후 순서로 읽을 때 인덱스 0,1,2,3,4,5가 되도록 좌표 재배치
+ * 전→중→후 순서로 읽을 때 인덱스 0,1,2,3,4,5가 되도록 배치
  *
- * ## 좌표 체계 (2행 3열 그리드)
+ * ## 전장 FORMATION (BattleScene.js)
+ * 좌표 스왑 적용 (0↔4, 1↔5):
  *
  *         시각 front   시각 mid   시각 back
  * 상단      [0]후열1    [2]중열1    [4]전열1
+ *          (x:400)     (x:260)     (x:120)
  * 하단      [1]후열2    [3]중열2    [5]전열2
+ *          (x:430)     (x:290)     (x:150)
  *
- * ## 전장 FORMATION 인덱스 (BattleScene.js) - 좌표 스왑 적용
+ * ## 파티 현황판 (PartyStatusUI.js)
+ * 원본 CSS 유지 + UNIT_TO_PARTY_SLOT 매핑으로 순서 조정
  *
- * FORMATION.ALLY[0] = 후열1 (x:400, y:240) ← 시각 front-top
- * FORMATION.ALLY[1] = 후열2 (x:430, y:420) ← 시각 front-bottom
- * FORMATION.ALLY[2] = 중열1 (x:260, y:220) ← 시각 mid-top
- * FORMATION.ALLY[3] = 중열2 (x:290, y:400) ← 시각 mid-bottom
- * FORMATION.ALLY[4] = 전열1 (x:120, y:200) ← 시각 back-top
- * FORMATION.ALLY[5] = 전열2 (x:150, y:380) ← 시각 back-bottom
- *
- * ## 파티 현황판 슬롯 (PartyStatusUI.js CSS) - 251403→012345 변환
- *
- * pos=0: 시각 front-top (left:98px)
- * pos=1: 시각 front-bottom (left:159px)
- * pos=2: 시각 mid-top (left:72px)
- * pos=3: 시각 mid-bottom (left:141px)
- * pos=4: 시각 back-top (left:57px)
- * pos=5: 시각 back-bottom (left:116px)
+ * 원본 CSS 시각 순서: pos3 → pos1 → pos0 → pos5 → pos4 → pos2
+ * 매핑: 유닛0→pos3, 유닛1→pos1, 유닛2→pos0, 유닛3→pos5, 유닛4→pos4, 유닛5→pos2
+ * 결과: 시각적으로 0,1,2,3,4,5 순서
  */
 
 // ============================================
@@ -93,16 +85,22 @@ export const ACTIVE_FORMATION_SLOTS: readonly FormationIndex[] = [0, 1, 2, 3, 4,
 /**
  * FORMATION 인덱스 → 파티 현황판 슬롯 pos 매핑
  *
- * 디버깅용: 1:1 매핑으로 설정하여 위치 확인
- * FORMATION 인덱스 = 파티 현황판 pos
+ * 시각적 순서 012345 달성을 위한 매핑
+ * 원본 CSS 위치에서 310542 → 012345 변환
+ *
+ * 원본 파티 현황판 시각 순서 (CSS 기준):
+ *   시각1=pos3, 시각2=pos1, 시각3=pos0,
+ *   시각4=pos5, 시각5=pos4, 시각6=pos2
+ *
+ * 목표: 유닛 0→시각1, 1→시각2, 2→시각3, 3→시각4, 4→시각5, 5→시각6
  */
 export const FORMATION_TO_PARTY_SLOT: Record<FormationIndex, PartySlotPosition> = {
-    0: 0,  // FORMATION[0] → pos=0
-    1: 1,  // FORMATION[1] → pos=1
-    2: 2,  // FORMATION[2] → pos=2
-    3: 3,  // FORMATION[3] → pos=3
-    4: 4,  // FORMATION[4] → pos=4
-    5: 5,  // FORMATION[5] → pos=5
+    0: 3,  // 유닛0 → pos3 (시각1: front-top)
+    1: 1,  // 유닛1 → pos1 (시각2: front-bottom)
+    2: 0,  // 유닛2 → pos0 (시각3: mid-top)
+    3: 5,  // 유닛3 → pos5 (시각4: mid-bottom)
+    4: 4,  // 유닛4 → pos4 (시각5: back-top)
+    5: 2,  // 유닛5 → pos2 (시각6: back-bottom)
 };
 
 /**
@@ -133,31 +131,22 @@ export function getFormationSlot(index: FormationIndex, isEnemy: boolean = false
 /**
  * 매핑 일관성 검증 (개발/디버그용)
  *
- * 시각적 순서 012345 배치에서:
- * - 후열(back) → 시각 front (pos=0,1)
- * - 중열(middle) → 시각 mid (pos=2,3)
- * - 전열(front) → 시각 back (pos=4,5)
+ * 시각적 순서 012345 검증:
+ * 원본 CSS 시각 순서: pos3→pos1→pos0→pos5→pos4→pos2
+ * 유닛 0-5가 위 순서대로 매핑되어야 함
  */
 export function validateMapping(): boolean {
+    // 원본 CSS의 시각적 순서 (pos값)
+    const visualOrder: PartySlotPosition[] = [3, 1, 0, 5, 4, 2];
+
     const errors: string[] = [];
 
     ACTIVE_FORMATION_SLOTS.forEach((formIdx, unitIdx) => {
-        const formSlot = FORMATION_ALLY[formIdx];
         const partyPos = UNIT_TO_PARTY_SLOT[unitIdx];
+        const expectedPos = visualOrder[unitIdx];
 
-        // 시각적 순서 012345 검증 (의도적인 반전)
-        // 후열(back) → 시각 front (pos 0,1)
-        // 중열(middle) → 시각 mid (pos 2,3)
-        // 전열(front) → 시각 back (pos 4,5)
-        const expectedVisualRange = {
-            'back': [0, 1],
-            'middle': [2, 3],
-            'front': [4, 5]
-        };
-
-        const range = expectedVisualRange[formSlot.row];
-        if (partyPos < range[0] || partyPos > range[1]) {
-            errors.push(`[${unitIdx}] ${formSlot.label}(${formSlot.row})이 예상 범위(${range})가 아닌 pos=${partyPos}에 매핑됨`);
+        if (partyPos !== expectedPos) {
+            errors.push(`유닛[${unitIdx}]이 pos=${partyPos}에 매핑됨 (예상: pos=${expectedPos})`);
         }
     });
 
@@ -167,6 +156,7 @@ export function validateMapping(): boolean {
     }
 
     console.log('[FormationMapping] 매핑 검증 성공 (시각적 순서 012345)');
+    console.log('[FormationMapping] UNIT_TO_PARTY_SLOT:', UNIT_TO_PARTY_SLOT);
     return true;
 }
 
