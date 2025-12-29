@@ -18,7 +18,6 @@ export default class PlatformerScene extends Phaser.Scene {
     private walls!: Phaser.Physics.Arcade.StaticGroup;
     private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
     private jumpKey!: Phaser.Input.Keyboard.Key;
-    private dashKey!: Phaser.Input.Keyboard.Key;
 
     // 현재 맵 데이터
     private mapData!: MapData;
@@ -135,7 +134,6 @@ export default class PlatformerScene extends Phaser.Scene {
     private setupInput(): void {
         this.cursors = this.input.keyboard!.createCursorKeys();
         this.jumpKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.X);
-        this.dashKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
 
         // WASD 추가
         this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.W);
@@ -237,8 +235,9 @@ export default class PlatformerScene extends Phaser.Scene {
     private addDebugInstructions(): void {
         const instructions = [
             '← → / A D : 이동',
-            'X : 점프',
-            'Z : 비산 대시',
+            'X / ↑ : 점프 (지상)',
+            'X / ↑ : 비산 대시 (공중)',
+            '↓ / S : 아래 방향',
             'R : 재시작',
             'ESC : 맵 선택'
         ];
@@ -272,7 +271,6 @@ export default class PlatformerScene extends Phaser.Scene {
         left: boolean;
         right: boolean;
         jump: boolean;
-        dash: boolean;
         down: boolean;
         interact: boolean;
     } {
@@ -285,7 +283,6 @@ export default class PlatformerScene extends Phaser.Scene {
             left: this.cursors.left.isDown || keyA.isDown,
             right: this.cursors.right.isDown || keyD.isDown,
             jump: this.jumpKey.isDown || this.cursors.up.isDown,
-            dash: this.dashKey.isDown,
             down: this.cursors.down.isDown || keyS.isDown,
             interact: false
         };

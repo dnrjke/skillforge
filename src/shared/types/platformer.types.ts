@@ -7,8 +7,10 @@
 
 export interface PhysicsConfig {
     gravity: number;           // 중력 (1200)
+    fallGravityMultiplier: number;  // 낙하 시 중력 배율 (1.5)
     friction: number;          // 마찰/관성 (0.1 = 부드러운 정령 느낌)
-    jumpVelocity: number;      // 기본 점프 속도 (-450)
+    jumpVelocity: number;      // 기본 점프 속도 (-900, 기존 2배)
+    jumpCutMultiplier: number; // 점프 버튼 떼면 속도 감쇠 비율 (0.4)
     maxFallSpeed: number;      // 최대 낙하 속도
     groundAccel: number;       // 지상 가속도
     airAccel: number;          // 공중 가속도
@@ -16,10 +18,11 @@ export interface PhysicsConfig {
 }
 
 export interface DashConfig {
-    dashForce: number;         // 대시 추진력 (600)
+    dashForce: number;         // 대시 추진력 (초기 폭발 속도 800)
     dashDuration: number;      // 대시 지속 시간 (ms)
     dashCooldown: number;      // 대시 쿨다운 (ms)
     fireflyCost: number;       // 반딧불 소모량 (1)
+    easeOutFactor: number;     // Ease-out 감쇠 (0.92)
 }
 
 export interface WallClingConfig {
@@ -72,6 +75,31 @@ export interface FireflyState {
     rechargeRate: number;      // 초당 회복량 (지상에서만)
     rechargeDelay: number;     // 사용 후 회복 시작 딜레이 (ms)
     lastUsedTime: number;      // 마지막 사용 시간
+}
+
+// ===== 반딧불 유영 시스템 (Orbit) =====
+
+export interface OrbitParticle {
+    sprite: Phaser.GameObjects.Sprite | null;
+    baseAngle: number;         // 기본 각도 offset (파티클마다 다름)
+    currentAngle: number;      // 현재 각도
+    orbitRadius: number;       // 공전 반경
+    orbitSpeed: number;        // 공전 속도
+    bobAmplitude: number;      // 상하 진폭
+    bobPhase: number;          // 상하 위상
+    active: boolean;           // 활성 상태 (소모되면 false)
+    returning: boolean;        // 대시 후 복귀 중
+    lagPosition: { x: number; y: number };  // 대시 중 뒤처짐 위치
+}
+
+export interface OrbitConfig {
+    particleCount: number;     // 파티클 개수 (5)
+    baseRadius: number;        // 기본 공전 반경 (35)
+    orbitSpeed: number;        // 공전 속도 (0.003 rad/ms)
+    bobAmplitude: number;      // 상하 진폭 (4)
+    bobFrequency: number;      // 상하 주파수 (0.005)
+    dashLagFactor: number;     // 대시 중 뒤처짐 계수 (0.15)
+    returnSpeed: number;       // 복귀 속도 (0.2)
 }
 
 // ===== 비산 대시 (Shatter Dash) =====
@@ -178,19 +206,32 @@ export interface PlatformerProgress {
 
 export const DEFAULT_PHYSICS: PhysicsConfig = {
     gravity: 1200,
+    fallGravityMultiplier: 1.5,
     friction: 0.1,
-    jumpVelocity: -450,
-    maxFallSpeed: 800,
+    jumpVelocity: -900,        // 기존 -450의 2배
+    jumpCutMultiplier: 0.4,    // 버튼 떼면 40%로 감쇠
+    maxFallSpeed: 900,
     groundAccel: 1500,
     airAccel: 1200,
     airControl: 0.8
 };
 
 export const DEFAULT_DASH: DashConfig = {
-    dashForce: 600,
-    dashDuration: 150,
-    dashCooldown: 100,
-    fireflyCost: 1
+    dashForce: 800,            // 폭발적인 초기 속도
+    dashDuration: 180,
+    dashCooldown: 50,
+    fireflyCost: 1,
+    easeOutFactor: 0.92        // 매 프레임 속도 * 0.92
+};
+
+export const DEFAULT_ORBIT: OrbitConfig = {
+    particleCount: 5,
+    baseRadius: 35,
+    orbitSpeed: 0.003,
+    bobAmplitude: 4,
+    bobFrequency: 0.005,
+    dashLagFactor: 0.15,
+    returnSpeed: 0.2
 };
 
 export const DEFAULT_WALL_CLING: WallClingConfig = {
@@ -201,8 +242,8 @@ export const DEFAULT_WALL_CLING: WallClingConfig = {
 };
 
 export const DEFAULT_PLAYER_STATS: PlayerStats = {
-    maxFireflies: 3,
-    currentFireflies: 3,
+    maxFireflies: 5,           // 5개 반딧불 유영
+    currentFireflies: 5,
     moveSpeed: 200,
     canDoubleJump: false,
     canWallCling: true,
