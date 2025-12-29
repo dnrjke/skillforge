@@ -551,10 +551,10 @@ export default class PartyStatusUI {
                 <div class="unit-sprite ${this.isEnemy ? 'enemy-sprite' : ''}"></div>
             `;
 
-            // 디버깅용 인덱스 표시
+            // 디버깅용 인덱스 표시 (유닛 인덱스 + pos 값)
             const debugLabel = document.createElement('div');
             debugLabel.className = 'debug-index';
-            debugLabel.textContent = `[${unitIndex}]`;
+            debugLabel.textContent = `[${unitIndex}] p${gridIndex}`;
             debugLabel.style.cssText = `
                 position: absolute;
                 top: -25px;
