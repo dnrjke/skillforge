@@ -79,6 +79,11 @@ export default class BattleScene extends Phaser.Scene {
         // 파티 현황판 UI 설정
         this.setupPartyStatusUI();
 
+        // PartyStatusUI 생성 후 저장된 설정 재적용 (초기 로드 시 DOM이 없어서 미적용되는 문제 해결)
+        if (this.battleControlUI) {
+            this.battleControlUI.applySettings();
+        }
+
         // 입력 설정
         this.setupInput();
 
