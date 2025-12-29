@@ -7,7 +7,7 @@ import type {
     FireflySystemConfig,
     FireflyCreateOptions,
     CharacterSprite
-} from '../types/ui.types';
+} from '../../shared/types/ui.types';
 
 /**
  * FireflySystem - AP 반딧불 시스템

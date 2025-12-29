@@ -3,7 +3,7 @@ import FireflySystem from './FireflySystem';
 import type {
     FieldStatusUIConfig,
     CharacterSprite
-} from '../types/ui.types';
+} from '../../shared/types/ui.types';
 
 /**
  * FieldStatusUI - 필드 캐릭터용 상태 UI

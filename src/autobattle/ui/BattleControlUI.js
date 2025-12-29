@@ -2,7 +2,7 @@
 // 우상단: 배속 뱃지 (여러 번 눌러서 변경)
 // 우하단: 자동전투/일시정지 버튼
 
-import { requestContainerFullscreen } from '../main.js';
+import { requestContainerFullscreen } from '../../main.js';
 
 export default class BattleControlUI {
     constructor(scene, battleManager) {

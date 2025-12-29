@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import BootScene from './scenes/BootScene.js';
-import BattleScene from './scenes/BattleScene.js';
+import BootScene from './autobattle/scenes/BootScene.js';
+import BattleScene from './autobattle/scenes/BattleScene.js';
 
 // 모바일 감지
 function isMobileDevice() {
