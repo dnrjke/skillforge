@@ -494,6 +494,7 @@ export default class PartyStatusUI {
             : this.battleManager.allies;
 
         // 슬롯 매핑: activeSlots 값을 보드 위치로 직접 사용
+        // activeSlots[i] = FORMATION 인덱스 = PartyStatusUI 슬롯 위치
         units.forEach((unit, unitIndex) => {
             const gridIndex = this.activeSlots[unitIndex];
 
@@ -501,6 +502,8 @@ export default class PartyStatusUI {
             const slot = document.createElement('div');
             slot.className = 'unit-slot';
             slot.dataset.pos = gridIndex;
+            slot.dataset.unitId = unit.id;  // 유닛 ID도 저장
+            slot.dataset.unitIndex = unitIndex;  // 인덱스도 저장
             if (this.isEnemy) {
                 slot.classList.add('enemy-slot');
             }
@@ -527,9 +530,26 @@ export default class PartyStatusUI {
                 <div class="unit-sprite ${this.isEnemy ? 'enemy-sprite' : ''}"></div>
             `;
 
+            // 디버깅용 인덱스 표시
+            const debugLabel = document.createElement('div');
+            debugLabel.className = 'debug-index';
+            debugLabel.textContent = `[${unitIndex}]`;
+            debugLabel.style.cssText = `
+                position: absolute;
+                top: -25px;
+                left: 50%;
+                transform: translateX(-50%);
+                font-size: 16px;
+                font-weight: bold;
+                color: ${this.isEnemy ? '#ff6666' : '#66ff66'};
+                text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+                z-index: 100;
+            `;
+
             slot.appendChild(shadow);
             slot.appendChild(hpContainer);
             slot.appendChild(spriteWrapper);
+            slot.appendChild(debugLabel);
 
             this.unitsContainer.appendChild(slot);
 
@@ -570,6 +590,7 @@ export default class PartyStatusUI {
                 const isDamage = currentHp < prevHp;
                 const isHeal = currentHp > prevHp;
 
+
                 elements.hpCurrent.textContent = currentHp;
                 elements.hpBar.style.width = `${hpRatio * 100}%`;
 
@@ -601,8 +622,20 @@ export default class PartyStatusUI {
                 elements.hpBar.classList.add('low');
             }
 
-            if (!unit.isAlive) {
+            // 사망 체크: isAlive 플래그 또는 HP 0 이하 (예외 발생 시에도 사망 처리 보장)
+            if (!unit.isAlive || unit.currentHp <= 0) {
                 elements.slot.classList.add('dead');
+                // isAlive 동기화 (HP 기반으로 복구)
+                if (unit.currentHp <= 0 && unit.isAlive) {
+                    unit.isAlive = false;
+                    console.warn(`[PartyStatusUI] Fixed isAlive state for ${unit.id} (HP: ${unit.currentHp})`);
+                }
+            } else {
+                // 생존 상태: dead 클래스 제거 (부활 시 UI 복원)
+                if (elements.slot.classList.contains('dead')) {
+                    elements.slot.classList.remove('dead');
+                    console.log(`[PartyStatusUI] Restored alive state for ${unit.id}`);
+                }
             }
         });
     }
