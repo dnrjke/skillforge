@@ -1,35 +1,93 @@
-// 패시브 스킬 시스템 - 유니콘 오버로드 스타일
-// PP(Passive Point)를 소모하여 특정 조건에서 자동 발동
+/**
+ * 패시브 스킬 시스템 - 유니콘 오버로드 스타일
+ * PP(Passive Point)를 소모하여 특정 조건에서 자동 발동
+ */
 
-export class PassiveSkill {
-    constructor(config) {
+import type { PassiveTrigger, PassiveContext, PassiveResult } from '../../shared/types/game.types';
+
+// 유닛 인터페이스 (순환 참조 방지)
+interface UnitLike {
+    currentPp: number;
+    maxHp: number;
+    consumePp: (amount: number) => void;
+    heal: (amount: number) => number;
+    recoverAp: (amount: number) => number;
+}
+
+export interface PassiveSkillConfig {
+    id: string;
+    name: string;
+    displayName?: string;
+    description?: string;
+    ppCost?: number;
+    trigger: PassiveTrigger;
+    chance?: number;
+    color?: string;
+    effect: (unit: UnitLike, context: PassiveContext) => PassiveResult;
+}
+
+export interface PassiveSkillInstance {
+    id: string;
+    name: string;
+    displayName: string;
+    description: string;
+    ppCost: number;
+    trigger: PassiveTrigger;
+    chance: number;
+    color: string;
+    effect: (unit: UnitLike, context: PassiveContext) => PassiveResult;
+    canActivate: (unit: UnitLike) => boolean;
+    activate: (unit: UnitLike, context: PassiveContext) => PassiveResult;
+}
+
+export class PassiveSkill implements PassiveSkillInstance {
+    id: string;
+    name: string;
+    displayName: string;
+    description: string;
+    ppCost: number;
+    trigger: PassiveTrigger;
+    chance: number;
+    color: string;
+    effect: (unit: UnitLike, context: PassiveContext) => PassiveResult;
+
+    constructor(config: PassiveSkillConfig) {
         this.id = config.id;
         this.name = config.name;
         this.description = config.description || '';
-        this.ppCost = config.ppCost || 1;           // PP 소모량
-        this.trigger = config.trigger;               // 발동 조건: 'onBeingHit', 'onAllyHit', 'onEnemyAttack', 'onTurnStart'
-        this.chance = config.chance || 1.0;          // 발동 확률 (0~1)
-        this.effect = config.effect;                 // 효과 함수
-        this.displayName = config.displayName || this.name; // 화면에 표시될 이름
-        this.color = config.color || '#ffcc00';      // 텍스트 색상
+        this.ppCost = config.ppCost || 1;
+        this.trigger = config.trigger;
+        this.chance = config.chance ?? 1.0;
+        this.effect = config.effect;
+        this.displayName = config.displayName || this.name;
+        this.color = config.color || '#ffcc00';
     }
 
-    // 발동 가능 여부 확인
-    canActivate(unit) {
+    /**
+     * 발동 가능 여부 확인
+     */
+    canActivate(unit: UnitLike): boolean {
         if (unit.currentPp < this.ppCost) return false;
         if (Math.random() > this.chance) return false;
         return true;
     }
 
-    // 패시브 발동
-    activate(unit, context) {
+    /**
+     * 패시브 발동
+     */
+    activate(unit: UnitLike, context: PassiveContext): PassiveResult {
         unit.consumePp(this.ppCost);
         return this.effect(unit, context);
     }
 }
 
+// 패시브 프리셋 ID 타입
+export type PassivePresetId =
+    | 'GUARD_REACTION' | 'COUNTER_ATTACK' | 'COVER_ALLY'
+    | 'EMERGENCY_DODGE' | 'EMERGENCY_HEAL' | 'BATTLE_SPIRIT';
+
 // 사전 정의된 패시브 스킬들
-export const PassivePresets = {
+export const PassivePresets: Record<PassivePresetId, PassiveSkill> = {
     // 방어 반응 - 피격 시 30% 확률로 데미지 50% 감소
     GUARD_REACTION: new PassiveSkill({
         id: 'GUARD_REACTION',
@@ -40,7 +98,7 @@ export const PassivePresets = {
         trigger: 'onBeingHit',
         chance: 0.3,
         color: '#4488ff',
-        effect: (unit, context) => {
+        effect: (_unit, context) => {
             context.damageMultiplier = 0.5;
             return { type: 'damageReduce', value: 0.5 };
         }
@@ -56,7 +114,7 @@ export const PassivePresets = {
         trigger: 'onAfterHit',
         chance: 0.4,
         color: '#ff6600',
-        effect: (unit, context) => {
+        effect: (_unit, _context) => {
             return { type: 'counterAttack', damage: 10 };
         }
     }),
@@ -68,11 +126,11 @@ export const PassivePresets = {
         displayName: '엄호!',
         description: '아군 피격 시 25% 확률로 대신 맞음',
         ppCost: 1,
-        trigger: 'onAllyHit',
+        trigger: 'onBeingHit', // 'onAllyHit' 추후 구현
         chance: 0.25,
         color: '#88ff88',
         effect: (unit, context) => {
-            context.newTarget = unit;
+            (context as any).newTarget = unit;
             return { type: 'coverAlly' };
         }
     }),
@@ -87,7 +145,7 @@ export const PassivePresets = {
         trigger: 'onBeingHit',
         chance: 0.2,
         color: '#ffff44',
-        effect: (unit, context) => {
+        effect: (_unit, context) => {
             context.damageMultiplier = 0;
             context.dodged = true;
             return { type: 'dodge' };
@@ -104,7 +162,7 @@ export const PassivePresets = {
         trigger: 'onLowHp',
         chance: 1.0,
         color: '#44ff88',
-        effect: (unit, context) => {
+        effect: (unit, _context) => {
             const healAmount = Math.floor(unit.maxHp * 0.15);
             unit.heal(healAmount);
             return { type: 'heal', value: healAmount };
@@ -121,15 +179,18 @@ export const PassivePresets = {
         trigger: 'onTurnStart',
         chance: 0.5,
         color: '#ffaa00',
-        effect: (unit, context) => {
+        effect: (unit, _context) => {
             unit.recoverAp(1);
             return { type: 'apRecover', value: 1 };
         }
     })
 };
 
+// 패시브셋 타입
+export type PassiveSetId = 'WARRIOR' | 'MAGE' | 'ROGUE' | 'TANK';
+
 // 캐릭터 타입별 기본 패시브 세트
-export const PassiveSets = {
+export const PassiveSets: Record<PassiveSetId, PassiveSkill[]> = {
     WARRIOR: [
         PassivePresets.GUARD_REACTION,
         PassivePresets.COUNTER_ATTACK
@@ -148,8 +209,11 @@ export const PassiveSets = {
     ]
 };
 
-export function getPassive(id) {
-    return PassivePresets[id] || null;
+/**
+ * 패시브 ID로 패시브 객체 가져오기
+ */
+export function getPassive(id: PassivePresetId | string): PassiveSkill | null {
+    return PassivePresets[id as PassivePresetId] || null;
 }
 
 export default PassivePresets;

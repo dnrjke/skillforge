@@ -1,7 +1,11 @@
-// 키워드 기반 전투 시스템 - 키워드 정의
-// 각 키워드는 apCost(AP 소모량)와 power(위력 가중치)를 가짐
+/**
+ * 키워드 기반 전투 시스템 - 키워드 정의
+ * 각 키워드는 apCost(AP 소모량)와 power(위력 가중치)를 가짐
+ */
 
-export const Keywords = {
+import type { Keyword, KeywordId, KeywordMap } from '../../shared/types/game.types';
+
+export const Keywords: KeywordMap = {
     // 공격 타입 키워드
     STRIKE: {
         id: 'STRIKE',
@@ -107,21 +111,27 @@ export const Keywords = {
     }
 };
 
-// 키워드 ID로 키워드 객체 가져오기
-export function getKeyword(id) {
-    return Keywords[id] || null;
+/**
+ * 키워드 ID로 키워드 객체 가져오기
+ */
+export function getKeyword(id: KeywordId | string): Keyword | null {
+    return Keywords[id as KeywordId] || null;
 }
 
-// 키워드 목록의 총 AP 비용 계산
-export function calculateTotalApCost(keywordIds) {
+/**
+ * 키워드 목록의 총 AP 비용 계산
+ */
+export function calculateTotalApCost(keywordIds: KeywordId[]): number {
     return keywordIds.reduce((total, id) => {
         const keyword = getKeyword(id);
         return total + (keyword ? keyword.apCost : 0);
     }, 0);
 }
 
-// 키워드 목록의 총 위력 계산
-export function calculateTotalPower(keywordIds) {
+/**
+ * 키워드 목록의 총 위력 계산
+ */
+export function calculateTotalPower(keywordIds: KeywordId[]): number {
     return keywordIds.reduce((total, id) => {
         const keyword = getKeyword(id);
         return total + (keyword ? keyword.power : 0);

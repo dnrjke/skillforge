@@ -2,7 +2,7 @@
 // 전투 흐름 제어, 유닛 관리, 턴 시스템
 // 연출은 BattlePresentation, UI는 ActionBannerUI, 스킬 실행은 SkillExecutor로 위임
 
-import Unit from '../entities/Unit.js';
+import Unit from '../entities/Unit';
 import ParticleEffects from '../effects/ParticleEffects.js';
 import BattlePresentation from './BattlePresentation.js';
 import SkillExecutor from './SkillExecutor.js';

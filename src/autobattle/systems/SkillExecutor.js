@@ -6,7 +6,7 @@
 // - 키워드별 연출 모듈 (예: [관통] → 관통 이펙트)
 // - 데미지 공식 모듈화
 
-import { getKeyword } from '../data/Keywords.js';
+import { getKeyword } from '../data/Keywords';
 
 export default class SkillExecutor {
     constructor(battleManager, presentation, bannerUI) {
