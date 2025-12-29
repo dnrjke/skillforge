@@ -1,6 +1,16 @@
 import Phaser from 'phaser';
 import BootScene from './autobattle/scenes/BootScene.js';
 import BattleScene from './autobattle/scenes/BattleScene.js';
+import PlatformerBootScene from './platformer/scenes/PlatformerBootScene';
+import PlatformerScene from './platformer/scenes/PlatformerScene';
+
+// 게임 모드 감지 (URL 파라미터로 전환)
+// ?mode=platformer → 플랫포머 모드
+// ?mode=battle (기본) → 자동전투 모드
+function getGameMode() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('mode') || 'battle';
+}
 
 // 모바일 감지
 function isMobileDevice() {
@@ -44,6 +54,15 @@ export function requestContainerFullscreen() {
     }
 }
 
+// 게임 모드에 따른 씬 선택
+function getScenes() {
+    const mode = getGameMode();
+    if (mode === 'platformer') {
+        return [PlatformerBootScene, PlatformerScene];
+    }
+    return [BootScene, BattleScene];
+}
+
 const config = {
     type: Phaser.AUTO,
     width: 1280,
@@ -64,7 +83,7 @@ const config = {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH
     },
-    scene: [BootScene, BattleScene]
+    scene: getScenes()
 };
 
 // 모바일 최적화 초기화
