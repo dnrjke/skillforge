@@ -493,14 +493,23 @@ export default class PartyStatusUI {
             ? this.battleManager.enemies
             : this.battleManager.allies;
 
+        // 디버그: 유닛 매핑 확인
+        console.log(`[PartyStatusUI] Rendering ${this.isEnemy ? 'enemy' : 'ally'} units:`,
+            units.map((u, i) => `${i}: ${u.id} (HP: ${u.currentHp})`));
+        console.log(`[PartyStatusUI] activeSlots:`, this.activeSlots);
+
         // 슬롯 매핑: activeSlots 값을 보드 위치로 직접 사용
         units.forEach((unit, unitIndex) => {
             const gridIndex = this.activeSlots[unitIndex];
+
+            console.log(`[PartyStatusUI] Mapping unit ${unit.id} (index ${unitIndex}) to grid position ${gridIndex}`);
 
             // 유닛 슬롯 생성
             const slot = document.createElement('div');
             slot.className = 'unit-slot';
             slot.dataset.pos = gridIndex;
+            slot.dataset.unitId = unit.id;  // 유닛 ID도 저장
+            slot.dataset.unitIndex = unitIndex;  // 인덱스도 저장
             if (this.isEnemy) {
                 slot.classList.add('enemy-slot');
             }
@@ -559,7 +568,10 @@ export default class PartyStatusUI {
 
         units.forEach(unit => {
             const elements = this.unitElements.get(unit.id);
-            if (!elements) return;
+            if (!elements) {
+                console.warn(`[PartyStatusUI] No elements found for unit ${unit.id}`);
+                return;
+            }
 
             const prevHp = this.previousHp.get(unit.id);
             const currentHp = unit.currentHp;
@@ -569,6 +581,10 @@ export default class PartyStatusUI {
             if (prevHp !== currentHp) {
                 const isDamage = currentHp < prevHp;
                 const isHeal = currentHp > prevHp;
+
+                // 디버그: HP 변동 추적
+                console.log(`[PartyStatusUI] HP change for ${unit.id}: ${prevHp} → ${currentHp} (slot pos: ${elements.slot.dataset.pos})`);
+
 
                 elements.hpCurrent.textContent = currentHp;
                 elements.hpBar.style.width = `${hpRatio * 100}%`;
