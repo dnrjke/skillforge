@@ -593,6 +593,10 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         return { current: this.firefly.current, max: this.firefly.max };
     }
 
+    public resetFireflies(): void {
+        this.firefly.current = this.firefly.max;
+    }
+
     public getStats(): PlayerStats {
         return { ...this.stats };
     }

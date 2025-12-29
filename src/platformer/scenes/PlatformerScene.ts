@@ -1,14 +1,15 @@
 /**
  * PlatformerScene - 메인 플랫포머 게임 씬
  *
- * 테스트용 레벨 포함:
- * - 기본 플랫폼 배치
- * - 플레이어 생성 및 입력 처리
+ * 다양한 테스트 맵 지원:
+ * - 맵 데이터를 init()에서 받아서 동적 생성
  * - 비산 대시 테스트 환경
  */
 
 import Phaser from 'phaser';
 import Player from '../entities/Player';
+import { MAPS, getMapById } from '../data/maps';
+import type { MapData, PlatformData, WallData } from '../data/maps';
 import type { DashDirection } from '../../shared/types/platformer.types';
 
 export default class PlatformerScene extends Phaser.Scene {
@@ -19,9 +20,13 @@ export default class PlatformerScene extends Phaser.Scene {
     private jumpKey!: Phaser.Input.Keyboard.Key;
     private dashKey!: Phaser.Input.Keyboard.Key;
 
+    // 현재 맵 데이터
+    private mapData!: MapData;
+
     // UI
     private fireflyText!: Phaser.GameObjects.Text;
     private stateText!: Phaser.GameObjects.Text;
+    private mapNameText!: Phaser.GameObjects.Text;
 
     // VFX 컨테이너
     private vfxContainer!: Phaser.GameObjects.Container;
@@ -30,9 +35,16 @@ export default class PlatformerScene extends Phaser.Scene {
         super({ key: 'PlatformerScene' });
     }
 
+    init(data: { mapId?: string }): void {
+        // 맵 ID로 맵 데이터 로드 (기본: basic)
+        const mapId = data.mapId || 'basic';
+        this.mapData = getMapById(mapId) || MAPS.basic;
+    }
+
     create(): void {
         // 배경색
-        this.cameras.main.setBackgroundColor(0x1a1a2e);
+        const bgColor = this.mapData.backgroundColor || 0x1a1a2e;
+        this.cameras.main.setBackgroundColor(bgColor);
 
         // VFX 컨테이너
         this.vfxContainer = this.add.container(0, 0);
@@ -66,21 +78,15 @@ export default class PlatformerScene extends Phaser.Scene {
     private createPlatforms(): void {
         this.platforms = this.physics.add.staticGroup();
 
-        // 바닥
-        this.createPlatform(640, 680, 1280, 40, 0x3d3d5c);
-
-        // 중간 플랫폼들 (테스트용 레벨)
-        this.createPlatform(200, 550, 200, 20, 0x4a4a6a);
-        this.createPlatform(500, 450, 250, 20, 0x4a4a6a);
-        this.createPlatform(850, 400, 200, 20, 0x4a4a6a);
-        this.createPlatform(1100, 300, 180, 20, 0x4a4a6a);
-
-        // 높은 플랫폼 (대시 테스트용)
-        this.createPlatform(300, 280, 150, 20, 0x5a5a7a);
-        this.createPlatform(600, 200, 200, 20, 0x5a5a7a);
-
-        // 떨어진 플랫폼 (멀리 점프 테스트)
-        this.createPlatform(1000, 550, 150, 20, 0x4a4a6a);
+        for (const platform of this.mapData.platforms) {
+            this.createPlatform(
+                platform.x,
+                platform.y,
+                platform.width,
+                platform.height,
+                platform.color || 0x4a4a6a
+            );
+        }
     }
 
     private createPlatform(x: number, y: number, width: number, height: number, color: number): void {
@@ -89,21 +95,24 @@ export default class PlatformerScene extends Phaser.Scene {
         this.platforms.add(platform);
 
         // 플랫폼 가장자리 하이라이트
-        const highlight = this.add.rectangle(x, y - height / 2, width, 2, 0x8888aa);
+        const highlightColor = Phaser.Display.Color.ValueToColor(color);
+        const lighterColor = highlightColor.clone().lighten(30).color;
+        const highlight = this.add.rectangle(x, y - height / 2, width, 2, lighterColor);
         highlight.setDepth(1);
     }
 
     private createWalls(): void {
         this.walls = this.physics.add.staticGroup();
 
-        // 왼쪽 벽
-        this.createWall(10, 400, 20, 400, 0x2d2d4c);
-
-        // 오른쪽 벽
-        this.createWall(1270, 400, 20, 400, 0x2d2d4c);
-
-        // 중간 벽 (벽 점프 테스트용)
-        this.createWall(700, 500, 20, 200, 0x3d3d5c);
+        for (const wall of this.mapData.walls) {
+            this.createWall(
+                wall.x,
+                wall.y,
+                wall.width,
+                wall.height,
+                wall.color || 0x2d2d4c
+            );
+        }
     }
 
     private createWall(x: number, y: number, width: number, height: number, color: number): void {
@@ -113,8 +122,8 @@ export default class PlatformerScene extends Phaser.Scene {
     }
 
     private createPlayer(): void {
-        // 플레이어 생성 (임시 텍스처 사용)
-        this.player = new Player(this, 200, 600, 'player_placeholder');
+        const { x, y } = this.mapData.playerStart;
+        this.player = new Player(this, x, y, 'player_placeholder');
 
         // VFX 콜백 등록
         this.player.onShatterDash = this.emitShatterEffect.bind(this);
@@ -133,6 +142,19 @@ export default class PlatformerScene extends Phaser.Scene {
         this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.A);
         this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.S);
         this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D);
+
+        // R키로 리스타트
+        const restartKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+        restartKey.on('down', () => {
+            this.scene.restart({ mapId: this.mapData.id });
+        });
+
+        // ESC로 맵 선택 화면으로
+        const escKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+        escKey.on('down', () => {
+            // 메인 페이지로 리다이렉트
+            window.location.href = window.location.pathname;
+        });
     }
 
     private setupCollisions(): void {
@@ -161,6 +183,22 @@ export default class PlatformerScene extends Phaser.Scene {
     }
 
     private createUI(): void {
+        // 맵 이름 표시
+        this.mapNameText = this.add.text(640, 15, this.mapData.name, {
+            fontSize: '20px',
+            color: '#ffffff',
+            fontFamily: 'Alexandria, sans-serif',
+            stroke: '#000',
+            strokeThickness: 3
+        }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(1000);
+
+        // 맵 설명
+        this.add.text(640, 42, this.mapData.description, {
+            fontSize: '12px',
+            color: '#888888',
+            fontFamily: 'Alexandria, sans-serif'
+        }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(1000);
+
         // 반딧불 카운터
         this.fireflyText = this.add.text(20, 20, '', {
             fontSize: '24px',
@@ -180,20 +218,18 @@ export default class PlatformerScene extends Phaser.Scene {
 
     private setupCamera(): void {
         this.cameras.main.setBounds(0, 0, 1280, 720);
-        // 플레이어 따라가기 (필요시 활성화)
-        // this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     }
 
     private addDebugInstructions(): void {
         const instructions = [
             '← → / A D : 이동',
             'X : 점프',
-            'Z : 비산 대시 (반딧불 소모)',
-            '방향키 + Z : 8방향 대시',
-            '벽에 붙으면 벽 지탱'
+            'Z : 비산 대시',
+            'R : 재시작',
+            'ESC : 맵 선택'
         ];
 
-        const text = this.add.text(1260, 20, instructions.join('\n'), {
+        this.add.text(1260, 20, instructions.join('\n'), {
             fontSize: '14px',
             color: '#666666',
             fontFamily: 'monospace',
@@ -213,6 +249,9 @@ export default class PlatformerScene extends Phaser.Scene {
 
         // UI 업데이트
         this.updateUI();
+
+        // 추락 체크
+        this.checkFallOff();
     }
 
     private collectInput(): {
@@ -242,7 +281,7 @@ export default class PlatformerScene extends Phaser.Scene {
         const fireflies = this.player.getFireflies();
         const state = this.player.getState();
 
-        // 반딧불 표시 (채워진 것과 빈 것)
+        // 반딧불 표시
         let fireflyDisplay = '🔥 ';
         for (let i = 0; i < fireflies.max; i++) {
             fireflyDisplay += i < fireflies.current ? '●' : '○';
@@ -253,13 +292,22 @@ export default class PlatformerScene extends Phaser.Scene {
         this.stateText.setText(`State: ${state}`);
     }
 
+    private checkFallOff(): void {
+        // 화면 아래로 떨어지면 리스폰
+        if (this.player.y > 800) {
+            this.player.setPosition(this.mapData.playerStart.x, this.mapData.playerStart.y);
+            this.player.setVelocity(0, 0);
+            this.player.resetFireflies();
+
+            // 리스폰 이펙트
+            this.emitRespawnEffect(this.mapData.playerStart.x, this.mapData.playerStart.y);
+        }
+    }
+
     // ===== VFX 이펙트들 =====
 
     private emitShatterEffect(x: number, y: number, direction: DashDirection): void {
-        // 비산 대시 이펙트 - 반딧불이 팡! 터지는 연출
         const colors = [0xffcc44, 0xff9944, 0xffff88];
-
-        // 방향 벡터 계산
         const angle = this.getDirectionAngle(direction);
 
         // 파티클 버스트
@@ -315,7 +363,6 @@ export default class PlatformerScene extends Phaser.Scene {
     }
 
     private emitLandEffect(x: number, y: number): void {
-        // 착지 먼지 이펙트
         for (let i = 0; i < 6; i++) {
             const side = i < 3 ? -1 : 1;
             const dust = this.add.circle(x + side * (10 + Math.random() * 20), y, 3, 0x888888, 0.5);
@@ -334,7 +381,6 @@ export default class PlatformerScene extends Phaser.Scene {
     }
 
     private emitWallClingEffect(x: number, y: number, side: 'left' | 'right'): void {
-        // 벽에 반딧불이 붙는 이펙트
         const offsetX = side === 'left' ? -15 : 15;
 
         for (let i = 0; i < 3; i++) {
@@ -347,7 +393,6 @@ export default class PlatformerScene extends Phaser.Scene {
             );
             firefly.setBlendMode(Phaser.BlendModes.ADD);
 
-            // 펄스 효과
             this.tweens.add({
                 targets: firefly,
                 scale: { from: 0.5, to: 1.2 },
@@ -361,7 +406,6 @@ export default class PlatformerScene extends Phaser.Scene {
     }
 
     private emitFireflyRecoverEffect(count: number): void {
-        // 반딧불 회복 이펙트
         const x = this.player.x;
         const y = this.player.y;
 
@@ -388,5 +432,43 @@ export default class PlatformerScene extends Phaser.Scene {
                 });
             });
         }
+    }
+
+    private emitRespawnEffect(x: number, y: number): void {
+        // 리스폰 이펙트 - 반딧불이 모여드는 연출
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            const distance = 80;
+            const startX = x + Math.cos(angle) * distance;
+            const startY = y + Math.sin(angle) * distance;
+
+            const firefly = this.add.circle(startX, startY, 6, 0xffcc44, 0);
+            firefly.setBlendMode(Phaser.BlendModes.ADD);
+
+            this.tweens.add({
+                targets: firefly,
+                x: x,
+                y: y,
+                alpha: { from: 0.8, to: 0 },
+                scale: { from: 1, to: 0.3 },
+                duration: 400,
+                delay: i * 50,
+                ease: 'Power2.easeIn',
+                onComplete: () => firefly.destroy()
+            });
+        }
+
+        // 중앙 플래시
+        this.time.delayedCall(400, () => {
+            const flash = this.add.circle(x, y, 40, 0xffffff, 0.5);
+            flash.setBlendMode(Phaser.BlendModes.ADD);
+            this.tweens.add({
+                targets: flash,
+                scale: 0.5,
+                alpha: 0,
+                duration: 200,
+                onComplete: () => flash.destroy()
+            });
+        });
     }
 }

@@ -52,14 +52,17 @@ export default class PlatformerBootScene extends Phaser.Scene {
         this.load.on('complete', () => {
             loadingText.setText('Press any key to start');
 
+            // mapId 가져오기
+            const mapId = this.game.registry.get('mapId') || 'basic';
+
             // 아무 키나 누르면 시작
             this.input.keyboard!.once('keydown', () => {
-                this.scene.start('PlatformerScene');
+                this.scene.start('PlatformerScene', { mapId });
             });
 
             // 또는 클릭으로 시작
             this.input.once('pointerdown', () => {
-                this.scene.start('PlatformerScene');
+                this.scene.start('PlatformerScene', { mapId });
             });
         });
     }
