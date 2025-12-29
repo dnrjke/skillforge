@@ -613,6 +613,12 @@ export default class PartyStatusUI {
                     unit.isAlive = false;
                     console.warn(`[PartyStatusUI] Fixed isAlive state for ${unit.id} (HP: ${unit.currentHp})`);
                 }
+            } else {
+                // 생존 상태: dead 클래스 제거 (부활 시 UI 복원)
+                if (elements.slot.classList.contains('dead')) {
+                    elements.slot.classList.remove('dead');
+                    console.log(`[PartyStatusUI] Restored alive state for ${unit.id}`);
+                }
             }
         });
     }
