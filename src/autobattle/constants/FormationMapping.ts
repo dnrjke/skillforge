@@ -88,10 +88,10 @@ export const FORMATION_ENEMY: readonly FormationSlot[] = [
 // ============================================
 
 /**
- * 3vs3 전투에서 사용하는 FORMATION 인덱스
- * 순서: 후열2, 중열1, 전열1
+ * 디버깅용: 6개 슬롯 모두 사용
+ * 순서: 후열1, 후열2, 중열1, 중열2, 전열1, 전열2
  */
-export const ACTIVE_FORMATION_SLOTS: readonly FormationIndex[] = [1, 2, 4] as const;
+export const ACTIVE_FORMATION_SLOTS: readonly FormationIndex[] = [0, 1, 2, 3, 4, 5] as const;
 
 // ============================================
 // 파티 현황판 슬롯 매핑
@@ -100,21 +100,16 @@ export const ACTIVE_FORMATION_SLOTS: readonly FormationIndex[] = [1, 2, 4] as co
 /**
  * FORMATION 인덱스 → 파티 현황판 슬롯 pos 매핑
  *
- * 파티 현황판 실제 레이아웃 (화면에서 확인됨):
- * - pos=2 → 전열1 위치
- * - pos=1 → 중열1 위치
- * - pos=4 → 중열2 위치
- * - pos=0 → 후열2 위치 (추정)
- *
- * 규칙: 전장 위치와 파티 현황판 위치 일치
+ * 디버깅용: 1:1 매핑으로 설정하여 위치 확인
+ * FORMATION 인덱스 = 파티 현황판 pos
  */
 export const FORMATION_TO_PARTY_SLOT: Record<FormationIndex, PartySlotPosition> = {
-    0: 1,  // 후열1 → 중열1 위치 (pos=1)
-    1: 0,  // 후열2 → 후열2 위치 (pos=0)
-    2: 1,  // 중열1 → 중열1 위치 (pos=1)
-    3: 4,  // 중열2 → 중열2 위치 (pos=4)
-    4: 2,  // 전열1 → 전열1 위치 (pos=2)
-    5: 5,  // 전열2 → 전열2 위치 (pos=5, 추정)
+    0: 0,  // FORMATION[0] → pos=0
+    1: 1,  // FORMATION[1] → pos=1
+    2: 2,  // FORMATION[2] → pos=2
+    3: 3,  // FORMATION[3] → pos=3
+    4: 4,  // FORMATION[4] → pos=4
+    5: 5,  // FORMATION[5] → pos=5
 };
 
 /**

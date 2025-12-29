@@ -32,10 +32,9 @@ const FORMATION = {
     ]
 };
 
-// 3vs3 전투에서 사용할 슬롯 인덱스 (편성에 따라 변경 가능)
+// 디버깅용: 6개 슬롯 모두 표시
 // FORMATION 인덱스: 0-1=후열, 2-3=중열, 4-5=전열
-// PartyStatusUI도 동일한 슬롯 사용 (파티 현황판 슬롯 = 전장 FORMATION 슬롯)
-const ACTIVE_SLOTS = [1, 2, 4]; // 후열 하단, 중열 상단, 전열 상단
+const ACTIVE_SLOTS = [0, 1, 2, 3, 4, 5]; // 모든 슬롯 (디버깅)
 
 export default class BattleScene extends Phaser.Scene {
     constructor() {
