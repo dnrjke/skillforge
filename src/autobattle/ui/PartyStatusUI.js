@@ -172,22 +172,25 @@ export default class PartyStatusUI {
              *   CSS_Y = 원본_Y * scale - 48
              */
 
-            /* 뒷줄 (0, 1, 2) */
-            .unit-slot[data-pos="0"] { left: 57px; top: 10px; }
-            .unit-slot[data-pos="1"] { left: 98px; top: -5px; }
-            .unit-slot[data-pos="2"] { left: 141px; top: -20px; }
-            /* 앞줄 (3, 4, 5) */
-            .unit-slot[data-pos="3"] { left: 72px; top: 32px; }
-            .unit-slot[data-pos="4"] { left: 116px; top: 15px; }
-            .unit-slot[data-pos="5"] { left: 159px; top: -1px; }
+            /*
+             * 슬롯 위치 (시각적 순서 012345 배치)
+             * 전→중→후 순서로 읽을 때 0,1,2,3,4,5가 되도록 좌표 재배치
+             * 251403 → 012345 변환
+             */
+            .unit-slot[data-pos="0"] { left: 98px; top: -5px; }   /* 후열1 → 시각 front-top */
+            .unit-slot[data-pos="1"] { left: 159px; top: -1px; }  /* 후열2 → 시각 front-bottom */
+            .unit-slot[data-pos="2"] { left: 72px; top: 32px; }   /* 중열1 → 시각 mid-top */
+            .unit-slot[data-pos="3"] { left: 141px; top: -20px; } /* 중열2 → 시각 mid-bottom */
+            .unit-slot[data-pos="4"] { left: 57px; top: 10px; }   /* 전열1 → 시각 back-top */
+            .unit-slot[data-pos="5"] { left: 116px; top: 15px; }  /* 전열2 → 시각 back-bottom */
 
-            /* z-index: 보드(0) < 뒷줄(1-2) < 앞줄(3-4) */
-            .unit-slot[data-pos="0"] { z-index: 1; }
-            .unit-slot[data-pos="1"] { z-index: 2; }
-            .unit-slot[data-pos="2"] { z-index: 1; }
-            .unit-slot[data-pos="3"] { z-index: 3; }
-            .unit-slot[data-pos="4"] { z-index: 4; }
-            .unit-slot[data-pos="5"] { z-index: 3; }
+            /* z-index: 시각적 depth (앞=높음, 뒤=낮음) */
+            .unit-slot[data-pos="0"] { z-index: 4; }  /* 시각 front-top */
+            .unit-slot[data-pos="1"] { z-index: 3; }  /* 시각 front-bottom */
+            .unit-slot[data-pos="2"] { z-index: 2; }  /* 시각 mid-top */
+            .unit-slot[data-pos="3"] { z-index: 2; }  /* 시각 mid-bottom */
+            .unit-slot[data-pos="4"] { z-index: 1; }  /* 시각 back-top */
+            .unit-slot[data-pos="5"] { z-index: 1; }  /* 시각 back-bottom */
 
             /* ===== 캐릭터 그림자 (발판 위, 앞쪽) ===== */
             .unit-shadow {
@@ -207,9 +210,9 @@ export default class PartyStatusUI {
                 z-index: 2;
             }
 
-            /* 중앙 슬롯 그림자 확대 */
-            .unit-slot[data-pos="1"] .unit-shadow,
-            .unit-slot[data-pos="4"] .unit-shadow {
+            /* 시각 front 슬롯 그림자 확대 */
+            .unit-slot[data-pos="0"] .unit-shadow,
+            .unit-slot[data-pos="1"] .unit-shadow {
                 width: 34px;
                 height: 9px;
             }
@@ -228,9 +231,9 @@ export default class PartyStatusUI {
                 z-index: 3;
             }
 
-            /* 중앙 슬롯 캐릭터 1.1배 더 크게 (총 1.43배) */
-            .unit-slot[data-pos="1"] .unit-sprite-wrapper,
-            .unit-slot[data-pos="4"] .unit-sprite-wrapper {
+            /* 시각 front 슬롯 캐릭터 1.1배 더 크게 (총 1.43배) */
+            .unit-slot[data-pos="0"] .unit-sprite-wrapper,
+            .unit-slot[data-pos="1"] .unit-sprite-wrapper {
                 transform: translateX(-50%) scale(1.43);
             }
 
@@ -265,9 +268,9 @@ export default class PartyStatusUI {
                 50% { transform: translateX(-50%) scale(1.3) translateY(-2px); }
             }
 
-            /* 중앙 슬롯 플로팅 애니메이션 */
-            .unit-slot[data-pos="1"] .unit-sprite-wrapper,
-            .unit-slot[data-pos="4"] .unit-sprite-wrapper {
+            /* 시각 front 슬롯 플로팅 애니메이션 */
+            .unit-slot[data-pos="0"] .unit-sprite-wrapper,
+            .unit-slot[data-pos="1"] .unit-sprite-wrapper {
                 animation: spriteFloatCenter 2s ease-in-out infinite;
             }
 
@@ -286,29 +289,35 @@ export default class PartyStatusUI {
                 z-index: 10;
             }
 
-            /* 윗줄 (0, 1, 2): 머리 위 - 숫자가 바 위에 */
-            .unit-slot[data-pos="0"] .unit-hp-container,
-            .unit-slot[data-pos="1"] .unit-hp-container,
-            .unit-slot[data-pos="2"] .unit-hp-container {
+            /* 시각 back (4, 5): 머리 위 - 숫자가 바 위에 */
+            .unit-slot[data-pos="4"] .unit-hp-container,
+            .unit-slot[data-pos="5"] .unit-hp-container {
                 flex-direction: column-reverse;
                 top: -22px;
                 left: 50%;
                 transform: translateX(-50%);
             }
 
-            /* 아랫줄 (3, 4, 5): 발 아래, 오른쪽으로 이동 */
-            .unit-slot[data-pos="3"] .unit-hp-container,
-            .unit-slot[data-pos="4"] .unit-hp-container,
-            .unit-slot[data-pos="5"] .unit-hp-container {
+            /* 시각 mid (2, 3): 머리 위 */
+            .unit-slot[data-pos="2"] .unit-hp-container,
+            .unit-slot[data-pos="3"] .unit-hp-container {
+                flex-direction: column-reverse;
+                top: -22px;
+                left: 50%;
+                transform: translateX(-50%);
+            }
+
+            /* 시각 front (0, 1): 발 아래, 오른쪽으로 이동 */
+            .unit-slot[data-pos="0"] .unit-hp-container,
+            .unit-slot[data-pos="1"] .unit-hp-container {
                 bottom: 6px;
                 left: 44px;
                 transform: none;
             }
 
-            /* 적군 아랫줄: 좌우 대칭 (왼쪽으로 이동) */
-            .enemy .unit-slot[data-pos="3"] .unit-hp-container,
-            .enemy .unit-slot[data-pos="4"] .unit-hp-container,
-            .enemy .unit-slot[data-pos="5"] .unit-hp-container {
+            /* 적군 시각 front: 좌우 대칭 (왼쪽으로 이동) */
+            .enemy .unit-slot[data-pos="0"] .unit-hp-container,
+            .enemy .unit-slot[data-pos="1"] .unit-hp-container {
                 left: auto;
                 right: 44px;
             }
@@ -446,13 +455,13 @@ export default class PartyStatusUI {
                     height: 50px;
                 }
 
-                /* 모바일 타일 좌표 (180x70px, 데스크탑의 0.643배, X -20px 보정 적용) */
-                .unit-slot[data-pos="0"] { left: 37px; top: 6px; }
-                .unit-slot[data-pos="1"] { left: 63px; top: -3px; }
-                .unit-slot[data-pos="2"] { left: 91px; top: -13px; }
-                .unit-slot[data-pos="3"] { left: 46px; top: 21px; }
-                .unit-slot[data-pos="4"] { left: 75px; top: 10px; }
-                .unit-slot[data-pos="5"] { left: 102px; top: -1px; }
+                /* 모바일 타일 좌표 (시각 순서 012345, 251403→012345 변환) */
+                .unit-slot[data-pos="0"] { left: 91px; top: -13px; }  /* 시각 front-top */
+                .unit-slot[data-pos="1"] { left: 102px; top: -1px; }  /* 시각 front-bottom */
+                .unit-slot[data-pos="2"] { left: 63px; top: -3px; }   /* 시각 mid-top */
+                .unit-slot[data-pos="3"] { left: 75px; top: 10px; }   /* 시각 mid-bottom */
+                .unit-slot[data-pos="4"] { left: 37px; top: 6px; }    /* 시각 back-top */
+                .unit-slot[data-pos="5"] { left: 46px; top: 21px; }   /* 시각 back-bottom */
 
                 .unit-shadow {
                     bottom: 14px;
@@ -465,8 +474,9 @@ export default class PartyStatusUI {
                     transform: translateX(-50%) scale(1.0);
                 }
 
-                .unit-slot[data-pos="1"] .unit-sprite-wrapper,
-                .unit-slot[data-pos="4"] .unit-sprite-wrapper {
+                /* 시각 front 슬롯 확대 */
+                .unit-slot[data-pos="0"] .unit-sprite-wrapper,
+                .unit-slot[data-pos="1"] .unit-sprite-wrapper {
                     transform: translateX(-50%) scale(1.1);
                 }
 
@@ -479,23 +489,24 @@ export default class PartyStatusUI {
                     margin-top: -2px;
                 }
 
-                .unit-slot[data-pos="0"] .unit-hp-container,
-                .unit-slot[data-pos="1"] .unit-hp-container,
-                .unit-slot[data-pos="2"] .unit-hp-container {
-                    top: -15px;
-                }
-
+                /* 시각 back + mid: 머리 위 */
+                .unit-slot[data-pos="2"] .unit-hp-container,
                 .unit-slot[data-pos="3"] .unit-hp-container,
                 .unit-slot[data-pos="4"] .unit-hp-container,
                 .unit-slot[data-pos="5"] .unit-hp-container {
+                    top: -15px;
+                }
+
+                /* 시각 front: 발 아래 */
+                .unit-slot[data-pos="0"] .unit-hp-container,
+                .unit-slot[data-pos="1"] .unit-hp-container {
                     bottom: 4px;
                     left: 29px;
                 }
 
-                /* 모바일 적군 아랫줄: 좌우 대칭 */
-                .enemy .unit-slot[data-pos="3"] .unit-hp-container,
-                .enemy .unit-slot[data-pos="4"] .unit-hp-container,
-                .enemy .unit-slot[data-pos="5"] .unit-hp-container {
+                /* 모바일 적군 시각 front: 좌우 대칭 */
+                .enemy .unit-slot[data-pos="0"] .unit-hp-container,
+                .enemy .unit-slot[data-pos="1"] .unit-hp-container {
                     left: auto;
                     right: 29px;
                 }
