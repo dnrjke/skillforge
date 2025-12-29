@@ -363,10 +363,16 @@ export default class BattleManager {
             });
         }
 
-        if (result.isDead) {
+        // isDead 플래그와 isAlive 직접 확인 모두 체크 (사망 처리 보장)
+        const isDead = result.isDead || !target.isAlive;
+
+        if (isDead) {
             this.log(`${target.name}이(가) 쓰러졌다!`, 'system');
             this.presentation.playDeathAnimation(target);
-            this.particleEffects.playDeathEffect(target.sprite.x, target.sprite.y, target.isEnemy);
+
+            if (target.sprite) {
+                this.particleEffects.playDeathEffect(target.sprite.x, target.sprite.y, target.isEnemy);
+            }
 
             // 전장 UI 숨기기
             if (target.sprite && target.sprite.statusBar) {

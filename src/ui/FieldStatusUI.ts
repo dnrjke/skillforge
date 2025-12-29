@@ -509,17 +509,33 @@ export default class FieldStatusUI {
      * 전장 UI 숨기기 (사망 시 호출)
      */
     public hide(): void {
-        if (this.container) {
-            this.scene.tweens.add({
-                targets: this.container,
-                alpha: 0,
-                duration: 300,
-                ease: 'Power2'
-            });
+        try {
+            if (this.container && this.scene && this.scene.tweens) {
+                this.scene.tweens.add({
+                    targets: this.container,
+                    alpha: 0,
+                    duration: 300,
+                    ease: 'Power2'
+                });
+            } else if (this.container) {
+                // scene이 유효하지 않으면 즉시 숨김
+                this.container.setAlpha(0);
+            }
+        } catch (error) {
+            console.error('[FieldStatusUI] Error hiding container:', error);
+            // 에러 발생 시에도 숨김 시도
+            if (this.container) {
+                this.container.setAlpha(0);
+            }
         }
 
-        if (this.fireflySystem) {
-            this.fireflySystem.setLingeringMode();
+        // 반딧불 잔류 모드 설정 (에러 발생해도 시도)
+        try {
+            if (this.fireflySystem) {
+                this.fireflySystem.setLingeringMode();
+            }
+        } catch (error) {
+            console.error('[FieldStatusUI] Error setting firefly lingering mode:', error);
         }
     }
 

@@ -216,6 +216,11 @@ export default class SkillExecutor {
                 if (this.scene && this.scene.time) {
                     this.scene.time.timeScale = 1;
                 }
+            } finally {
+                // 예외 발생 시에도 사망 상태 확인 (isAlive 직접 체크)
+                if (!target.isAlive) {
+                    targetDied = true;
+                }
             }
         }, particleEffects);
 
@@ -230,7 +235,10 @@ export default class SkillExecutor {
         const defText = result.wasDefending ? ' (방어 관통)' : '';
         this.log(`→ ${target.name}에게 ${result.totalDamage} 데미지!${critText}${defText}`, 'damage');
 
-        if (result.targetDied) {
+        // targetDied 플래그와 isAlive 직접 확인 모두 체크 (예외 발생 시에도 사망 처리 보장)
+        const isDead = result.targetDied || !target.isAlive;
+
+        if (isDead) {
             this.log(`${target.name}이(가) 쓰러졌다!`, 'system');
             this.presentation.playDeathAnimation(target);
 
@@ -240,7 +248,7 @@ export default class SkillExecutor {
             }
 
             const particleEffects = this.battleManager.particleEffects;
-            if (particleEffects) {
+            if (particleEffects && target.sprite) {
                 const remainingEnemies = target.isEnemy
                     ? this.battleManager.getAliveEnemies()
                     : this.battleManager.getAliveAllies();

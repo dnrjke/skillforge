@@ -480,11 +480,12 @@ export default class Unit {
         const shakeDuration = 60 + apCost * 10;
         scene.cameras.main.shake(shakeDuration, shakeIntensity);
 
-        // 4. 피격 애니메이션
-        if (target.isAlive) {
+        // 4. 피격 애니메이션 (사망하지 않은 경우에만)
+        if (target.isAlive && target.sprite && target.sprite.active) {
             target.sprite.play('knight_hit');
             target.sprite.once('animationcomplete', () => {
-                if (target.isAlive) {
+                // 애니메이션 완료 시점에 다시 생존 및 스프라이트 유효성 확인
+                if (target.isAlive && target.sprite && target.sprite.active) {
                     target.sprite.play('knight_idle');
                 }
             });
