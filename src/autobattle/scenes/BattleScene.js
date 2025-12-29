@@ -140,14 +140,14 @@ export default class BattleScene extends Phaser.Scene {
         // 아군 배치 (3명)
         ACTIVE_SLOTS.forEach((slotIndex, index) => {
             const slot = FORMATION.ALLY[slotIndex];
-            const ally = this.createCharacter(slot.x, slot.y, false, `아군${index + 1}`, slot.row);
+            const ally = this.createCharacter(slot.x, slot.y, false, `아군${index + 1}`, slot.row, index);
             this.allies.push(ally);
         });
 
         // 적군 배치 (3명)
         ACTIVE_SLOTS.forEach((slotIndex, index) => {
             const slot = FORMATION.ENEMY[slotIndex];
-            const enemy = this.createCharacter(slot.x, slot.y, true, `적군${index + 1}`, slot.row);
+            const enemy = this.createCharacter(slot.x, slot.y, true, `적군${index + 1}`, slot.row, index);
             this.enemies.push(enemy);
         });
 
@@ -155,11 +155,22 @@ export default class BattleScene extends Phaser.Scene {
         this.sortCharactersByDepth();
     }
 
-    createCharacter(x, y, isEnemy, name, row) {
+    createCharacter(x, y, isEnemy, name, row, debugIndex) {
         const character = this.add.sprite(x, y, 'knight');
 
         // 스케일 조정 (2배 확대: 3 -> 6)
         character.setScale(6);
+
+        // 디버깅용 인덱스 표시
+        const debugLabel = this.add.text(x, y - 100, `[${debugIndex}]`, {
+            fontSize: '24px',
+            color: isEnemy ? '#ff6666' : '#66ff66',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 4
+        }).setOrigin(0.5).setDepth(3000);
+        this.worldContainer.add(debugLabel);
+        character.debugLabel = debugLabel;
 
         // 캐릭터 메타 정보
         character.data = {
