@@ -2,6 +2,26 @@
 // 입체 발판 + 캐릭터 스프라이트 + 체력바
 // HTML/CSS 기반, z-index: 20
 
+import { UNIT_TO_PARTY_SLOT } from '../constants/FormationMapping.ts';
+
+/**
+ * 파티 현황판 슬롯 매핑 (CSS data-pos 값)
+ *
+ * 좌표 체계 (2행 3열 그리드):
+ *         후열(좌)   중열(중)   전열(우)
+ * 상단      후열1      중열1      전열1
+ * 하단      후열2      중열2      전열2
+ *
+ * 파티 현황판 슬롯:
+ * 뒷줄(후열): pos=0(하단), pos=1(중앙), pos=2(상단)
+ * 앞줄(전열): pos=3(하단), pos=4(중앙), pos=5(상단)
+ *
+ * 3vs3 매핑 (ACTIVE_SLOTS = [1, 2, 4]):
+ * units[0] (후열2, x:150) → pos=1 (뒷줄 중앙)
+ * units[1] (중열1, x:260) → pos=2 (뒷줄 상단)
+ * units[2] (전열1, x:400) → pos=4 (앞줄 중앙)
+ */
+
 export default class PartyStatusUI {
     constructor(scene, battleManager, options = {}) {
         this.scene = scene;
@@ -493,10 +513,11 @@ export default class PartyStatusUI {
             ? this.battleManager.enemies
             : this.battleManager.allies;
 
-        // 슬롯 매핑: activeSlots 값을 보드 위치로 직접 사용
-        // activeSlots[i] = FORMATION 인덱스 = PartyStatusUI 슬롯 위치
+        // 슬롯 매핑: UNIT_TO_PARTY_SLOT 사용 (FormationMapping.ts에서 정의)
+        // 전장 위치 → 파티 현황판 위치 일관성 보장
         units.forEach((unit, unitIndex) => {
-            const gridIndex = this.activeSlots[unitIndex];
+            // UNIT_TO_PARTY_SLOT: 유닛 인덱스 → 파티 현황판 pos
+            const gridIndex = UNIT_TO_PARTY_SLOT[unitIndex];
 
             // 유닛 슬롯 생성
             const slot = document.createElement('div');
