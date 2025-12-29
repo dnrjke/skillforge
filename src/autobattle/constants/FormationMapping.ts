@@ -4,6 +4,11 @@
  * ## 시각적 순서 012345 배치
  * 전→중→후 순서로 읽을 때 인덱스 0,1,2,3,4,5가 되도록 배치
  *
+ * ## 각도 불일치 주의
+ * - 파티 현황판(UI): 우상향(+각도) 배치 - 전열로 갈수록 위로
+ * - 전장(Battlefield): 우하향(-각도) 배치 - 전열로 갈수록 아래로
+ * - 해결: Y축 증감 방향만 일치시킴 (작은 Y = 상단, 큰 Y = 하단)
+ *
  * ## 전장 FORMATION (BattleScene.js)
  * 좌표 스왑 적용 (0↔4, 1↔5):
  *
@@ -16,8 +21,8 @@
  * ## 파티 현황판 (PartyStatusUI.js)
  * 원본 CSS 유지 + UNIT_TO_PARTY_SLOT 매핑으로 순서 조정
  *
- * 원본 CSS 시각 순서: pos3 → pos1 → pos0 → pos5 → pos4 → pos2
- * 매핑: 유닛0→pos3, 유닛1→pos1, 유닛2→pos0, 유닛3→pos5, 유닛4→pos4, 유닛5→pos2
+ * 실제 CSS 시각 순서: pos2 → pos5 → pos1 → pos4 → pos0 → pos3
+ * 매핑: 유닛0→pos2, 유닛1→pos5, 유닛2→pos1, 유닛3→pos4, 유닛4→pos0, 유닛5→pos3
  * 결과: 시각적으로 0,1,2,3,4,5 순서
  */
 
@@ -86,21 +91,21 @@ export const ACTIVE_FORMATION_SLOTS: readonly FormationIndex[] = [0, 1, 2, 3, 4,
  * FORMATION 인덱스 → 파티 현황판 슬롯 pos 매핑
  *
  * 시각적 순서 012345 달성을 위한 매핑
- * 원본 CSS 위치에서 310542 → 012345 변환
+ * 원본 CSS 위치에서 531420 → 012345 변환
  *
- * 원본 파티 현황판 시각 순서 (CSS 기준):
- *   시각1=pos3, 시각2=pos1, 시각3=pos0,
- *   시각4=pos5, 시각5=pos4, 시각6=pos2
+ * 실제 파티 현황판 CSS 시각 순서:
+ *   시각1=pos2, 시각2=pos5, 시각3=pos1,
+ *   시각4=pos4, 시각5=pos0, 시각6=pos3
  *
  * 목표: 유닛 0→시각1, 1→시각2, 2→시각3, 3→시각4, 4→시각5, 5→시각6
  */
 export const FORMATION_TO_PARTY_SLOT: Record<FormationIndex, PartySlotPosition> = {
-    0: 3,  // 유닛0 → pos3 (시각1: front-top)
-    1: 1,  // 유닛1 → pos1 (시각2: front-bottom)
-    2: 0,  // 유닛2 → pos0 (시각3: mid-top)
-    3: 5,  // 유닛3 → pos5 (시각4: mid-bottom)
-    4: 4,  // 유닛4 → pos4 (시각5: back-top)
-    5: 2,  // 유닛5 → pos2 (시각6: back-bottom)
+    0: 2,  // 유닛0 → pos2 (시각1)
+    1: 5,  // 유닛1 → pos5 (시각2)
+    2: 1,  // 유닛2 → pos1 (시각3)
+    3: 4,  // 유닛3 → pos4 (시각4)
+    4: 0,  // 유닛4 → pos0 (시각5)
+    5: 3,  // 유닛5 → pos3 (시각6)
 };
 
 /**
@@ -132,12 +137,12 @@ export function getFormationSlot(index: FormationIndex, isEnemy: boolean = false
  * 매핑 일관성 검증 (개발/디버그용)
  *
  * 시각적 순서 012345 검증:
- * 원본 CSS 시각 순서: pos3→pos1→pos0→pos5→pos4→pos2
+ * 실제 CSS 시각 순서: pos2→pos5→pos1→pos4→pos0→pos3
  * 유닛 0-5가 위 순서대로 매핑되어야 함
  */
 export function validateMapping(): boolean {
-    // 원본 CSS의 시각적 순서 (pos값)
-    const visualOrder: PartySlotPosition[] = [3, 1, 0, 5, 4, 2];
+    // 실제 CSS의 시각적 순서 (pos값)
+    const visualOrder: PartySlotPosition[] = [2, 5, 1, 4, 0, 3];
 
     const errors: string[] = [];
 
