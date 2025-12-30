@@ -210,13 +210,6 @@ export default class PartyStatusUI {
                 z-index: 2;
             }
 
-            /* 중앙 슬롯 그림자 확대 */
-            .unit-slot[data-pos="1"] .unit-shadow,
-            .unit-slot[data-pos="4"] .unit-shadow {
-                width: 34px;
-                height: 9px;
-            }
-
             /* ===== 유닛 스프라이트 (발판 위에 크게) ===== */
             .unit-sprite-wrapper {
                 position: absolute;
@@ -229,12 +222,6 @@ export default class PartyStatusUI {
                 overflow: visible;
                 animation: spriteFloat 2s ease-in-out infinite;
                 z-index: 3;
-            }
-
-            /* 중앙 슬롯 캐릭터 1.1배 더 크게 (총 1.43배) */
-            .unit-slot[data-pos="1"] .unit-sprite-wrapper,
-            .unit-slot[data-pos="4"] .unit-sprite-wrapper {
-                transform: translateX(-50%) scale(1.43);
             }
 
             .unit-sprite {
@@ -266,17 +253,6 @@ export default class PartyStatusUI {
             @keyframes spriteFloat {
                 0%, 100% { transform: translateX(-50%) scale(1.3) translateY(0); }
                 50% { transform: translateX(-50%) scale(1.3) translateY(-2px); }
-            }
-
-            /* 중앙 슬롯 플로팅 애니메이션 */
-            .unit-slot[data-pos="1"] .unit-sprite-wrapper,
-            .unit-slot[data-pos="4"] .unit-sprite-wrapper {
-                animation: spriteFloatCenter 2s ease-in-out infinite;
-            }
-
-            @keyframes spriteFloatCenter {
-                0%, 100% { transform: translateX(-50%) scale(1.43) translateY(0); }
-                50% { transform: translateX(-50%) scale(1.43) translateY(-2px); }
             }
 
             /* ===== HP UI 컨테이너 ===== */
@@ -495,11 +471,6 @@ export default class PartyStatusUI {
                 .unit-sprite-wrapper {
                     bottom: 15px;
                     transform: translateX(-50%) scale(1.0);
-                }
-
-                .unit-slot[data-pos="1"] .unit-sprite-wrapper,
-                .unit-slot[data-pos="4"] .unit-sprite-wrapper {
-                    transform: translateX(-50%) scale(1.1);
                 }
 
                 /* 모바일 HP UI - 숫자를 바에 더 붙임 */
