@@ -162,10 +162,13 @@ export default class PartyStatusUI {
              * [1] 전열2 (우상단) = 942, 308
              * [2] 중열1 (중하단) = 676, 456
              * [3] 중열2 (중상단) = 634, 282
-             * [4] 후열1 (좌하단) = 344, 480
+             * [4] 후열1 (좌하단) = 344, 430
              * [5] 후열2 (좌상단) = 300, 258
              *
-             * 변환: X=(원본X-300)*280/698-30, Y=(원본Y-258)*110/226-50
+             * 변환 공식 (원본 이미지 1280x832px → 280x110px):
+             *   scale = 110 / 832 = 0.1322
+             *   CSS_X = (원본_X - 20) * scale + 25
+             *   CSS_Y = 원본_Y * scale - 48
              *
              * 레이아웃:
              *         좌(후열)    중(중열)    우(전열)
@@ -173,13 +176,13 @@ export default class PartyStatusUI {
              * 하단     [4]후열1    [2]중열1    [0]전열1
              */
             /* 하단 (0, 2, 4) - 앞줄 */
-            .unit-slot[data-pos="0"] { left: 250px; top: 60px; }   /* 전열1 우하단 (998,484) */
-            .unit-slot[data-pos="2"] { left: 121px; top: 46px; }   /* 중열1 중하단 (676,456) */
-            .unit-slot[data-pos="4"] { left: -12px; top: 58px; }   /* 후열1 좌하단 (344,480) */
+            .unit-slot[data-pos="0"] { left: 154px; top: 16px; }   /* 전열1 우하단 (998,484) */
+            .unit-slot[data-pos="2"] { left: 112px; top: 12px; }   /* 중열1 중하단 (676,456) */
+            .unit-slot[data-pos="4"] { left: 68px; top: 9px; }     /* 후열1 좌하단 (344,430) */
             /* 상단 (1, 3, 5) - 뒷줄 */
-            .unit-slot[data-pos="1"] { left: 228px; top: -26px; }  /* 전열2 우상단 (942,308) */
-            .unit-slot[data-pos="3"] { left: 104px; top: -38px; }  /* 중열2 중상단 (634,282) */
-            .unit-slot[data-pos="5"] { left: -30px; top: -50px; }  /* 후열2 좌상단 (300,258) */
+            .unit-slot[data-pos="1"] { left: 147px; top: -7px; }   /* 전열2 우상단 (942,308) */
+            .unit-slot[data-pos="3"] { left: 106px; top: -11px; }  /* 중열2 중상단 (634,282) */
+            .unit-slot[data-pos="5"] { left: 62px; top: -14px; }   /* 후열2 좌상단 (300,258) */
 
             /* z-index: 하단(앞) > 상단(뒤) */
             .unit-slot[data-pos="0"] { z-index: 6; }  /* 전열1 하단 - 가장 앞 */
@@ -447,15 +450,15 @@ export default class PartyStatusUI {
                     height: 50px;
                 }
 
-                /* 모바일 타일 좌표 (새 발판 이미지, 비례 스케일) */
+                /* 모바일 타일 좌표 (데스크톱 * 0.64 스케일) */
                 /* 하단 (0, 2, 4) */
-                .unit-slot[data-pos="0"] { left: 159px; top: 35px; }  /* 전열1 우하단 */
-                .unit-slot[data-pos="2"] { left: 76px; top: 26px; }   /* 중열1 중하단 */
-                .unit-slot[data-pos="4"] { left: -10px; top: 34px; }  /* 후열1 좌하단 */
+                .unit-slot[data-pos="0"] { left: 99px; top: 10px; }   /* 전열1 우하단 */
+                .unit-slot[data-pos="2"] { left: 72px; top: 8px; }    /* 중열1 중하단 */
+                .unit-slot[data-pos="4"] { left: 44px; top: 6px; }    /* 후열1 좌하단 */
                 /* 상단 (1, 3, 5) */
-                .unit-slot[data-pos="1"] { left: 145px; top: -20px; } /* 전열2 우상단 */
-                .unit-slot[data-pos="3"] { left: 65px; top: -28px; }  /* 중열2 중상단 */
-                .unit-slot[data-pos="5"] { left: -21px; top: -35px; } /* 후열2 좌상단 */
+                .unit-slot[data-pos="1"] { left: 95px; top: -4px; }   /* 전열2 우상단 */
+                .unit-slot[data-pos="3"] { left: 68px; top: -7px; }   /* 중열2 중상단 */
+                .unit-slot[data-pos="5"] { left: 40px; top: -9px; }   /* 후열2 좌상단 */
 
                 .unit-shadow {
                     bottom: 14px;
