@@ -5,32 +5,38 @@ import BattleControlUI from '../ui/BattleControlUI.js';
 import PartyStatusUI from '../ui/PartyStatusUI.js';
 import BattleManager from '../systems/BattleManager.js';
 
-// 캐릭터 배치 좌표 상수 (전열2/중열2/후열2 - 가로 화면 최적화)
-// Y 좌표를 위로 이동 (-60)
-// 시각적 순서 012345 배치 (전→중→후 순서로 읽었을 때 0,1,2,3,4,5)
-// 좌표 스왑: 0↔4, 1↔5
+/*
+ * 캐릭터 배치 좌표 - 새 발판 이미지 기준 (2024-12-30)
+ *
+ * 레이아웃:
+ *         좌(후열)    중(중열)    우(전열)
+ * 상단     [5]후열2    [3]중열2    [1]전열2
+ * 하단     [4]후열1    [2]중열1    [0]전열1
+ *
+ * 읽기 순서: 우→좌, 하→상 번갈아 → 0,1,2,3,4,5
+ */
 const FORMATION = {
     ALLY: [
-        // 후열 (Back) - 시각적으로 가장 앞 (전열 위치)
-        { id: 0, row: 'back',   x: 400, y: 240 },  // 후열1 → 전열 상 좌표
-        { id: 1, row: 'back',   x: 430, y: 420 },  // 후열2 → 전열 하 좌표
-        // 중열 (Middle) - 시각적으로 중앙
-        { id: 2, row: 'middle', x: 260, y: 220 },  // 중열 상
-        { id: 3, row: 'middle', x: 290, y: 400 },  // 중열 하
-        // 전열 (Front) - 시각적으로 가장 뒤 (후열 위치)
-        { id: 4, row: 'front',  x: 120, y: 200 },  // 전열1 → 후열 상 좌표
-        { id: 5, row: 'front',  x: 150, y: 380 }   // 전열2 → 후열 하 좌표
+        // 전열 (Front) - 우측
+        { id: 0, row: 'front',  x: 400, y: 400 },  // 전열1 (우하단)
+        { id: 1, row: 'front',  x: 380, y: 220 },  // 전열2 (우상단)
+        // 중열 (Middle) - 중앙
+        { id: 2, row: 'middle', x: 260, y: 380 },  // 중열1 (중하단)
+        { id: 3, row: 'middle', x: 240, y: 200 },  // 중열2 (중상단)
+        // 후열 (Back) - 좌측
+        { id: 4, row: 'back',   x: 120, y: 360 },  // 후열1 (좌하단)
+        { id: 5, row: 'back',   x: 100, y: 180 }   // 후열2 (좌상단)
     ],
     ENEMY: [
-        // 후열 (Back) - 시각적으로 가장 앞 (전열 위치)
-        { id: 0, row: 'back',   x: 880, y: 240 },  // 후열1 → 전열 상 좌표
-        { id: 1, row: 'back',   x: 850, y: 420 },  // 후열2 → 전열 하 좌표
-        // 중열 (Middle) - 시각적으로 중앙
-        { id: 2, row: 'middle', x: 1020, y: 220 }, // 중열 상
-        { id: 3, row: 'middle', x: 990, y: 400 },  // 중열 하
-        // 전열 (Front) - 시각적으로 가장 뒤 (후열 위치)
-        { id: 4, row: 'front',  x: 1160, y: 200 }, // 전열1 → 후열 상 좌표
-        { id: 5, row: 'front',  x: 1130, y: 380 }  // 전열2 → 후열 하 좌표
+        // 전열 (Front) - 좌측 (적군 시점에선 우측)
+        { id: 0, row: 'front',  x: 880, y: 400 },  // 전열1 (좌하단)
+        { id: 1, row: 'front',  x: 900, y: 220 },  // 전열2 (좌상단)
+        // 중열 (Middle) - 중앙
+        { id: 2, row: 'middle', x: 1020, y: 380 }, // 중열1 (중하단)
+        { id: 3, row: 'middle', x: 1040, y: 200 }, // 중열2 (중상단)
+        // 후열 (Back) - 우측 (적군 시점에선 좌측)
+        { id: 4, row: 'back',   x: 1160, y: 360 }, // 후열1 (우하단)
+        { id: 5, row: 'back',   x: 1180, y: 180 }  // 후열2 (우상단)
     ]
 };
 
@@ -129,14 +135,14 @@ export default class BattleScene extends Phaser.Scene {
         // 아군 배치 (6명)
         ACTIVE_SLOTS.forEach((slotIndex, index) => {
             const slot = FORMATION.ALLY[slotIndex];
-            const ally = this.createCharacter(slot.x, slot.y, false, `아군${index + 1}`, slot.row);
+            const ally = this.createCharacter(slot.x, slot.y, false, `아군${index + 1}`, slot.row, index);
             this.allies.push(ally);
         });
 
         // 적군 배치 (6명)
         ACTIVE_SLOTS.forEach((slotIndex, index) => {
             const slot = FORMATION.ENEMY[slotIndex];
-            const enemy = this.createCharacter(slot.x, slot.y, true, `적군${index + 1}`, slot.row);
+            const enemy = this.createCharacter(slot.x, slot.y, true, `적군${index + 1}`, slot.row, index);
             this.enemies.push(enemy);
         });
 
@@ -144,11 +150,22 @@ export default class BattleScene extends Phaser.Scene {
         this.sortCharactersByDepth();
     }
 
-    createCharacter(x, y, isEnemy, name, row) {
+    createCharacter(x, y, isEnemy, name, row, debugIndex) {
         const character = this.add.sprite(x, y, 'knight');
 
         // 스케일 조정 (2배 확대: 3 -> 6)
         character.setScale(6);
+
+        // 디버깅용 인덱스 표시
+        const debugLabel = this.add.text(x, y - 100, `[${debugIndex}]`, {
+            fontSize: '24px',
+            color: isEnemy ? '#ff6666' : '#66ff66',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 4
+        }).setOrigin(0.5).setDepth(3000);
+        this.worldContainer.add(debugLabel);
+        character.debugLabel = debugLabel;
 
         // 캐릭터 메타 정보
         character.data = {
