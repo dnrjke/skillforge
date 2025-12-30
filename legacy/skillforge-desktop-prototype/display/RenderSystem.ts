@@ -1,11 +1,5 @@
 /**
- * RenderSystem - 모바일 우선 Canvas 드로잉 시스템
- *
- * MOBILE-FIRST ADAPTIVE LAYOUT
- * "태블릿은 다른 UI가 아니라, 더 여유 있는 모바일이다."
- *
- * 모든 좌표는 CANVAS_LOGICAL (360x640) 기준의 논리 좌표
- * LayerManager가 DPR 및 스케일 처리
+ * RenderSystem - Canvas 드로잉 시스템
  *
  * Layer 0 (World) 렌더링 담당:
  * - 배경
@@ -17,7 +11,7 @@
 import { LayerManager } from '../core/LayerManager';
 import { TimeSystem } from '../core/TimeSystem';
 import { Layout } from './Layout';
-import { SlotPosition, TeamType, UnitData, CANVAS_LOGICAL } from '../types';
+import { SlotPosition, TeamType, UnitData } from '../types';
 
 export class RenderSystem {
     private layerManager: LayerManager;
@@ -37,17 +31,16 @@ export class RenderSystem {
      */
     public initialize(): void {
         this.ctx = this.layerManager.getContext();
-        console.log('[RenderSystem] Initialized (Mobile-First, Logical Coordinates)');
+        console.log('[RenderSystem] Initialized');
     }
 
     /**
      * 배경 렌더링
-     * 논리 좌표(360x640) 기준
      */
     public renderBackground(): void {
         if (!this.ctx) return;
 
-        const { width, height } = this.layout.getLogicalSize();
+        const { width, height } = this.layerManager.dimensions;
 
         // 그라데이션 배경 (어두운 심연)
         const gradient = this.ctx.createLinearGradient(0, 0, 0, height);

@@ -1,9 +1,6 @@
 /**
  * TimeSystem - CT(Charge Time) 및 게임 틱 관리
  *
- * MOBILE-FIRST ADAPTIVE LAYOUT
- * (시간 시스템은 레이아웃과 무관하게 동일하게 동작)
- *
  * 행동바(CT) 기반 순차 실행:
  * - 각 유닛은 Speed에 따라 CT 충전
  * - CT 100% 도달 시 행동 실행

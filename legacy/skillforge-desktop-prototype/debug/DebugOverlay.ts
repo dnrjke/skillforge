@@ -1,10 +1,5 @@
 /**
- * DebugOverlay - 모바일 우선 디버그 오버레이 시스템
- *
- * MOBILE-FIRST ADAPTIVE LAYOUT
- * "태블릿은 다른 UI가 아니라, 더 여유 있는 모바일이다."
- *
- * 모든 좌표는 CANVAS_LOGICAL (360x640) 기준의 논리 좌표
+ * DebugOverlay - 디버그 오버레이 시스템
  *
  * 디버그 정보 표시:
  * - 슬롯 번호 (유닛 인덱스 + 발판 번호)
@@ -16,7 +11,7 @@
 import { LayerManager } from '../core/LayerManager';
 import { TimeSystem } from '../core/TimeSystem';
 import { Layout } from '../display/Layout';
-import { DebugConfig, UnitData, TeamType, CANVAS_LOGICAL } from '../types';
+import { DebugConfig, UnitData, TeamType } from '../types';
 
 export class DebugOverlay {
     private layerManager: LayerManager;
@@ -47,7 +42,7 @@ export class DebugOverlay {
         // 정보 패널 생성
         this.createInfoPanel();
 
-        console.log('[DebugOverlay] Initialized (Mobile-First)');
+        console.log('[DebugOverlay] Initialized');
     }
 
     /**
@@ -170,7 +165,7 @@ export class DebugOverlay {
         team: TeamType
     ): void {
         const slots = layout.getAllSlots(team);
-        const { height: slotHeight } = layout.getSlotSize();
+        const { width: slotWidth, height: slotHeight } = layout.getSlotSize();
 
         for (const slot of slots) {
             // 슬롯 번호 표시
@@ -234,10 +229,9 @@ export class DebugOverlay {
 
     /**
      * 레이어 경계선 렌더링
-     * 논리 좌표 (360x640) 기준
      */
     private renderLayerBorders(ctx: CanvasRenderingContext2D, layout: Layout): void {
-        const { width, height } = layout.getLogicalSize();
+        const { width, height } = layout.getScreenSize();
         const combatZone = layout.getCombatZone();
 
         // 전투 영역 표시
@@ -253,7 +247,7 @@ export class DebugOverlay {
         ctx.textAlign = 'left';
         ctx.fillText('Combat Zone', combatZone.x + 5, combatZone.y + 15);
 
-        // 화면 경계 (논리 좌표)
+        // 화면 경계
         ctx.strokeStyle = 'rgba(255, 0, 255, 0.2)';
         ctx.strokeRect(2, 2, width - 4, height - 4);
     }
@@ -278,13 +272,10 @@ export class DebugOverlay {
         const allyAlive = allyUnits.filter(u => u.stats.hp > 0).length;
         const enemyAlive = enemyUnits.filter(u => u.stats.hp > 0).length;
 
-        const { deviceClass, viewportWidth, viewportHeight } = this.layerManager.dimensions;
-        const scale = this.layerManager.scale;
+        const { width, height } = this.layerManager.dimensions;
 
         this.infoElement.innerHTML = `
-            <div style="margin-bottom: 4px; color: #88ff88;">Logical: ${CANVAS_LOGICAL.WIDTH}x${CANVAS_LOGICAL.HEIGHT}</div>
-            <div style="margin-bottom: 4px; color: #aaaaaa;">Device: ${deviceClass.toUpperCase()} ${viewportWidth}x${viewportHeight}</div>
-            <div style="margin-bottom: 4px; color: #aaaaaa;">Scale: ${scale.toFixed(2)}</div>
+            <div style="margin-bottom: 4px; color: #88ff88;">Screen: ${width}x${height}</div>
             <div style="margin-bottom: 4px; color: #4488ff;">Allies: ${allyAlive}/6</div>
             <div style="margin-bottom: 4px; color: #ff4444;">Enemies: ${enemyAlive}/6</div>
             <div style="color: #aaaaaa;">Speed: ${timeSystem.gameSpeed}x</div>

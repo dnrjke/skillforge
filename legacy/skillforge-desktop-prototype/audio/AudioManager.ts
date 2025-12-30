@@ -1,9 +1,6 @@
 /**
  * AudioManager - Web Audio API 기반 오디오 시스템
  *
- * MOBILE-FIRST ADAPTIVE LAYOUT
- * (오디오 시스템은 레이아웃과 무관하게 동일하게 동작)
- *
  * 채널 분리:
  * - BGM: 배경 음악 (피치/필터 변조 지원)
  * - SFX: 타격음, 스킬 발동음 (동시 발음 제한)
@@ -62,7 +59,7 @@ export class AudioManager {
 
         try {
             // AudioContext 생성
-            this.audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+            this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
 
             // 마스터 게인 노드
             this.masterGain = this.audioContext.createGain();

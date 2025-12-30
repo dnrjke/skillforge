@@ -1,41 +1,7 @@
 /**
  * Skillforge Type Definitions
- * 모든 타입 정의의 단일 진실 공급원 (SSOT)
- *
- * MOBILE-FIRST ADAPTIVE LAYOUT
- * "태블릿은 다른 UI가 아니라, 더 여유 있는 모바일이다."
+ * 모든 타입 정의의 단일 진실 공급원
  */
-
-// ============================================================================
-// Device & Layout Types (Mobile-First Adaptive)
-// ============================================================================
-
-/**
- * 디바이스 클래스 (명시적 브레이크포인트)
- * - mobile: <= 480px width (기준 디바이스)
- * - tablet: 481px ~ 1024px width (확장된 모바일)
- * - NO DESKTOP CONCEPT
- */
-export type DeviceClass = 'mobile' | 'tablet';
-
-/**
- * 디바이스 브레이크포인트 (고정값, Claude 임의 변경 금지)
- */
-export const DEVICE_BREAKPOINTS = {
-    MOBILE_MAX: 480,
-    TABLET_MIN: 481,
-    TABLET_MAX: 1024,
-} as const;
-
-/**
- * 캔버스 논리 해상도 (9:16 Portrait, 고정)
- * Canvas는 항상 동일한 논리 해상도를 유지
- */
-export const CANVAS_LOGICAL = {
-    WIDTH: 360,
-    HEIGHT: 640,
-    ASPECT_RATIO: 9 / 16,
-} as const;
 
 // ============================================================================
 // Layer System Types
@@ -99,8 +65,24 @@ export interface UnitData {
 //  전투는 물리로 끝나고, 감정은 연출로 마무리된다."
 // ============================================================================
 
+/**
+ * 퇴장 사유 (Exit Reason)
+ * - HP_ZERO: 체력 0으로 인한 전투 이탈
+ * - FORCED_RETREAT: 강제 후퇴 (스킬 효과 등)
+ * - SCRIPTED: 스크립트 연출에 의한 퇴장
+ */
 export type ExitReason = 'HP_ZERO' | 'FORCED_RETREAT' | 'SCRIPTED';
 
+/**
+ * 퇴장 연출 타입 (Exit Presentation Type)
+ * - FALL: 발판 소멸 후 추락 (기본)
+ * - FLOAT: 부유하며 사라짐 (마법사 등)
+ * - FLY_AWAY: 날아서 퇴장 (비행 유닛)
+ * - SLOW_DESCENT: 느린 하강 (우아한 퇴장)
+ * - COMEDIC_EXIT: 개그 퇴장 (특수 캐릭터)
+ * - FADE_OUT: 서서히 사라짐
+ * - SHATTER: 파편화되며 소멸
+ */
 export type ExitPresentationType =
     | 'FALL'
     | 'FLOAT'
@@ -110,15 +92,26 @@ export type ExitPresentationType =
     | 'FADE_OUT'
     | 'SHATTER';
 
+/**
+ * 퇴장 연출 설정 (캐릭터별)
+ */
 export interface ExitPresentationConfig {
     type: ExitPresentationType;
+    /** 메모리얼 GIF/이미지 경로 (Layer 1에 표시) */
     memorialAsset?: string;
+    /** 메모리얼 표시 시간 (ms) */
     memorialDuration?: number;
+    /** 퇴장 연출 속도 배율 (1.0 = 기본) */
     speedMultiplier?: number;
+    /** 퇴장 시 재생할 사운드 키 */
     exitSoundKey?: string;
+    /** 퇴장 시 재생할 대사 키 */
     exitVoiceKey?: string;
 }
 
+/**
+ * 퇴장 요청 컨텍스트 (시스템 내부용)
+ */
 export interface ExitContext {
     unitId: string;
     unitName: string;
@@ -126,24 +119,34 @@ export interface ExitContext {
     team: TeamType;
     reason: ExitReason;
     config: ExitPresentationConfig;
+    /** 퇴장 시작 시 유닛 위치 */
     startPosition: Position;
 }
 
+/**
+ * 퇴장 연출 단계
+ */
 export type ExitPhase =
-    | 'IDLE'
-    | 'PLATFORM_DISSOLVE'
-    | 'WORLD_EXIT'
-    | 'MEMORIAL'
-    | 'CLEANUP'
-    | 'COMPLETE';
+    | 'IDLE'           // 대기
+    | 'PLATFORM_DISSOLVE' // 발판 소멸 중
+    | 'WORLD_EXIT'     // Layer 0 물리 연출 중
+    | 'MEMORIAL'       // Layer 1 메모리얼 표시 중
+    | 'CLEANUP'        // 정리 중
+    | 'COMPLETE';      // 완료
 
+/**
+ * 퇴장 연출 상태
+ */
 export interface ExitPresentationState {
     context: ExitContext;
     phase: ExitPhase;
-    progress: number;
+    progress: number;  // 0.0 ~ 1.0
     startTime: number;
 }
 
+/**
+ * 기본 퇴장 연출 설정
+ */
 export const DEFAULT_EXIT_CONFIG: ExitPresentationConfig = {
     type: 'FALL',
     memorialDuration: 2000,
@@ -157,9 +160,9 @@ export const DEFAULT_EXIT_CONFIG: ExitPresentationConfig = {
 export type BattleState = 'idle' | 'preparing' | 'running' | 'paused' | 'ended';
 
 export interface BattleConfig {
-    tickRate: number;
-    simultaneousWindow: number;
-    ctMaxValue: number;
+    tickRate: number;           // ms per tick
+    simultaneousWindow: number; // 동시 발동 윈도우 (ms)
+    ctMaxValue: number;         // CT 최대값 (100%)
 }
 
 export const DEFAULT_BATTLE_CONFIG: BattleConfig = {
@@ -177,7 +180,7 @@ export type AudioChannel = 'bgm' | 'sfx' | 'system' | 'voice';
 export interface AudioConfig {
     masterVolume: number;
     channelVolumes: Record<AudioChannel, number>;
-    voiceLimitWindow: number;
+    voiceLimitWindow: number;   // 동시 발음 제한 윈도우 (ms)
     maxConcurrentSounds: number;
 }
 
@@ -194,45 +197,24 @@ export const DEFAULT_AUDIO_CONFIG: AudioConfig = {
 };
 
 // ============================================================================
-// Screen & Layout Types (Mobile-First)
+// Screen & Layout Types
 // ============================================================================
 
 export interface ScreenDimensions {
-    /** 실제 뷰포트 너비 */
-    viewportWidth: number;
-    /** 실제 뷰포트 높이 */
-    viewportHeight: number;
-    /** 캔버스 컨테이너 너비 */
-    canvasWidth: number;
-    /** 캔버스 컨테이너 높이 */
-    canvasHeight: number;
-    /** 현재 디바이스 클래스 */
-    deviceClass: DeviceClass;
-    /** Device Pixel Ratio */
-    dpr: number;
-    /** Safe Area Insets */
-    safeArea: {
-        top: number;
-        bottom: number;
-        left: number;
-        right: number;
-    };
+    width: number;
+    height: number;
+    aspectRatio: number;
+    safeAreaTop: number;
+    safeAreaBottom: number;
+    safeAreaLeft: number;
+    safeAreaRight: number;
 }
 
-/**
- * 보드 설정 (논리 좌표 기반)
- * 모든 좌표는 CANVAS_LOGICAL 기준
- */
 export interface BoardConfig {
-    /** 보드 중심 X (논리 좌표) */
     centerX: number;
-    /** 보드 중심 Y (논리 좌표) */
     centerY: number;
-    /** 열 간격 (논리 픽셀) */
     columnGap: number;
-    /** 행 간격 (논리 픽셀) */
     rowGap: number;
-    /** 사선 오프셋 (논리 픽셀) */
     skewOffset: number;
 }
 
@@ -270,7 +252,6 @@ export interface DebugConfig {
     showLayerBorders: boolean;
     showCoordinates: boolean;
     showHitboxes: boolean;
-    showDeviceInfo: boolean;
 }
 
 export const DEFAULT_DEBUG_CONFIG: DebugConfig = {
@@ -280,7 +261,6 @@ export const DEFAULT_DEBUG_CONFIG: DebugConfig = {
     showLayerBorders: false,
     showCoordinates: false,
     showHitboxes: false,
-    showDeviceInfo: true,
 };
 
 // ============================================================================
@@ -296,8 +276,7 @@ export type GameEventType =
     | 'unit:damage'
     | 'unit:heal'
     | 'unit:death'
-    | 'slot:empty'
-    | 'device:resize';
+    | 'slot:empty';
 
 export interface GameEvent {
     type: GameEventType;

@@ -1,16 +1,11 @@
 /**
- * ExitPresentationSystem - 모바일 우선 퇴장 연출 시스템
- *
- * MOBILE-FIRST ADAPTIVE LAYOUT
- * "태블릿은 다른 UI가 아니라, 더 여유 있는 모바일이다."
- *
- * 모든 좌표는 CANVAS_LOGICAL (360x640) 기준의 논리 좌표
+ * ExitPresentationSystem - 퇴장 연출 시스템
  *
  * "Exit Presentation은 사망 애니메이션이 아니라, 캐릭터 퇴장의 무대다.
  *  전투는 물리로 끝나고, 감정은 연출로 마무리된다."
  *
  * 설계 원칙:
- * 1. 퇴장 != 사망: "전투에서 이탈했다"는 개념 유지
+ * 1. 퇴장 ≠ 사망: "전투에서 이탈했다"는 개념 유지
  * 2. 공통 트리거 + 캐릭터별 오버라이드
  * 3. 레이어 책임 분리:
  *    - Layer 0 (Canvas): 발판 소멸, 추락/이동 물리 연출
@@ -34,9 +29,10 @@ import {
     ExitPresentationState,
     ExitPresentationType,
     ExitReason,
+    Position,
+    TeamType,
     UnitData,
     DEFAULT_EXIT_CONFIG,
-    CANVAS_LOGICAL,
 } from '../types';
 
 /**
@@ -111,7 +107,7 @@ export class ExitPresentationSystem {
         // 메모리얼 컨테이너 생성 (Layer 1)
         this.createMemorialContainer();
 
-        console.log('[ExitPresentationSystem] Initialized (Mobile-First)');
+        console.log('[ExitPresentationSystem] Initialized');
     }
 
     /**
@@ -427,7 +423,7 @@ export class ExitPresentationSystem {
     }
 
     // =========================================================================
-    // 퇴장 연출 렌더링 (각 타입별) - 논리 좌표 기준
+    // 퇴장 연출 렌더링 (각 타입별)
     // =========================================================================
 
     /**
@@ -439,7 +435,7 @@ export class ExitPresentationSystem {
         progress: number
     ): void {
         const { startPosition } = context;
-        const height = CANVAS_LOGICAL.HEIGHT;
+        const { height } = this.layout.getScreenSize();
         const unitSize = this.layout.getUnitSize();
 
         // 가속도 기반 추락
@@ -515,7 +511,7 @@ export class ExitPresentationSystem {
         progress: number
     ): void {
         const { startPosition, team } = context;
-        const width = CANVAS_LOGICAL.WIDTH;
+        const { width } = this.layout.getScreenSize();
         const unitSize = this.layout.getUnitSize();
 
         // 팀에 따라 반대 방향으로 날아감
@@ -557,7 +553,7 @@ export class ExitPresentationSystem {
         progress: number
     ): void {
         const { startPosition } = context;
-        const height = CANVAS_LOGICAL.HEIGHT;
+        const { height } = this.layout.getScreenSize();
         const unitSize = this.layout.getUnitSize();
 
         // 느린 선형 하강
@@ -597,7 +593,7 @@ export class ExitPresentationSystem {
         progress: number
     ): void {
         const { startPosition } = context;
-        const height = CANVAS_LOGICAL.HEIGHT;
+        const { height } = this.layout.getScreenSize();
         const unitSize = this.layout.getUnitSize();
 
         // 튕기면서 퇴장

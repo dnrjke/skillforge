@@ -1,21 +1,22 @@
 {
     "name": "Skillforge Alpha",
     "short_name": "Skillforge",
-    "description": "Keyword-based Auto-Battle RPG",
-    "start_url": "/skillforge.html",
+    "description": "Mobile-first auto-battle RPG inspired by Brave Frontier and Unicorn Overlord",
+    "start_url": "./skillforge.html",
     "display": "standalone",
     "orientation": "portrait",
     "background_color": "#0a0a15",
-    "theme_color": "#0a0a15",
+    "theme_color": "#4488ff",
     "icons": [
         {
-            "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%230a0a15' width='100' height='100'/><text fill='%234488ff' font-size='60' x='50' y='65' text-anchor='middle'>SF</text></svg>",
-            "sizes": "any",
-            "type": "image/svg+xml",
-            "purpose": "any maskable"
+            "src": "icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
         }
-    ],
-    "categories": ["games", "entertainment"],
-    "lang": "ko",
-    "dir": "ltr"
+    ]
 }

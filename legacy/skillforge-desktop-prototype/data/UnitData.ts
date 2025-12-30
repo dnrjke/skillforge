@@ -1,9 +1,6 @@
 /**
  * UnitData - 더미 데이터
  *
- * MOBILE-FIRST ADAPTIVE LAYOUT
- * (유닛 데이터는 레이아웃과 무관하게 동일하게 동작)
- *
  * 테스트용 유닛 데이터 생성
  * Exit Presentation 설정 포함
  */

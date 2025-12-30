@@ -1,11 +1,5 @@
 /**
- * Layout - 모바일 우선 좌표 & 보드 로직
- *
- * MOBILE-FIRST ADAPTIVE LAYOUT
- * "태블릿은 다른 UI가 아니라, 더 여유 있는 모바일이다."
- *
- * 모든 좌표는 CANVAS_LOGICAL (360x640) 기준의 논리 좌표
- * 실제 화면 크기는 LayerManager가 스케일 변환 처리
+ * Layout - 좌표 & 보드 로직
  *
  * 발판 배치 로직:
  * - 아군: 좌하단 영역 점유, 3행 2열 세로형 평행사변형
@@ -14,80 +8,71 @@
  * 배치 순서: 0:우상(선봉) -> 1:좌상 -> 2:중우 -> 3:중좌 -> 4:우하 -> 5:좌하
  */
 
-import {
-    Position,
-    SlotPosition,
-    TeamType,
-    BoardConfig,
-    SlotVisual,
-    CANVAS_LOGICAL,
-} from '../types';
-
-/**
- * 레이아웃 상수 (논리 좌표 기준)
- * CANVAS_LOGICAL: 360x640
- */
-const LAYOUT_CONFIG = {
-    // 슬롯 크기 (논리 픽셀)
-    SLOT_WIDTH: 43,    // 360 * 0.12 ≈ 43
-    SLOT_HEIGHT: 51,   // 640 * 0.08 ≈ 51
-
-    // 아군 보드 설정 (좌하단)
-    ALLY_BOARD: {
-        centerX: 126,      // 360 * 0.35 = 126
-        centerY: 435,      // 640 * 0.68 = 435
-        columnGap: 65,     // 360 * 0.18 ≈ 65
-        rowGap: 64,        // 640 * 0.10 = 64
-        skewOffset: 14,    // 360 * 0.04 ≈ 14
-    },
-
-    // 적군 보드 설정 (우상단)
-    ENEMY_BOARD: {
-        centerX: 234,      // 360 * 0.65 = 234
-        centerY: 205,      // 640 * 0.32 ≈ 205
-        columnGap: 65,     // 360 * 0.18 ≈ 65
-        rowGap: 64,        // 640 * 0.10 = 64
-        skewOffset: 14,    // 360 * 0.04 ≈ 14
-    },
-
-    // 전투 영역 (중앙)
-    COMBAT_ZONE: {
-        x: 36,             // 360 * 0.1 = 36
-        y: 224,            // 640 * 0.35 = 224
-        width: 288,        // 360 * 0.8 = 288
-        height: 192,       // 640 * 0.3 = 192
-    },
-
-    // 유닛 오프셋 (슬롯 위에 배치)
-    UNIT_OFFSET_Y: -15,    // 슬롯 높이 * 0.3 ≈ 15
-} as const;
+import { Position, SlotPosition, TeamType, BoardConfig, SlotVisual } from '../types';
 
 export class Layout {
-    // 보드 설정 (논리 좌표)
-    private allyBoard: BoardConfig;
-    private enemyBoard: BoardConfig;
+    private screenWidth: number = 0;
+    private screenHeight: number = 0;
 
-    // 슬롯 크기 (논리 좌표)
-    private slotWidth: number;
-    private slotHeight: number;
+    // 보드 설정
+    private allyBoard: BoardConfig = {
+        centerX: 0,
+        centerY: 0,
+        columnGap: 0,
+        rowGap: 0,
+        skewOffset: 0,
+    };
+
+    private enemyBoard: BoardConfig = {
+        centerX: 0,
+        centerY: 0,
+        columnGap: 0,
+        rowGap: 0,
+        skewOffset: 0,
+    };
+
+    // 슬롯 크기
+    private slotWidth: number = 0;
+    private slotHeight: number = 0;
 
     // 캐시된 슬롯 위치
     private allySlots: SlotPosition[] = [];
     private enemySlots: SlotPosition[] = [];
 
-    constructor() {
-        // 고정 논리 좌표 기반 초기화
-        this.slotWidth = LAYOUT_CONFIG.SLOT_WIDTH;
-        this.slotHeight = LAYOUT_CONFIG.SLOT_HEIGHT;
+    /**
+     * 레이아웃 초기화
+     */
+    public initialize(screenWidth: number, screenHeight: number): void {
+        this.screenWidth = screenWidth;
+        this.screenHeight = screenHeight;
 
-        this.allyBoard = { ...LAYOUT_CONFIG.ALLY_BOARD };
-        this.enemyBoard = { ...LAYOUT_CONFIG.ENEMY_BOARD };
+        // 슬롯 크기 계산 (화면 비율 기반)
+        this.slotWidth = screenWidth * 0.12;
+        this.slotHeight = screenHeight * 0.08;
+
+        // 아군 보드 설정 (좌하단)
+        this.allyBoard = {
+            centerX: screenWidth * 0.35,
+            centerY: screenHeight * 0.68,
+            columnGap: screenWidth * 0.18,
+            rowGap: screenHeight * 0.10,
+            skewOffset: screenWidth * 0.04,
+        };
+
+        // 적군 보드 설정 (우상단)
+        this.enemyBoard = {
+            centerX: screenWidth * 0.65,
+            centerY: screenHeight * 0.32,
+            columnGap: screenWidth * 0.18,
+            rowGap: screenHeight * 0.10,
+            skewOffset: screenWidth * 0.04,
+        };
 
         // 슬롯 위치 계산
         this.calculateSlotPositions();
 
-        console.log('[Layout] Initialized (Mobile-First, Logical Coordinates)', {
-            canvas: `${CANVAS_LOGICAL.WIDTH}x${CANVAS_LOGICAL.HEIGHT}`,
+        console.log('[Layout] Initialized:', {
+            screen: { width: screenWidth, height: screenHeight },
             slotSize: { width: this.slotWidth, height: this.slotHeight },
         });
     }
@@ -167,7 +152,6 @@ export class Layout {
 
     /**
      * 좌표에서 슬롯 인덱스 찾기 (클릭 감지용)
-     * 입력 좌표는 논리 좌표여야 함 (LayerManager.screenToLogical 사용)
      */
     public getSlotAtPosition(x: number, y: number, team: TeamType): number | null {
         const slots = team === 'ally' ? this.allySlots : this.enemySlots;
@@ -218,55 +202,43 @@ export class Layout {
 
         return {
             x: slot.x,
-            y: slot.y + LAYOUT_CONFIG.UNIT_OFFSET_Y,
+            y: slot.y - this.slotHeight * 0.3, // 슬롯 위에 유닛 배치
         };
     }
 
     /**
-     * 전투 중앙 영역 (Combat Zone) 좌표 (논리 좌표)
+     * 전투 중앙 영역 (Combat Zone) 좌표
      */
     public getCombatZone(): { x: number; y: number; width: number; height: number } {
-        return { ...LAYOUT_CONFIG.COMBAT_ZONE };
+        return {
+            x: this.screenWidth * 0.1,
+            y: this.screenHeight * 0.35,
+            width: this.screenWidth * 0.8,
+            height: this.screenHeight * 0.3,
+        };
     }
 
     /**
-     * 슬롯 크기 조회 (논리 좌표)
+     * 슬롯 크기 조회
      */
     public getSlotSize(): { width: number; height: number } {
         return { width: this.slotWidth, height: this.slotHeight };
     }
 
     /**
-     * 논리 캔버스 크기 조회 (고정값)
+     * 화면 크기 조회
      */
-    public getLogicalSize(): { width: number; height: number } {
-        return {
-            width: CANVAS_LOGICAL.WIDTH,
-            height: CANVAS_LOGICAL.HEIGHT,
-        };
+    public getScreenSize(): { width: number; height: number } {
+        return { width: this.screenWidth, height: this.screenHeight };
     }
 
     /**
-     * 유닛 크기 계산 (논리 좌표)
+     * 유닛 크기 계산
      */
     public getUnitSize(): { width: number; height: number } {
         return {
             width: this.slotWidth * 0.8,
             height: this.slotHeight * 1.5,
         };
-    }
-
-    /**
-     * 화면 하단 좌표 (추락 퇴장용)
-     */
-    public getBottomY(): number {
-        return CANVAS_LOGICAL.HEIGHT + 100;
-    }
-
-    /**
-     * 화면 상단 좌표 (비행 퇴장용)
-     */
-    public getTopY(): number {
-        return -100;
     }
 }

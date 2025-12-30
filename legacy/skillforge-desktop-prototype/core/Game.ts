@@ -1,8 +1,5 @@
 /**
- * Game - 모바일 우선 메인 게임 루프 & 상태 머신
- *
- * MOBILE-FIRST ADAPTIVE LAYOUT
- * "태블릿은 다른 UI가 아니라, 더 여유 있는 모바일이다."
+ * Game - 메인 게임 루프 & 상태 머신
  *
  * Skillforge의 핵심 게임 컨트롤러
  * - 레이어 관리
@@ -55,7 +52,7 @@ export class Game {
     private constructor() {
         this.layerManager = new LayerManager();
         this.timeSystem = new TimeSystem();
-        this.layout = new Layout(); // 논리 좌표 기반으로 자동 초기화
+        this.layout = new Layout();
         this.audioManager = new AudioManager();
         this.renderSystem = new RenderSystem(this.layerManager, this.layout);
         this.exitPresentationSystem = new ExitPresentationSystem(this.layerManager, this.layout);
@@ -76,35 +73,39 @@ export class Game {
      * 게임 초기화
      */
     public async initialize(): Promise<void> {
-        console.log('[Game] Initializing Skillforge Alpha (Mobile-First)...');
+        console.log('[Game] Initializing Skillforge Alpha...');
 
         try {
             // 1. 레이어 매니저 초기화
             this.layerManager.initialize();
 
-            // 2. 렌더 시스템 초기화
+            // 2. 레이아웃 시스템 초기화
+            const dimensions = this.layerManager.dimensions;
+            this.layout.initialize(dimensions.width, dimensions.height);
+
+            // 3. 렌더 시스템 초기화
             this.renderSystem.initialize();
 
-            // 3. 오디오 시스템 초기화
+            // 4. 오디오 시스템 초기화
             await this.audioManager.initialize();
 
-            // 4. 퇴장 연출 시스템 초기화
+            // 5. 퇴장 연출 시스템 초기화
             this.exitPresentationSystem.initialize();
             this.setupExitPresentationCallbacks();
 
-            // 5. 디버그 오버레이 초기화
+            // 6. 디버그 오버레이 초기화
             this.debugOverlay.initialize(this.debugConfig);
 
-            // 6. 더미 데이터 로드
+            // 7. 더미 데이터 로드
             this.loadDummyData();
 
-            // 7. 시간 시스템 콜백 등록
+            // 8. 시간 시스템 콜백 등록
             this.setupTimeCallbacks();
 
-            // 8. 이벤트 리스너 설정
+            // 9. 이벤트 리스너 설정
             this.setupEventListeners();
 
-            // 9. UI 초기화
+            // 10. UI 초기화
             this.initializeUI();
 
             console.log('[Game] Initialization complete!');
@@ -174,6 +175,12 @@ export class Game {
      * 이벤트 리스너 설정
      */
     private setupEventListeners(): void {
+        // 화면 크기 변경 시 레이아웃 재계산
+        window.addEventListener('resize', () => {
+            const dimensions = this.layerManager.dimensions;
+            this.layout.initialize(dimensions.width, dimensions.height);
+        });
+
         // 터치/마우스 이벤트 (Canvas)
         const canvas = this.layerManager.getCanvas();
         canvas.addEventListener('click', this.handleCanvasClick.bind(this));
@@ -196,8 +203,8 @@ export class Game {
         if (angelBust) {
             angelBust.innerHTML = `
                 <div style="
-                    width: 80px;
-                    height: 100px;
+                    width: 120px;
+                    height: 160px;
                     background: linear-gradient(135deg, rgba(100,100,150,0.3), rgba(50,50,80,0.5));
                     border: 2px solid rgba(200,200,255,0.3);
                     border-radius: 8px;
@@ -205,9 +212,9 @@ export class Game {
                     align-items: center;
                     justify-content: center;
                     color: rgba(200,200,255,0.6);
-                    font-size: 10px;
+                    font-size: 12px;
                     text-align: center;
-                ">Angel<br>Bust</div>
+                ">Angel Bust<br>(Layer 1)</div>
             `;
         }
     }
@@ -221,57 +228,54 @@ export class Game {
         container.className = 'interactive';
         container.style.cssText = `
             position: absolute;
-            bottom: 10px;
-            right: 10px;
-            padding: 8px;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px;
             background: rgba(0, 0, 0, 0.7);
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 8px;
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 8px;
             z-index: 1001;
-            max-width: 120px;
         `;
 
         // 전투 시작/정지 버튼
-        const battleBtn = this.createButton('Start', () => {
+        const battleBtn = this.createButton('Start Battle', () => {
             if (this._battleState === 'running') {
                 this.pauseBattle();
-                battleBtn.textContent = 'Resume';
+                battleBtn.textContent = 'Resume Battle';
             } else {
                 this.startBattle();
-                battleBtn.textContent = 'Pause';
+                battleBtn.textContent = 'Pause Battle';
             }
         });
 
         // 속도 조절 버튼
-        const speedBtn = this.createButton('1x', () => {
+        const speedBtn = this.createButton('Speed: 1x', () => {
             const speeds = [1, 1.5, 2, 3];
             const currentIdx = speeds.indexOf(this.timeSystem.gameSpeed);
             const nextIdx = (currentIdx + 1) % speeds.length;
             this.timeSystem.gameSpeed = speeds[nextIdx];
-            speedBtn.textContent = `${speeds[nextIdx]}x`;
+            speedBtn.textContent = `Speed: ${speeds[nextIdx]}x`;
         });
 
         // 디버그 토글 버튼
-        const debugBtn = this.createButton('Debug', () => {
+        const debugBtn = this.createButton('Debug: ON', () => {
             this.debugConfig.showSlotLabels = !this.debugConfig.showSlotLabels;
             this.debugConfig.showUnitLabels = !this.debugConfig.showUnitLabels;
             this.debugOverlay.updateConfig(this.debugConfig);
-            debugBtn.style.background = this.debugConfig.showSlotLabels
-                ? 'rgba(100, 150, 100, 0.8)'
-                : 'rgba(80, 80, 120, 0.8)';
+            debugBtn.textContent = this.debugConfig.showSlotLabels ? 'Debug: ON' : 'Debug: OFF';
         });
 
         // 오디오 테스트 버튼
-        const audioBtn = this.createButton('Audio', async () => {
+        const audioBtn = this.createButton('Test Audio', async () => {
             await this.audioManager.resume();
             this.audioManager.playTestTone('sfx', 440, 0.1);
         });
 
         // 퇴장 연출 테스트 버튼
-        const exitTestBtn = this.createButton('Exit', () => {
+        const exitTestBtn = this.createButton('Test Exit', () => {
             // 랜덤 유닛 퇴장 테스트
             const allUnits = [...this.allyUnits, ...this.enemyUnits];
             const aliveUnits = allUnits.filter(u => u.stats.hp > 0 && !this.exitingUnits.has(u.id));
@@ -297,15 +301,14 @@ export class Game {
         const btn = document.createElement('button');
         btn.textContent = text;
         btn.style.cssText = `
-            padding: 6px 12px;
+            padding: 8px 16px;
             background: rgba(80, 80, 120, 0.8);
             border: 1px solid rgba(150, 150, 200, 0.5);
             border-radius: 4px;
             color: white;
-            font-size: 12px;
+            font-size: 14px;
             cursor: pointer;
             transition: background 0.2s;
-            width: 100%;
         `;
         btn.addEventListener('mouseenter', () => {
             btn.style.background = 'rgba(100, 100, 150, 0.9)';
@@ -319,20 +322,21 @@ export class Game {
 
     /**
      * Canvas 클릭 핸들러
-     * 논리 좌표로 변환하여 처리
      */
     private handleCanvasClick(event: MouseEvent): void {
-        const logicalPos = this.layerManager.screenToLogical(event.clientX, event.clientY);
+        const rect = this.layerManager.getCanvas().getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
 
-        console.log('[Game] Canvas click (logical):', logicalPos);
+        console.log('[Game] Canvas click:', { x, y });
 
         // 슬롯 클릭 감지
-        const clickedSlot = this.layout.getSlotAtPosition(logicalPos.x, logicalPos.y, 'ally');
+        const clickedSlot = this.layout.getSlotAtPosition(x, y, 'ally');
         if (clickedSlot !== null) {
             console.log('[Game] Ally slot clicked:', clickedSlot);
         }
 
-        const clickedEnemySlot = this.layout.getSlotAtPosition(logicalPos.x, logicalPos.y, 'enemy');
+        const clickedEnemySlot = this.layout.getSlotAtPosition(x, y, 'enemy');
         if (clickedEnemySlot !== null) {
             console.log('[Game] Enemy slot clicked:', clickedEnemySlot);
         }
@@ -340,15 +344,16 @@ export class Game {
 
     /**
      * Canvas 터치 핸들러
-     * 논리 좌표로 변환하여 처리
      */
     private handleCanvasTouch(event: TouchEvent): void {
         event.preventDefault();
         if (event.touches.length > 0) {
             const touch = event.touches[0];
-            const logicalPos = this.layerManager.screenToLogical(touch.clientX, touch.clientY);
+            const rect = this.layerManager.getCanvas().getBoundingClientRect();
+            const x = touch.clientX - rect.left;
+            const y = touch.clientY - rect.top;
 
-            console.log('[Game] Canvas touch (logical):', logicalPos);
+            console.log('[Game] Canvas touch:', { x, y });
         }
     }
 
@@ -523,7 +528,7 @@ export class Game {
      */
     public run(): void {
         this.timeSystem.start();
-        console.log('[Game] Game loop started (Mobile-First)');
+        console.log('[Game] Game loop started');
     }
 
     /**
