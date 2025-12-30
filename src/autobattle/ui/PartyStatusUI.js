@@ -124,9 +124,13 @@ export default class PartyStatusUI {
                 z-index: 0;
             }
 
-            .enemy .board-sprite {
+            /* 아군: 우하향(↘️) - 전장과 일치하도록 미러링 */
+            .ally .board-sprite {
                 transform: scaleX(-1);
             }
+
+            /* 적군: 우상향(↗️) - 전장과 일치 (미러링 없음) */
+            /* .enemy .board-sprite는 기본 상태 유지 */
 
             /* ===== 캐릭터 컨테이너 ===== */
             .units-container {
@@ -139,15 +143,18 @@ export default class PartyStatusUI {
                 z-index: 1;
             }
 
-            /* 적군: 보드와 함께 유닛 컨테이너도 미러링 */
-            .enemy .units-container {
+            /* 아군: 보드와 함께 유닛 컨테이너도 미러링 */
+            .ally .units-container {
                 transform: scaleX(-1);
             }
 
-            /* 적군 슬롯: 컨테이너 반전을 상쇄하여 내용물 정상 표시 */
-            .enemy .unit-slot {
+            /* 아군 슬롯: 컨테이너 반전을 상쇄하여 내용물 정상 표시 */
+            .ally .unit-slot {
                 transform: scaleX(-1);
             }
+
+            /* 적군: 미러링 없음 (기본 상태) */
+            /* .enemy .units-container, .enemy .unit-slot는 기본 상태 유지 */
 
             /* ===== 개별 유닛 슬롯 ===== */
             .unit-slot {
@@ -310,10 +317,10 @@ export default class PartyStatusUI {
                 transform: none;
             }
 
-            /* 적군 아랫줄: 좌우 대칭 (왼쪽으로 이동) */
-            .enemy .unit-slot[data-pos="3"] .unit-hp-container,
-            .enemy .unit-slot[data-pos="4"] .unit-hp-container,
-            .enemy .unit-slot[data-pos="5"] .unit-hp-container {
+            /* 아군 아랫줄: 좌우 대칭 (미러링 상쇄) */
+            .ally .unit-slot[data-pos="3"] .unit-hp-container,
+            .ally .unit-slot[data-pos="4"] .unit-hp-container,
+            .ally .unit-slot[data-pos="5"] .unit-hp-container {
                 left: auto;
                 right: 44px;
             }
@@ -497,10 +504,10 @@ export default class PartyStatusUI {
                     left: 29px;
                 }
 
-                /* 모바일 적군 아랫줄: 좌우 대칭 */
-                .enemy .unit-slot[data-pos="3"] .unit-hp-container,
-                .enemy .unit-slot[data-pos="4"] .unit-hp-container,
-                .enemy .unit-slot[data-pos="5"] .unit-hp-container {
+                /* 모바일 아군 아랫줄: 좌우 대칭 (미러링 상쇄) */
+                .ally .unit-slot[data-pos="3"] .unit-hp-container,
+                .ally .unit-slot[data-pos="4"] .unit-hp-container,
+                .ally .unit-slot[data-pos="5"] .unit-hp-container {
                     left: auto;
                     right: 29px;
                 }
