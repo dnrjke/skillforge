@@ -299,22 +299,38 @@ export default class PartyStatusUI {
                 transform: translateX(-50%);
             }
 
-            /* 하단 (0, 2, 4): 좌측 (UI 우측이 발판과 겹침) */
-            .unit-slot[data-pos="0"] .unit-hp-container,
-            .unit-slot[data-pos="2"] .unit-hp-container,
+            /* 하단 (0, 2, 4): 좌측 하단 (슬롯별 높이 및 간격 차이) */
+            .unit-slot[data-pos="0"] .unit-hp-container {
+                bottom: 6px;
+                right: 52px;
+                left: auto;
+                transform: none;
+            }
+            .unit-slot[data-pos="2"] .unit-hp-container {
+                bottom: 10px;
+                right: 48px;
+                left: auto;
+                transform: none;
+            }
             .unit-slot[data-pos="4"] .unit-hp-container {
-                top: 70px;
-                right: 30px;
+                bottom: 14px;
+                right: 44px;
                 left: auto;
                 transform: none;
             }
 
-            /* 적군 하단: 좌우 대칭 (미러링 상쇄) */
-            .enemy .unit-slot[data-pos="0"] .unit-hp-container,
-            .enemy .unit-slot[data-pos="2"] .unit-hp-container,
+            /* 적군 하단: 좌우 대칭 (미러링 상쇄, 슬롯별 간격) */
+            .enemy .unit-slot[data-pos="0"] .unit-hp-container {
+                right: auto;
+                left: 52px;
+            }
+            .enemy .unit-slot[data-pos="2"] .unit-hp-container {
+                right: auto;
+                left: 48px;
+            }
             .enemy .unit-slot[data-pos="4"] .unit-hp-container {
                 right: auto;
-                left: 30px;
+                left: 44px;
             }
 
             /* HP바 */
@@ -492,21 +508,35 @@ export default class PartyStatusUI {
                     top: -15px;
                 }
 
-                /* 모바일 하단 (0, 2, 4): 좌측 */
-                .unit-slot[data-pos="0"] .unit-hp-container,
-                .unit-slot[data-pos="2"] .unit-hp-container,
+                /* 모바일 하단 (0, 2, 4): 좌측 하단 (슬롯별 높이 및 간격) */
+                .unit-slot[data-pos="0"] .unit-hp-container {
+                    bottom: 4px;
+                    right: 33px;
+                    left: auto;
+                }
+                .unit-slot[data-pos="2"] .unit-hp-container {
+                    bottom: 6px;
+                    right: 30px;
+                    left: auto;
+                }
                 .unit-slot[data-pos="4"] .unit-hp-container {
-                    top: 50px;
-                    right: 15px;
+                    bottom: 8px;
+                    right: 28px;
                     left: auto;
                 }
 
-                /* 모바일 적군 하단: 좌우 대칭 */
-                .enemy .unit-slot[data-pos="0"] .unit-hp-container,
-                .enemy .unit-slot[data-pos="2"] .unit-hp-container,
+                /* 모바일 적군 하단: 좌우 대칭 (슬롯별 간격) */
+                .enemy .unit-slot[data-pos="0"] .unit-hp-container {
+                    right: auto;
+                    left: 33px;
+                }
+                .enemy .unit-slot[data-pos="2"] .unit-hp-container {
+                    right: auto;
+                    left: 30px;
+                }
                 .enemy .unit-slot[data-pos="4"] .unit-hp-container {
                     right: auto;
-                    left: 20px;
+                    left: 28px;
                 }
 
                 .mini-hp-bar { width: 34px; height: 3px; }
