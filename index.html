@@ -3,29 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta http-equiv="refresh" content="0; url=src/skillforge/skillforge.html">
+    <title>Skillforge - Redirecting...</title>
+    <style>
+        body {
+            margin: 0;
+            background: #0a0a15;
+            color: #fff;
+            font-family: sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <p>Redirecting to Skillforge Alpha...</p>
+    <script>
+        // Fallback redirect if meta refresh doesn't work
+        window.location.href = 'src/skillforge/skillforge.html';
+    </script>
+</body>
+</html>
+
+<!--
+================================================================================
+LEGACY CODE - PRESERVED FOR REFERENCE
+================================================================================
+The original index.html and main.js loaded the Phaser-based autobattle/platformer
+system. This has been replaced by the new Skillforge Alpha architecture.
+
+Original content:
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
     <title>SkillForge - 키워드 조합형 RPG</title>
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;700&family=Almendra:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body {
-            /* 모바일 바운싱(Overscroll) 방지 */
             position: fixed;
             width: 100%;
             height: 100%;
             overflow: hidden;
             overscroll-behavior: none;
             -webkit-overflow-scrolling: touch;
-            /* iOS 사파리 주소창 숨김을 위한 트릭 */
             min-height: 100.1vh;
         }
         body {
@@ -33,9 +63,7 @@
             justify-content: center;
             align-items: center;
             background-color: #1a1a2e;
-            /* iOS Safari 텍스트 크기 자동 조정 방지 */
             -webkit-text-size-adjust: 100%;
-            /* 터치 하이라이트 제거 */
             -webkit-tap-highlight-color: transparent;
         }
         #game-container {
@@ -46,7 +74,6 @@
             aspect-ratio: 16 / 9;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
         }
-        /* HTML UI 래퍼 - 캔버스와 동일한 영역에 오버레이 */
         #ui-overlay {
             position: absolute;
             top: 0;
@@ -56,9 +83,7 @@
             pointer-events: none;
             z-index: 1000;
         }
-        #ui-overlay > * {
-            pointer-events: auto;
-        }
+        #ui-overlay > * { pointer-events: auto; }
     </style>
 </head>
 <body>
@@ -68,3 +93,5 @@
     <script type="module" src="/src/main.js"></script>
 </body>
 </html>
+================================================================================
+-->

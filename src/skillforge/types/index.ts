@@ -56,7 +56,102 @@ export interface UnitData {
     team: TeamType;
     spriteKey?: string;
     color?: string;
+    exitPresentation?: ExitPresentationConfig;
 }
+
+// ============================================================================
+// Exit Presentation Types
+// "Exit Presentation은 사망 애니메이션이 아니라, 캐릭터 퇴장의 무대다.
+//  전투는 물리로 끝나고, 감정은 연출로 마무리된다."
+// ============================================================================
+
+/**
+ * 퇴장 사유 (Exit Reason)
+ * - HP_ZERO: 체력 0으로 인한 전투 이탈
+ * - FORCED_RETREAT: 강제 후퇴 (스킬 효과 등)
+ * - SCRIPTED: 스크립트 연출에 의한 퇴장
+ */
+export type ExitReason = 'HP_ZERO' | 'FORCED_RETREAT' | 'SCRIPTED';
+
+/**
+ * 퇴장 연출 타입 (Exit Presentation Type)
+ * - FALL: 발판 소멸 후 추락 (기본)
+ * - FLOAT: 부유하며 사라짐 (마법사 등)
+ * - FLY_AWAY: 날아서 퇴장 (비행 유닛)
+ * - SLOW_DESCENT: 느린 하강 (우아한 퇴장)
+ * - COMEDIC_EXIT: 개그 퇴장 (특수 캐릭터)
+ * - FADE_OUT: 서서히 사라짐
+ * - SHATTER: 파편화되며 소멸
+ */
+export type ExitPresentationType =
+    | 'FALL'
+    | 'FLOAT'
+    | 'FLY_AWAY'
+    | 'SLOW_DESCENT'
+    | 'COMEDIC_EXIT'
+    | 'FADE_OUT'
+    | 'SHATTER';
+
+/**
+ * 퇴장 연출 설정 (캐릭터별)
+ */
+export interface ExitPresentationConfig {
+    type: ExitPresentationType;
+    /** 메모리얼 GIF/이미지 경로 (Layer 1에 표시) */
+    memorialAsset?: string;
+    /** 메모리얼 표시 시간 (ms) */
+    memorialDuration?: number;
+    /** 퇴장 연출 속도 배율 (1.0 = 기본) */
+    speedMultiplier?: number;
+    /** 퇴장 시 재생할 사운드 키 */
+    exitSoundKey?: string;
+    /** 퇴장 시 재생할 대사 키 */
+    exitVoiceKey?: string;
+}
+
+/**
+ * 퇴장 요청 컨텍스트 (시스템 내부용)
+ */
+export interface ExitContext {
+    unitId: string;
+    unitName: string;
+    slotIndex: number;
+    team: TeamType;
+    reason: ExitReason;
+    config: ExitPresentationConfig;
+    /** 퇴장 시작 시 유닛 위치 */
+    startPosition: Position;
+}
+
+/**
+ * 퇴장 연출 단계
+ */
+export type ExitPhase =
+    | 'IDLE'           // 대기
+    | 'PLATFORM_DISSOLVE' // 발판 소멸 중
+    | 'WORLD_EXIT'     // Layer 0 물리 연출 중
+    | 'MEMORIAL'       // Layer 1 메모리얼 표시 중
+    | 'CLEANUP'        // 정리 중
+    | 'COMPLETE';      // 완료
+
+/**
+ * 퇴장 연출 상태
+ */
+export interface ExitPresentationState {
+    context: ExitContext;
+    phase: ExitPhase;
+    progress: number;  // 0.0 ~ 1.0
+    startTime: number;
+}
+
+/**
+ * 기본 퇴장 연출 설정
+ */
+export const DEFAULT_EXIT_CONFIG: ExitPresentationConfig = {
+    type: 'FALL',
+    memorialDuration: 2000,
+    speedMultiplier: 1.0,
+};
 
 // ============================================================================
 // Battle System Types
