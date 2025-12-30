@@ -158,12 +158,12 @@ export default class PartyStatusUI {
 
             /*
              * 새 발판 이미지 좌표 (원본 px, 그림자 중심 기준)
-             * [0] 전열1 (우하단) = 998, 484
-             * [1] 전열2 (우상단) = 942, 308
-             * [2] 중열1 (중하단) = 676, 456
-             * [3] 중열2 (중상단) = 634, 282
-             * [4] 후열1 (좌하단) = 344, 430
-             * [5] 후열2 (좌상단) = 300, 258
+             * [0] 전열1 (우하단) = 1003, 507
+             * [1] 전열2 (우상단) = 950, 333
+             * [2] 중열1 (중하단) = 678, 477
+             * [3] 중열2 (중상단) = 640, 303
+             * [4] 후열1 (좌하단) = 345, 461
+             * [5] 후열2 (좌상단) = 307, 272
              *
              * 변환 공식 (원본 이미지 1280x832px → 280x110px):
              *   scale = 110 / 832 = 0.1322
@@ -176,13 +176,13 @@ export default class PartyStatusUI {
              * 하단     [4]후열1    [2]중열1    [0]전열1
              */
             /* 하단 (0, 2, 4) - 앞줄 */
-            .unit-slot[data-pos="0"] { left: 154px; top: 16px; }   /* 전열1 우하단 (998,484) */
-            .unit-slot[data-pos="2"] { left: 112px; top: 12px; }   /* 중열1 중하단 (676,456) */
-            .unit-slot[data-pos="4"] { left: 68px; top: 9px; }     /* 후열1 좌하단 (344,430) */
+            .unit-slot[data-pos="0"] { left: 155px; top: 19px; }   /* 전열1 우하단 (1003, 507) */
+            .unit-slot[data-pos="2"] { left: 112px; top: 15px; }   /* 중열1 중하단 (678, 477) */
+            .unit-slot[data-pos="4"] { left: 68px; top: 13px; }     /* 후열1 좌하단 (345, 461) */
             /* 상단 (1, 3, 5) - 뒷줄 */
-            .unit-slot[data-pos="1"] { left: 147px; top: -7px; }   /* 전열2 우상단 (942,308) */
-            .unit-slot[data-pos="3"] { left: 106px; top: -11px; }  /* 중열2 중상단 (634,282) */
-            .unit-slot[data-pos="5"] { left: 62px; top: -14px; }   /* 후열2 좌상단 (300,258) */
+            .unit-slot[data-pos="1"] { left: 148px; top: -4px; }   /* 전열2 우상단 (950, 333) */
+            .unit-slot[data-pos="3"] { left: 107px; top: -8px; }  /* 중열2 중상단 (640, 303) */
+            .unit-slot[data-pos="5"] { left: 63px; top: -12px; }   /* 후열2 좌상단 (307, 272) */
 
             /* z-index: 하단(앞) > 상단(뒤) */
             .unit-slot[data-pos="0"] { z-index: 6; }  /* 전열1 하단 - 가장 앞 */
@@ -195,8 +195,8 @@ export default class PartyStatusUI {
             /* ===== 캐릭터 그림자 (발판 위, 앞쪽) ===== */
             .unit-shadow {
                 position: absolute;
-                bottom: 20px;
-                left: 50%;
+                bottom: 18px;
+                left: 31px;
                 transform: translateX(-50%);
                 width: 30px;
                 height: 8px;
@@ -292,28 +292,28 @@ export default class PartyStatusUI {
             /* 상단 (1, 3, 5): 머리 위 (슬롯별 높이 차이) */
             .unit-slot[data-pos="1"] .unit-hp-container {
                 flex-direction: column-reverse;
-                top: -20px;
-                left: 50%;
+                top: -32px;
+                left: 39px;
                 transform: translateX(-50%);
             }
             .unit-slot[data-pos="3"] .unit-hp-container {
                 flex-direction: column-reverse;
-                top: -22px;
-                left: 50%;
+                top: -32px;
+                left: 26px;
                 transform: translateX(-50%);
             }
             .unit-slot[data-pos="5"] .unit-hp-container {
                 flex-direction: column-reverse;
-                top: -24px;
-                left: 50%;
+                top: -32px;
+                left: 13px;
                 transform: translateX(-50%);
             }
 
             /* 하단 (0, 2, 4): 슬롯별 높이 및 간격 차이 */
             .unit-slot[data-pos="0"] .unit-hp-container {
                 bottom: -6px;
-                right: auto;
-                left: 18px;
+                right: -8px;
+                left: auto;
                 transform: none;
             }
             .unit-slot[data-pos="2"] .unit-hp-container {
@@ -324,7 +324,7 @@ export default class PartyStatusUI {
             }
             .unit-slot[data-pos="4"] .unit-hp-container {
                 bottom: -2px;
-                right: 13px;
+                right: 18px;
                 left: auto;
                 transform: none;
             }
@@ -610,7 +610,7 @@ export default class PartyStatusUI {
             debugLabel.textContent = `[${unitIndex}] p${gridIndex}`;
             debugLabel.style.cssText = `
                 position: absolute;
-                top: -25px;
+                top: -250px;
                 left: 50%;
                 transform: translateX(-50%);
                 font-size: 14px;
