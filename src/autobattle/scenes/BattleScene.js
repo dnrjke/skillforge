@@ -34,9 +34,8 @@ const FORMATION = {
     ]
 };
 
-// 디버깅용: 6개 슬롯 모두 표시
 // FORMATION 인덱스: 0-1=후열, 2-3=중열, 4-5=전열
-const ACTIVE_SLOTS = [0, 1, 2, 3, 4, 5]; // 모든 슬롯 (디버깅)
+const ACTIVE_SLOTS = [0, 1, 2, 3, 4, 5];
 
 export default class BattleScene extends Phaser.Scene {
     constructor() {
@@ -108,8 +107,6 @@ export default class BattleScene extends Phaser.Scene {
         // 카메라 줌/이동 영향을 받는 모든 객체를 포함
         this.worldContainer = this.add.container(0, 0);
         this.worldContainer.setDepth(0);
-
-        console.log('[Container Debug] worldContainer created');
     }
 
     setupCameras() {
@@ -117,9 +114,6 @@ export default class BattleScene extends Phaser.Scene {
         // DOM 요소들(LogWindow, BattleControlUI)은 이미 setScrollFactor(0)로 카메라 독립
         this.mainCamera = this.cameras.main;
         this.mainCamera.setZoom(1.0);
-
-        console.log('[Camera Debug] Main Camera zoom:', this.mainCamera.zoom);
-        console.log('[Camera Debug] Main Camera bounds:', this.mainCamera.getBounds());
     }
 
     setupBackground() {
@@ -129,26 +123,20 @@ export default class BattleScene extends Phaser.Scene {
 
         // 배경을 월드 컨테이너에 추가
         this.worldContainer.add(bg);
-
-        // 디버그 로그: worldContainer 가시성 확인
-        console.log('[Visibility Debug] worldContainer alpha:', this.worldContainer.alpha);
-        console.log('[Visibility Debug] worldContainer visible:', this.worldContainer.visible);
-        console.log('[Visibility Debug] worldContainer length:', this.worldContainer.length);
-        console.log('[Visibility Debug] background added to worldContainer:', bg);
     }
 
     setupCharacters() {
-        // 아군 배치 (3명)
+        // 아군 배치 (6명)
         ACTIVE_SLOTS.forEach((slotIndex, index) => {
             const slot = FORMATION.ALLY[slotIndex];
-            const ally = this.createCharacter(slot.x, slot.y, false, `아군${index + 1}`, slot.row, index);
+            const ally = this.createCharacter(slot.x, slot.y, false, `아군${index + 1}`, slot.row);
             this.allies.push(ally);
         });
 
-        // 적군 배치 (3명)
+        // 적군 배치 (6명)
         ACTIVE_SLOTS.forEach((slotIndex, index) => {
             const slot = FORMATION.ENEMY[slotIndex];
-            const enemy = this.createCharacter(slot.x, slot.y, true, `적군${index + 1}`, slot.row, index);
+            const enemy = this.createCharacter(slot.x, slot.y, true, `적군${index + 1}`, slot.row);
             this.enemies.push(enemy);
         });
 
@@ -156,22 +144,11 @@ export default class BattleScene extends Phaser.Scene {
         this.sortCharactersByDepth();
     }
 
-    createCharacter(x, y, isEnemy, name, row, debugIndex) {
+    createCharacter(x, y, isEnemy, name, row) {
         const character = this.add.sprite(x, y, 'knight');
 
         // 스케일 조정 (2배 확대: 3 -> 6)
         character.setScale(6);
-
-        // 디버깅용 인덱스 표시
-        const debugLabel = this.add.text(x, y - 100, `[${debugIndex}]`, {
-            fontSize: '24px',
-            color: isEnemy ? '#ff6666' : '#66ff66',
-            fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 4
-        }).setOrigin(0.5).setDepth(3000);
-        this.worldContainer.add(debugLabel);
-        character.debugLabel = debugLabel;
 
         // 캐릭터 메타 정보
         character.data = {
