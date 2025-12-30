@@ -1,110 +1,264 @@
-# CLAUDE.md – 매핑 및 좌표 처리 가이드라인
+# CLAUDE.md – Skillforge Alpha 아키텍처 가이드라인
 
-## 1. 기본 원칙
+> **버전**: 2.0 (New Architecture)
+> **프로젝트**: Skillforge - 키워드 조합 기반 자동전투 RPG
+> **영감**: 브레이브 프론티어(시각적 쾌감) + 유니콘 오버로드(전략적 논리)
 
-- **이전 코드 우선 원칙**
-  변환이나 리팩토링 과정에서 직관과 어긋나는 매핑이 발생할 경우, 반드시 이전 브랜치(JS)의 매핑 테이블을 그대로 유지한다.
-  새로 해석하거나 임의로 오름차순 정렬하지 않는다.
+---
 
-- **사용자 알림 의무**
-  기존 코드와 새 매핑 규칙이 충돌할 경우, 즉시 사용자에게 알리고 선택지를 요청한다.
+## 1. 개발 원칙
 
-- **오름차순 강박 금지**
-  직관과 어긋나면 이전 코드 유지. 충돌 시 반드시 사용자에게 알림.
+### 1.1 기본 원칙
+- **이전 코드 우선 원칙**: 매핑 충돌 시 기존 코드의 매핑 테이블 유지
+- **사용자 알림 의무**: 충돌 발생 시 즉시 알림 및 선택 요청
+- **오름차순 강박 금지**: 직관과 어긋나면 이전 코드 유지
 
-## 2. UI와 전장의 시각적 각도 - V자 대칭 구조
+### 1.2 코드 품질
+- **TypeScript 100% Strict 모드**: 모든 코드는 타입 안전
+- **단일 진실 공급원(SSOT)**: 매핑과 설정은 한 곳에서만 정의
+- **관심사 분리**: 로직, 렌더링, UI를 명확히 분리
 
-### 현재 구현 (V자 대칭)
-- **아군 UI**: 우하향(↘️) - 전장 아군 배치와 일치
-- **적군 UI**: 우상향(↗️) - 전장 적군 배치와 일치
-- **결과**: 양쪽 UI가 전장을 향해 입을 벌린 'V자 대칭' 구조
+---
 
-### 구현 방식
-- **아군**: `scaleX(-1)` 미러링 적용 (board-sprite, units-container, unit-slot)
-- **적군**: 미러링 없음 (기본 상태)
-
-### 처리 원칙
-1. Y축 좌표의 **'증감 방향'**만 일치시킨다. (Y값이 커지면 전장에서도 아래, UI에서도 아래)
-2. '상단(Top)' 키워드는 전장과 UI 모두에서 상대적으로 **작은 Y값/Top값**을 의미한다.
-3. 시각적으로 UI는 위로 가고 유닛은 아래로 가더라도, 로직상으로는 **[작은 Y = 상단 / 큰 Y = 하단]** 공식을 절대 고수한다.
-
-### 픽셀 대응표
-| 위치 | 전장 좌표 (Y값) | UI 좌표 (Top값) | 인지적 위치 |
-|------|----------------|-----------------|-------------|
-| 상단(Top) | 200~240 (작음) | -20px ~ -5px (작음) | 안쪽 레인 |
-| 하단(Bottom) | 380~420 (큼) | 10px ~ 32px (큼) | 바깥쪽 레인 |
-
-## 3. 시각적 순서 012345 배치
-
-전→중→후 순서로 화면을 읽을 때 인덱스 0,1,2,3,4,5가 순서대로 보이도록 배치.
-
-### 전장 그리드 레이아웃 (BattleScene.js)
+## 2. 프로젝트 구조
 
 ```
-        시각 front   시각 mid    시각 back
-        ──────────   ─────────   ──────────
-상단     [0]후열1     [2]중열1     [4]전열1
-         (x:400)      (x:260)      (x:120)
-
-하단     [1]후열2     [3]중열2     [5]전열2
-         (x:430)      (x:290)      (x:150)
+/src/skillforge/          <-- 새 프로젝트 루트 (기존 코드와 완전 분리)
+├── core/
+│   ├── Game.ts           // 메인 루프 & 상태 머신
+│   ├── LayerManager.ts   // DOM & Canvas 레이어 컨트롤러
+│   └── TimeSystem.ts     // CT(행동바) & Tick 로직
+├── display/
+│   ├── RenderSystem.ts   // Canvas 드로잉
+│   ├── Layout.ts         // 좌표 & 보드 로직
+│   └── ui/               // HTML UI 컴포넌트
+├── data/
+│   └── UnitData.ts       // 더미 데이터
+├── audio/
+│   └── AudioManager.ts   // Web Audio API & 동시발음 제한
+├── debug/
+│   └── DebugOverlay.ts   // 디버그 오버레이
+├── assets/               // 리소스 (추후 추가)
+├── types/
+│   └── index.ts          // 타입 정의
+└── index.ts              // 엔트리 포인트
 ```
 
-### FORMATION 인덱스 - 좌표 스왑 적용
+---
 
-| 인덱스 | 의미 | 시각 위치 | X좌표 | Y좌표 |
-|--------|------|-----------|-------|-------|
-| 0 | 후열1 | front-top | 400 | 240 |
-| 1 | 후열2 | front-bottom | 430 | 420 |
-| 2 | 중열1 | mid-top | 260 | 220 |
-| 3 | 중열2 | mid-bottom | 290 | 400 |
-| 4 | 전열1 | back-top | 120 | 200 |
-| 5 | 전열2 | back-bottom | 150 | 380 |
+## 3. 레이어 아키텍처 (3단 레이어)
 
-### 파티 현황판 슬롯 (PartyStatusUI.js)
+### 3.1 레이어 구조
+```
+┌─────────────────────────────────────────┐
+│  Layer 2 (z-index: 1000) - SYSTEM       │  ← 설정, 모달, 시스템 UI
+├─────────────────────────────────────────┤
+│  Layer 1 (z-index: 500) - DISPLAY       │  ← 천사상, 스킬 팝업, 오버로드 게이지
+├─────────────────────────────────────────┤
+│  Layer 0 (z-index: 1) - WORLD           │  ← Canvas 전투 전장
+└─────────────────────────────────────────┘
+```
 
-**V자 대칭 (아군 scaleX(-1)) 후 CSS 시각 순서**: pos0 → pos3 → pos1 → pos4 → pos2 → pos5
+### 3.2 레이어 역할
+| 레이어 | Z-Index | 역할 | 인터랙션 |
+|--------|---------|------|----------|
+| Layer 2 (System) | 1000 | 설정, 일시정지, 상점, 모달 | pointer-events: auto |
+| Layer 1 (Display) | 500 | 천사상, 스킬 이름, 대미지 텍스트 | pointer-events: none (기본) |
+| Layer 0 (World) | 1 | Canvas 전투 전장, 유닛, 이펙트 | Canvas 이벤트 |
 
-**UNIT_TO_PARTY_SLOT 매핑**: [0, 3, 1, 4, 2, 5]
-- 유닛0 → pos0 (시각1)
-- 유닛1 → pos3 (시각2)
-- 유닛2 → pos1 (시각3)
-- 유닛3 → pos4 (시각4)
-- 유닛4 → pos2 (시각5)
-- 유닛5 → pos5 (시각6)
+### 3.3 레이어 구현 패턴
+```html
+<div id="app-container">
+    <canvas id="world-layer"></canvas>           <!-- Layer 0 -->
+    <div id="display-layer">...</div>            <!-- Layer 1 -->
+    <div id="system-layer">...</div>             <!-- Layer 2 -->
+</div>
+```
 
-## 4. 6슬롯 매핑 테이블
+---
 
-**ACTIVE_SLOTS = [0, 1, 2, 3, 4, 5]** (디버깅용 6슬롯)
+## 4. 화면 설계 (Portrait 9:16)
 
-| 유닛 인덱스 | 의미 | 전장 시각 위치 | 파티 pos | 파티 시각 순서 |
-|-------------|------|----------------|----------|----------------|
-| [0] | 후열1 | front-top | 0 | 시각1 |
-| [1] | 후열2 | front-bottom | 3 | 시각2 |
-| [2] | 중열1 | mid-top | 1 | 시각3 |
-| [3] | 중열2 | mid-bottom | 4 | 시각4 |
-| [4] | 전열1 | back-top | 2 | 시각5 |
-| [5] | 전열2 | back-bottom | 5 | 시각6 |
+### 4.1 뷰포트 설정
+- **비율**: 9:16 세로형 고정
+- **높이**: `100dvh` (Dynamic Viewport Height - Safari 주소창 대응)
+- **Safe Area**: `env(safe-area-inset-*)` (노치/Dynamic Island 대응)
 
-**시각적 순서 012345가 핵심: 화면에서 전→중→후 순서로 읽을 때 0,1,2,3,4,5**
+### 4.2 Canvas 영역 배치 (Layer 0)
+```
+┌────────────────────────┐
+│  천사상 공간 (Layer 1)  │  ← 좌상단, Canvas와 겹치지 않는 영역 확보
+├────────────────────────┤
+│                        │
+│   적군 보드 (우상단)    │  ← 3행 2열 평행사변형
+│   ↘                    │
+│                        │
+├────────────────────────┤
+│                        │
+│   전투 영역 (중앙)      │  ← 투사체, 빔, 이펙트
+│                        │
+├────────────────────────┤
+│                        │
+│   ↙ 아군 보드 (좌하단)  │  ← 3행 2열 평행사변형
+│                        │
+├────────────────────────┤
+│  테스트 인터페이스      │  ← 우하단, 전투 시작 등 기능 테스트
+└────────────────────────┘
+```
 
-## 5. 관련 파일
+### 4.3 아군 발판 레이아웃 (6슬롯)
+```
+세로로 긴 3행 2열 (3 Rows x 2 Columns)
+배치 순서: 0→1→2→3→4→5
 
-- `src/autobattle/constants/FormationMapping.ts` - 매핑 상수 및 타입 정의 (단일 진실 공급원)
-- `src/autobattle/scenes/BattleScene.js` - 전장 캐릭터 배치
-- `src/autobattle/ui/PartyStatusUI.js` - 파티 현황판 UI
+      우측(전진열)    좌측(후방열)
+      ─────────────   ─────────────
+Row0   [0] 선봉       [1]
+       (적진과 가장 가까움)
 
-## 6. 검증 절차
+Row1   [2]            [3]
 
-- `FormationMapping.ts`의 `validateMapping()` 함수로 일관성 검증
-- 디버그 라벨 `[인덱스] pN` 형식으로 시각 확인
+Row2   [4]            [5]
+       (화면 좌하단 구석)
+```
 
-## 7. 요약
+| 슬롯 | 위치 | 설명 |
+|------|------|------|
+| 0 | 우상단 | 선봉, 적진과 가장 가까움 |
+| 1 | 좌상단 | 선봉 좌측 |
+| 2 | 중간우측 | 중렬 우측 |
+| 3 | 중간좌측 | 중렬 좌측 |
+| 4 | 우하단 | 후열 우측 |
+| 5 | 좌하단 | 후열, 화면 구석 |
 
-- 오름차순 강박 금지
-- 직관과 어긋나면 이전 코드 유지
-- 충돌 시 반드시 사용자에게 알림
-- 매핑 테이블을 주석으로 박아두고 모든 로직에서 준수
-- `FormationMapping.ts`를 단일 진실 공급원(Single Source of Truth)으로 사용
-- **시각적 순서 012345**: 화면에서 전→중→후로 읽을 때 인덱스 순서
-- **V자 대칭**: 아군 UI(↘️)와 적군 UI(↗️)가 전장을 향해 V자 구조
+---
+
+## 5. 모바일 & PWA 대응
+
+### 5.1 필수 CSS 설정
+```css
+:root {
+    --sat: env(safe-area-inset-top);
+    --sab: env(safe-area-inset-bottom);
+}
+
+html, body {
+    margin: 0; padding: 0;
+    width: 100%; height: 100%;
+    overflow: hidden;
+    touch-action: none;           /* 브라우저 제스처 차단 */
+    overscroll-behavior: none;    /* 풀다운 새로고침 차단 */
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+#app-container {
+    height: 100dvh;               /* Dynamic Viewport Height */
+}
+```
+
+### 5.2 PWA 설정
+```json
+// manifest.json
+{
+    "display": "standalone",      /* 주소창 제거 */
+    "orientation": "portrait"
+}
+```
+
+### 5.3 메타 태그
+```html
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+```
+
+---
+
+## 6. 오디오 아키텍처
+
+### 6.1 채널 분리
+| 채널 | 용도 | 특수 처리 |
+|------|------|----------|
+| BGM | 배경 음악 | 오버로드 시 피치/필터 변조 |
+| SFX | 타격음, 스킬 발동음 | 동시 발음 제한 |
+| System | UI 클릭, 메뉴 오픈 | 항상 최우선 |
+| Voice/Special | 천사상 울림, 기합 소리 | 우선순위 높음 |
+
+### 6.2 동시 발음 제어 (Voice Limiting)
+- **문제**: 0.2초 동시 발동 시 다수 유닛이 동시에 소리 내면 스피커 과부하
+- **해결**: 동일 사운드가 0.05초 이내 중복 시 볼륨 조절 또는 개수 제한
+- **구현**: AudioSnapshot 로직으로 최근 재생 사운드 추적
+
+### 6.3 Web Audio API 구조
+```typescript
+AudioContext
+├── BGMGainNode ──→ MasterGain ──→ destination
+├── SFXGainNode ──→ MasterGain
+├── SystemGainNode ──→ MasterGain
+└── VoiceGainNode ──→ MasterGain
+```
+
+---
+
+## 7. 전투 시스템
+
+### 7.1 행동바(CT) 기반 순차 실행
+- 각 유닛은 Speed에 따라 CT(Charge Time) 충전
+- CT 100% 도달 시 행동 실행
+- 0.2초 내 동시 발동 유닛은 그룹화하여 연출
+
+### 7.2 스킬 타입 구분
+| 타입 | 설명 | 판정 |
+|------|------|------|
+| Stationary | 제자리 발사 | 스냅샷 좌표 판정 |
+| Tracking | 추적 스킬 | 실시간 좌표 판정 |
+
+### 7.3 발판 시스템
+- **발판**: 반딧불이 응집된 에너지체
+- **추락**: HP 0 시 발판 소멸 → 유닛 Canvas 아래로 추락 (물리 연출)
+- **컷인**: Layer 1에서 코믹/메모리얼 일러스트 노출
+
+---
+
+## 8. 디버그 시스템
+
+### 8.1 디버그 오버레이 기능
+- 슬롯 번호 표시 (유닛 인덱스 + 발판 번호)
+- FPS 카운터
+- 레이어 경계선 표시
+- 좌표 정보 표시
+
+### 8.2 디버그 라벨 형식
+```
+[인덱스] Slot N
+예: [0] Slot 0
+```
+
+---
+
+## 9. 관련 파일 참조
+
+### 9.1 새 프로젝트 파일
+- `src/skillforge/core/Game.ts` - 메인 게임 루프
+- `src/skillforge/core/LayerManager.ts` - 레이어 관리
+- `src/skillforge/display/Layout.ts` - 좌표 계산
+- `src/skillforge/audio/AudioManager.ts` - 오디오 시스템
+
+### 9.2 레거시 참조 (읽기 전용)
+- `legacy/CLAUDE_LEGACY.md` - 이전 매핑 가이드라인
+- `src/autobattle/constants/FormationMapping.ts` - 매핑 참조
+- `src/autobattle/entities/Unit.ts` - 유닛 로직 참조
+
+---
+
+## 10. 요약 체크리스트
+
+- [ ] 오름차순 강박 금지
+- [ ] 직관과 어긋나면 이전 코드 유지
+- [ ] 충돌 시 반드시 사용자에게 알림
+- [ ] 3단 레이어 구조 준수 (System > Display > World)
+- [ ] 9:16 Portrait, 100dvh, Safe Area 적용
+- [ ] Web Audio API 채널 분리 및 동시발음 제한
+- [ ] 디버그 오버레이로 슬롯/유닛 번호 확인
+- [ ] FormationMapping을 단일 진실 공급원으로 사용
