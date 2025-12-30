@@ -93,19 +93,19 @@ export const ACTIVE_FORMATION_SLOTS: readonly FormationIndex[] = [0, 1, 2, 3, 4,
  * 시각적 순서 012345 달성을 위한 매핑
  * 원본 CSS 위치에서 531420 → 012345 변환
  *
- * 실제 파티 현황판 CSS 시각 순서:
- *   시각1=pos2, 시각2=pos5, 시각3=pos1,
- *   시각4=pos4, 시각5=pos0, 시각6=pos3
+ * V자 대칭 (아군 scaleX(-1) 미러링) 후 CSS 시각 순서:
+ *   시각1=pos0, 시각2=pos3, 시각3=pos1,
+ *   시각4=pos4, 시각5=pos2, 시각6=pos5
  *
  * 목표: 유닛 0→시각1, 1→시각2, 2→시각3, 3→시각4, 4→시각5, 5→시각6
  */
 export const FORMATION_TO_PARTY_SLOT: Record<FormationIndex, PartySlotPosition> = {
-    0: 2,  // 유닛0 → pos2 (시각1)
-    1: 5,  // 유닛1 → pos5 (시각2)
+    0: 0,  // 유닛0 → pos0 (시각1)
+    1: 3,  // 유닛1 → pos3 (시각2)
     2: 1,  // 유닛2 → pos1 (시각3)
     3: 4,  // 유닛3 → pos4 (시각4)
-    4: 0,  // 유닛4 → pos0 (시각5)
-    5: 3,  // 유닛5 → pos3 (시각6)
+    4: 2,  // 유닛4 → pos2 (시각5)
+    5: 5,  // 유닛5 → pos5 (시각6)
 };
 
 /**
@@ -137,12 +137,12 @@ export function getFormationSlot(index: FormationIndex, isEnemy: boolean = false
  * 매핑 일관성 검증 (개발/디버그용)
  *
  * 시각적 순서 012345 검증:
- * 실제 CSS 시각 순서: pos2→pos5→pos1→pos4→pos0→pos3
+ * V자 대칭 (아군 scaleX(-1)) 후 CSS 시각 순서: pos0→pos3→pos1→pos4→pos2→pos5
  * 유닛 0-5가 위 순서대로 매핑되어야 함
  */
 export function validateMapping(): boolean {
-    // 실제 CSS의 시각적 순서 (pos값)
-    const visualOrder: PartySlotPosition[] = [2, 5, 1, 4, 0, 3];
+    // V자 대칭 미러링 후 CSS의 시각적 순서 (pos값)
+    const visualOrder: PartySlotPosition[] = [0, 3, 1, 4, 2, 5];
 
     const errors: string[] = [];
 
