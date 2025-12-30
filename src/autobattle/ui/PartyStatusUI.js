@@ -157,42 +157,35 @@ export default class PartyStatusUI {
             }
 
             /*
-             * 타일 좌표 (사용자 제공, 원본 이미지 1280x832px 기준)
-             * ==========================================
-             * Tile 0: (262, 440)   Tile 1: (572, 328)   Tile 2: (900, 208)
-             * Tile 3: (376, 608)   Tile 4: (712, 474)   Tile 5: (1034, 352)
+             * 새 발판 이미지 좌표 (원본 px, 그림자 중심 기준)
+             * [0] 전열1 (우하단) = 998, 484
+             * [1] 전열2 (우상단) = 942, 308
+             * [2] 중열1 (중하단) = 676, 456
+             * [3] 중열2 (중상단) = 634, 282
+             * [4] 후열1 (좌하단) = 344, 480
+             * [5] 후열2 (좌상단) = 300, 258
              *
-             * 보정: X축 -20px (원본 기준) 적용
-             * 보정된 좌표: (242, 440), (552, 328), (880, 208), (356, 608), (692, 474), (1014, 352)
-             *
-             * 변환 공식:
-             *   scale = 110 / 832 = 0.1322
-             *   offsetX = (280 - 1280 * scale) / 2 = 55px (중앙 정렬)
-             *   CSS_X = (원본_X - 20) * scale + offsetX - 30
-             *   CSS_Y = 원본_Y * scale - 48
+             * 레이아웃:
+             *         좌(후열)    중(중열)    우(전열)
+             * 상단     [5]후열2    [3]중열2    [1]전열2
+             * 하단     [4]후열1    [2]중열1    [0]전열1
              */
+            /* 하단 (0, 2, 4) - 앞줄 */
+            .unit-slot[data-pos="0"] { left: 188px; top: 14px; }   /* 전열1 우하단 */
+            .unit-slot[data-pos="2"] { left: 118px; top: 10px; }   /* 중열1 중하단 */
+            .unit-slot[data-pos="4"] { left: 45px; top: 13px; }    /* 후열1 좌하단 */
+            /* 상단 (1, 3, 5) - 뒷줄 */
+            .unit-slot[data-pos="1"] { left: 176px; top: -9px; }   /* 전열2 우상단 */
+            .unit-slot[data-pos="3"] { left: 109px; top: -13px; }  /* 중열2 중상단 */
+            .unit-slot[data-pos="5"] { left: 36px; top: -16px; }   /* 후열2 좌상단 */
 
-            /*
-             * 슬롯 위치 (원본 CSS - 102a704 기준)
-             * 뒷줄 (0, 1, 2) / 앞줄 (3, 4, 5)
-             * UNIT_TO_PARTY_SLOT 매핑으로 시각적 순서 012345 달성
-             */
-            /* 뒷줄 (0, 1, 2) */
-            .unit-slot[data-pos="0"] { left: 57px; top: 10px; }
-            .unit-slot[data-pos="1"] { left: 98px; top: -5px; }
-            .unit-slot[data-pos="2"] { left: 141px; top: -20px; }
-            /* 앞줄 (3, 4, 5) */
-            .unit-slot[data-pos="3"] { left: 72px; top: 32px; }
-            .unit-slot[data-pos="4"] { left: 116px; top: 15px; }
-            .unit-slot[data-pos="5"] { left: 159px; top: -1px; }
-
-            /* z-index: 보드(0) < 뒷줄(1-2) < 앞줄(3-4) */
-            .unit-slot[data-pos="0"] { z-index: 1; }
-            .unit-slot[data-pos="1"] { z-index: 2; }
-            .unit-slot[data-pos="2"] { z-index: 1; }
-            .unit-slot[data-pos="3"] { z-index: 3; }
-            .unit-slot[data-pos="4"] { z-index: 4; }
-            .unit-slot[data-pos="5"] { z-index: 3; }
+            /* z-index: 하단(앞) > 상단(뒤) */
+            .unit-slot[data-pos="0"] { z-index: 6; }  /* 전열1 하단 - 가장 앞 */
+            .unit-slot[data-pos="2"] { z-index: 5; }  /* 중열1 하단 */
+            .unit-slot[data-pos="4"] { z-index: 4; }  /* 후열1 하단 */
+            .unit-slot[data-pos="1"] { z-index: 3; }  /* 전열2 상단 */
+            .unit-slot[data-pos="3"] { z-index: 2; }  /* 중열2 상단 */
+            .unit-slot[data-pos="5"] { z-index: 1; }  /* 후열2 상단 - 가장 뒤 */
 
             /* ===== 캐릭터 그림자 (발판 위, 앞쪽) ===== */
             .unit-shadow {
@@ -291,31 +284,32 @@ export default class PartyStatusUI {
                 z-index: 10;
             }
 
-            /* 윗줄 (0, 1, 2): 머리 위 - 숫자가 바 위에 */
-            .unit-slot[data-pos="0"] .unit-hp-container,
+            /* 상단 (1, 3, 5): 머리 위 */
             .unit-slot[data-pos="1"] .unit-hp-container,
-            .unit-slot[data-pos="2"] .unit-hp-container {
+            .unit-slot[data-pos="3"] .unit-hp-container,
+            .unit-slot[data-pos="5"] .unit-hp-container {
                 flex-direction: column-reverse;
                 top: -22px;
                 left: 50%;
                 transform: translateX(-50%);
             }
 
-            /* 아랫줄 (3, 4, 5): 발 아래, 오른쪽으로 이동 */
-            .unit-slot[data-pos="3"] .unit-hp-container,
-            .unit-slot[data-pos="4"] .unit-hp-container,
-            .unit-slot[data-pos="5"] .unit-hp-container {
-                bottom: 6px;
-                left: 44px;
+            /* 하단 (0, 2, 4): 20px 아래, 좌측 (UI 우측이 발판과 겹침) */
+            .unit-slot[data-pos="0"] .unit-hp-container,
+            .unit-slot[data-pos="2"] .unit-hp-container,
+            .unit-slot[data-pos="4"] .unit-hp-container {
+                top: 90px;  /* 슬롯 하단 + 20px */
+                right: 30px;
+                left: auto;
                 transform: none;
             }
 
-            /* 적군 아랫줄: 좌우 대칭 (미러링 상쇄) */
-            .enemy .unit-slot[data-pos="3"] .unit-hp-container,
-            .enemy .unit-slot[data-pos="4"] .unit-hp-container,
-            .enemy .unit-slot[data-pos="5"] .unit-hp-container {
-                left: auto;
-                right: 44px;
+            /* 적군 하단: 좌우 대칭 (미러링 상쇄) */
+            .enemy .unit-slot[data-pos="0"] .unit-hp-container,
+            .enemy .unit-slot[data-pos="2"] .unit-hp-container,
+            .enemy .unit-slot[data-pos="4"] .unit-hp-container {
+                right: auto;
+                left: 30px;
             }
 
             /* HP바 */
@@ -451,13 +445,15 @@ export default class PartyStatusUI {
                     height: 50px;
                 }
 
-                /* 모바일 타일 좌표 (원본) */
-                .unit-slot[data-pos="0"] { left: 37px; top: 6px; }
-                .unit-slot[data-pos="1"] { left: 63px; top: -3px; }
-                .unit-slot[data-pos="2"] { left: 91px; top: -13px; }
-                .unit-slot[data-pos="3"] { left: 46px; top: 21px; }
-                .unit-slot[data-pos="4"] { left: 75px; top: 10px; }
-                .unit-slot[data-pos="5"] { left: 102px; top: -1px; }
+                /* 모바일 타일 좌표 (새 발판 이미지) */
+                /* 하단 (0, 2, 4) */
+                .unit-slot[data-pos="0"] { left: 119px; top: 6px; }   /* 전열1 우하단 */
+                .unit-slot[data-pos="2"] { left: 74px; top: 3px; }    /* 중열1 중하단 */
+                .unit-slot[data-pos="4"] { left: 27px; top: 5px; }    /* 후열1 좌하단 */
+                /* 상단 (1, 3, 5) */
+                .unit-slot[data-pos="1"] { left: 112px; top: -9px; }  /* 전열2 우상단 */
+                .unit-slot[data-pos="3"] { left: 68px; top: -11px; }  /* 중열2 중상단 */
+                .unit-slot[data-pos="5"] { left: 21px; top: -13px; }  /* 후열2 좌상단 */
 
                 .unit-shadow {
                     bottom: 14px;
@@ -484,25 +480,28 @@ export default class PartyStatusUI {
                     margin-top: -2px;
                 }
 
-                .unit-slot[data-pos="0"] .unit-hp-container,
+                /* 모바일 상단 (1, 3, 5): 머리 위 */
                 .unit-slot[data-pos="1"] .unit-hp-container,
-                .unit-slot[data-pos="2"] .unit-hp-container {
+                .unit-slot[data-pos="3"] .unit-hp-container,
+                .unit-slot[data-pos="5"] .unit-hp-container {
                     top: -15px;
                 }
 
-                .unit-slot[data-pos="3"] .unit-hp-container,
-                .unit-slot[data-pos="4"] .unit-hp-container,
-                .unit-slot[data-pos="5"] .unit-hp-container {
-                    bottom: 4px;
-                    left: 29px;
+                /* 모바일 하단 (0, 2, 4): 아래, 좌측 */
+                .unit-slot[data-pos="0"] .unit-hp-container,
+                .unit-slot[data-pos="2"] .unit-hp-container,
+                .unit-slot[data-pos="4"] .unit-hp-container {
+                    top: 70px;
+                    right: 20px;
+                    left: auto;
                 }
 
-                /* 모바일 적군 아랫줄: 좌우 대칭 (미러링 상쇄) */
-                .enemy .unit-slot[data-pos="3"] .unit-hp-container,
-                .enemy .unit-slot[data-pos="4"] .unit-hp-container,
-                .enemy .unit-slot[data-pos="5"] .unit-hp-container {
-                    left: auto;
-                    right: 29px;
+                /* 모바일 적군 하단: 좌우 대칭 */
+                .enemy .unit-slot[data-pos="0"] .unit-hp-container,
+                .enemy .unit-slot[data-pos="2"] .unit-hp-container,
+                .enemy .unit-slot[data-pos="4"] .unit-hp-container {
+                    right: auto;
+                    left: 20px;
                 }
 
                 .mini-hp-bar { width: 34px; height: 3px; }
@@ -556,9 +555,27 @@ export default class PartyStatusUI {
                 <div class="unit-sprite ${this.isEnemy ? 'enemy-sprite' : ''}"></div>
             `;
 
+            // 디버깅용 인덱스 표시
+            const debugLabel = document.createElement('div');
+            debugLabel.className = 'debug-index';
+            debugLabel.textContent = `[${unitIndex}] p${gridIndex}`;
+            debugLabel.style.cssText = `
+                position: absolute;
+                top: -25px;
+                left: 50%;
+                transform: translateX(-50%);
+                font-size: 14px;
+                font-weight: bold;
+                color: ${this.isEnemy ? '#ff6666' : '#66ff66'};
+                text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+                z-index: 100;
+                white-space: nowrap;
+            `;
+
             slot.appendChild(shadow);
             slot.appendChild(hpContainer);
             slot.appendChild(spriteWrapper);
+            slot.appendChild(debugLabel);
 
             this.unitsContainer.appendChild(slot);
 

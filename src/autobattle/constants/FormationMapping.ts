@@ -1,17 +1,20 @@
 /**
  * FormationMapping.ts - 전장 ↔ 파티 현황판 좌표 매핑 (Single Source of Truth)
  *
- * ## 시각적 순서 012345 배치
- * 전→중→후 순서로 읽을 때 인덱스 0,1,2,3,4,5가 되도록 배치
+ * ## 새 발판 이미지 기준 배치 (2024-12-30)
+ * 원본 이미지 좌표 (그림자 중심 기준):
  *
- * ## 전장 FORMATION (BattleScene.js)
- *         시각 front   시각 mid   시각 back
- * 상단      [0]후열1    [2]중열1    [4]전열1
- * 하단      [1]후열2    [3]중열2    [5]전열2
+ * [0] 전열1 (우하단) = 998, 484
+ * [1] 전열2 (우상단) = 942, 308
+ * [2] 중열1 (중하단) = 676, 456
+ * [3] 중열2 (중상단) = 634, 282
+ * [4] 후열1 (좌하단) = 344, 480
+ * [5] 후열2 (좌상단) = 300, 258
  *
- * ## 파티 현황판 (PartyStatusUI.js)
- * 적군 scaleX(-1) 미러링 시 CSS 시각 순서: pos2 → pos5 → pos1 → pos4 → pos0 → pos3
- * 매핑: [2, 5, 1, 4, 0, 3]
+ * ## 레이아웃
+ *         좌(후열)    중(중열)    우(전열)
+ * 상단     [5]후열2    [3]중열2    [1]전열2
+ * 하단     [4]후열1    [2]중열1    [0]전열1
  */
 
 // ============================================
@@ -74,17 +77,15 @@ export const ACTIVE_FORMATION_SLOTS: readonly FormationIndex[] = [0, 1, 2, 3, 4,
 
 /**
  * FORMATION 인덱스 → 파티 현황판 슬롯 pos 매핑
- *
- * 적군 scaleX(-1) 미러링 시 CSS 시각 순서:
- * pos2 → pos5 → pos1 → pos4 → pos0 → pos3
+ * 새 발판 이미지 기준 1:1 매핑
  */
 export const FORMATION_TO_PARTY_SLOT: Record<FormationIndex, PartySlotPosition> = {
-    0: 2,  // 유닛0 → pos2 (시각1)
-    1: 5,  // 유닛1 → pos5 (시각2)
-    2: 1,  // 유닛2 → pos1 (시각3)
-    3: 4,  // 유닛3 → pos4 (시각4)
-    4: 0,  // 유닛4 → pos0 (시각5)
-    5: 3,  // 유닛5 → pos3 (시각6)
+    0: 0,  // 전열1 (우하단)
+    1: 1,  // 전열2 (우상단)
+    2: 2,  // 중열1 (중하단)
+    3: 3,  // 중열2 (중상단)
+    4: 4,  // 후열1 (좌하단)
+    5: 5,  // 후열2 (좌상단)
 };
 
 /**
@@ -114,8 +115,8 @@ export function getFormationSlot(index: FormationIndex, isEnemy: boolean = false
 
 /** 매핑 일관성 검증 (개발용) */
 export function validateMapping(): boolean {
-    // 적군 scaleX(-1) 미러링 시 CSS의 시각적 순서 (pos값)
-    const visualOrder: PartySlotPosition[] = [2, 5, 1, 4, 0, 3];
+    // 새 발판 이미지 기준 1:1 매핑
+    const visualOrder: PartySlotPosition[] = [0, 1, 2, 3, 4, 5];
 
     const errors: string[] = [];
 
