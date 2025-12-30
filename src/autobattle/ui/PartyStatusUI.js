@@ -289,48 +289,58 @@ export default class PartyStatusUI {
                 z-index: 10;
             }
 
-            /* 상단 (1, 3, 5): 머리 위 */
-            .unit-slot[data-pos="1"] .unit-hp-container,
-            .unit-slot[data-pos="3"] .unit-hp-container,
-            .unit-slot[data-pos="5"] .unit-hp-container {
+            /* 상단 (1, 3, 5): 머리 위 (슬롯별 높이 차이) */
+            .unit-slot[data-pos="1"] .unit-hp-container {
+                flex-direction: column-reverse;
+                top: -20px;
+                left: 50%;
+                transform: translateX(-50%);
+            }
+            .unit-slot[data-pos="3"] .unit-hp-container {
                 flex-direction: column-reverse;
                 top: -22px;
                 left: 50%;
                 transform: translateX(-50%);
             }
+            .unit-slot[data-pos="5"] .unit-hp-container {
+                flex-direction: column-reverse;
+                top: -24px;
+                left: 50%;
+                transform: translateX(-50%);
+            }
 
-            /* 하단 (0, 2, 4): 좌측 하단 (슬롯별 높이 및 간격 차이) */
+            /* 하단 (0, 2, 4): 슬롯별 높이 및 간격 차이 */
             .unit-slot[data-pos="0"] .unit-hp-container {
-                bottom: 6px;
-                right: 52px;
-                left: auto;
+                bottom: -6px;
+                right: auto;
+                left: 18px;
                 transform: none;
             }
             .unit-slot[data-pos="2"] .unit-hp-container {
-                bottom: 10px;
-                right: 48px;
+                bottom: -4px;
+                right: 5px;
                 left: auto;
                 transform: none;
             }
             .unit-slot[data-pos="4"] .unit-hp-container {
-                bottom: 14px;
-                right: 44px;
+                bottom: -2px;
+                right: 13px;
                 left: auto;
                 transform: none;
             }
 
             /* 적군 하단: 좌우 대칭 (미러링 상쇄, 슬롯별 간격) */
             .enemy .unit-slot[data-pos="0"] .unit-hp-container {
-                right: auto;
-                left: 52px;
+                left: auto;
+                right: 18px;
             }
             .enemy .unit-slot[data-pos="2"] .unit-hp-container {
                 right: auto;
-                left: 48px;
+                left: 5px;
             }
             .enemy .unit-slot[data-pos="4"] .unit-hp-container {
                 right: auto;
-                left: 44px;
+                left: 13px;
             }
 
             /* HP바 */
@@ -501,42 +511,46 @@ export default class PartyStatusUI {
                     margin-top: -2px;
                 }
 
-                /* 모바일 상단 (1, 3, 5): 머리 위 */
-                .unit-slot[data-pos="1"] .unit-hp-container,
-                .unit-slot[data-pos="3"] .unit-hp-container,
+                /* 모바일 상단 (1, 3, 5): 머리 위 (슬롯별 높이 차이) */
+                .unit-slot[data-pos="1"] .unit-hp-container {
+                    top: -13px;
+                }
+                .unit-slot[data-pos="3"] .unit-hp-container {
+                    top: -14px;
+                }
                 .unit-slot[data-pos="5"] .unit-hp-container {
                     top: -15px;
                 }
 
-                /* 모바일 하단 (0, 2, 4): 좌측 하단 (슬롯별 높이 및 간격) */
+                /* 모바일 하단 (0, 2, 4): 슬롯별 높이 및 간격 */
                 .unit-slot[data-pos="0"] .unit-hp-container {
-                    bottom: 4px;
-                    right: 33px;
-                    left: auto;
+                    bottom: -4px;
+                    right: auto;
+                    left: 12px;
                 }
                 .unit-slot[data-pos="2"] .unit-hp-container {
-                    bottom: 6px;
-                    right: 30px;
+                    bottom: -3px;
+                    right: 3px;
                     left: auto;
                 }
                 .unit-slot[data-pos="4"] .unit-hp-container {
-                    bottom: 8px;
-                    right: 28px;
+                    bottom: -1px;
+                    right: 8px;
                     left: auto;
                 }
 
                 /* 모바일 적군 하단: 좌우 대칭 (슬롯별 간격) */
                 .enemy .unit-slot[data-pos="0"] .unit-hp-container {
-                    right: auto;
-                    left: 33px;
+                    left: auto;
+                    right: 12px;
                 }
                 .enemy .unit-slot[data-pos="2"] .unit-hp-container {
                     right: auto;
-                    left: 30px;
+                    left: 3px;
                 }
                 .enemy .unit-slot[data-pos="4"] .unit-hp-container {
                     right: auto;
-                    left: 28px;
+                    left: 8px;
                 }
 
                 .mini-hp-bar { width: 34px; height: 3px; }
