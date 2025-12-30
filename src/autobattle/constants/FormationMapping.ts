@@ -1,40 +1,29 @@
 /**
  * FormationMapping.ts - 전장 ↔ 파티 현황판 좌표 매핑
  *
- * ## 좌표 체계 (2행 3열 그리드)
+ * ## 시각적 순서 012345 배치
+ * 전→중→후 순서로 읽을 때 인덱스 0,1,2,3,4,5가 되도록 배치
  *
- *         후열(좌)   중열(중)   전열(우)
- * 상단      후열1      중열1      전열1
- * 하단      후열2      중열2      전열2
+ * ## 각도 불일치 주의
+ * - 파티 현황판(UI): 우상향(+각도) 배치 - 전열로 갈수록 위로
+ * - 전장(Battlefield): 우하향(-각도) 배치 - 전열로 갈수록 아래로
+ * - 해결: Y축 증감 방향만 일치시킴 (작은 Y = 상단, 큰 Y = 하단)
  *
- * ## 전장 FORMATION 인덱스 (BattleScene.js)
+ * ## 전장 FORMATION (BattleScene.js)
+ * 좌표 스왑 적용 (0↔4, 1↔5):
  *
- * FORMATION.ALLY[0] = 후열1 (x:120, y:200)
- * FORMATION.ALLY[1] = 후열2 (x:150, y:380)
- * FORMATION.ALLY[2] = 중열1 (x:260, y:220)
- * FORMATION.ALLY[3] = 중열2 (x:290, y:400)
- * FORMATION.ALLY[4] = 전열1 (x:400, y:240)
- * FORMATION.ALLY[5] = 전열2 (x:430, y:420)
+ *         시각 front   시각 mid   시각 back
+ * 상단      [0]후열1    [2]중열1    [4]전열1
+ *          (x:400)     (x:260)     (x:120)
+ * 하단      [1]후열2    [3]중열2    [5]전열2
+ *          (x:430)     (x:290)     (x:150)
  *
- * ## 파티 현황판 슬롯 (PartyStatusUI.js CSS)
+ * ## 파티 현황판 (PartyStatusUI.js)
+ * 원본 CSS 유지 + UNIT_TO_PARTY_SLOT 매핑으로 순서 조정
  *
- * 뒷줄(후열 대응):
- *   pos=0: 뒷줄 하단 (left:57px)
- *   pos=1: 뒷줄 중앙 (left:98px)
- *   pos=2: 뒷줄 상단 (left:141px)
- *
- * 앞줄(전열 대응):
- *   pos=3: 앞줄 하단 (left:72px)
- *   pos=4: 앞줄 중앙 (left:116px)
- *   pos=5: 앞줄 상단 (left:159px)
- *
- * ## 현재 3vs3 배치 (ACTIVE_SLOTS = [1, 2, 4])
- *
- * | 인덱스 | FORMATION | 전장 위치 | 파티 현황판 pos | 파티 위치 |
- * |--------|-----------|----------|-----------------|-----------|
- * | [0]    | 1 (후열2) | 좌하단   | 1               | 뒷줄 중앙 |
- * | [1]    | 2 (중열1) | 중상단   | 2               | 뒷줄 상단 |
- * | [2]    | 4 (전열1) | 우상단   | 4               | 앞줄 중앙 |
+ * 실제 CSS 시각 순서: pos2 → pos5 → pos1 → pos4 → pos0 → pos3
+ * 매핑: 유닛0→pos2, 유닛1→pos5, 유닛2→pos1, 유닛3→pos4, 유닛4→pos0, 유닛5→pos3
+ * 결과: 시각적으로 0,1,2,3,4,5 순서
  */
 
 // ============================================
@@ -65,22 +54,23 @@ export interface FormationSlot {
     label: string;  // 후열1, 후열2, 중열1, ...
 }
 
+// 시각적 순서 012345 배치 (좌표 스왑: 0↔4, 1↔5)
 export const FORMATION_ALLY: readonly FormationSlot[] = [
-    { id: 0, row: 'back',   x: 120, y: 200, label: '후열1' },
-    { id: 1, row: 'back',   x: 150, y: 380, label: '후열2' },
-    { id: 2, row: 'middle', x: 260, y: 220, label: '중열1' },
-    { id: 3, row: 'middle', x: 290, y: 400, label: '중열2' },
-    { id: 4, row: 'front',  x: 400, y: 240, label: '전열1' },
-    { id: 5, row: 'front',  x: 430, y: 420, label: '전열2' },
+    { id: 0, row: 'back',   x: 400, y: 240, label: '후열1' },  // 시각 front-top
+    { id: 1, row: 'back',   x: 430, y: 420, label: '후열2' },  // 시각 front-bottom
+    { id: 2, row: 'middle', x: 260, y: 220, label: '중열1' },  // 시각 mid-top
+    { id: 3, row: 'middle', x: 290, y: 400, label: '중열2' },  // 시각 mid-bottom
+    { id: 4, row: 'front',  x: 120, y: 200, label: '전열1' },  // 시각 back-top
+    { id: 5, row: 'front',  x: 150, y: 380, label: '전열2' },  // 시각 back-bottom
 ] as const;
 
 export const FORMATION_ENEMY: readonly FormationSlot[] = [
-    { id: 0, row: 'back',   x: 1160, y: 200, label: '후열1' },
-    { id: 1, row: 'back',   x: 1130, y: 380, label: '후열2' },
-    { id: 2, row: 'middle', x: 1020, y: 220, label: '중열1' },
-    { id: 3, row: 'middle', x: 990,  y: 400, label: '중열2' },
-    { id: 4, row: 'front',  x: 880,  y: 240, label: '전열1' },
-    { id: 5, row: 'front',  x: 850,  y: 420, label: '전열2' },
+    { id: 0, row: 'back',   x: 880,  y: 240, label: '후열1' }, // 시각 front-top
+    { id: 1, row: 'back',   x: 850,  y: 420, label: '후열2' }, // 시각 front-bottom
+    { id: 2, row: 'middle', x: 1020, y: 220, label: '중열1' }, // 시각 mid-top
+    { id: 3, row: 'middle', x: 990,  y: 400, label: '중열2' }, // 시각 mid-bottom
+    { id: 4, row: 'front',  x: 1160, y: 200, label: '전열1' }, // 시각 back-top
+    { id: 5, row: 'front',  x: 1130, y: 380, label: '전열2' }, // 시각 back-bottom
 ] as const;
 
 // ============================================
@@ -88,10 +78,10 @@ export const FORMATION_ENEMY: readonly FormationSlot[] = [
 // ============================================
 
 /**
- * 3vs3 전투에서 사용하는 FORMATION 인덱스
- * 순서: 후열2, 중열1, 전열1
+ * 디버깅용: 6개 슬롯 모두 사용
+ * 순서: 후열1, 후열2, 중열1, 중열2, 전열1, 전열2
  */
-export const ACTIVE_FORMATION_SLOTS: readonly FormationIndex[] = [1, 2, 4] as const;
+export const ACTIVE_FORMATION_SLOTS: readonly FormationIndex[] = [0, 1, 2, 3, 4, 5] as const;
 
 // ============================================
 // 파티 현황판 슬롯 매핑
@@ -100,18 +90,22 @@ export const ACTIVE_FORMATION_SLOTS: readonly FormationIndex[] = [1, 2, 4] as co
 /**
  * FORMATION 인덱스 → 파티 현황판 슬롯 pos 매핑
  *
- * 규칙:
- * - 후열(back) → 뒷줄 (pos 0, 1, 2)
- * - 전열(front) → 앞줄 (pos 3, 4, 5)
- * - 중열(middle) → 뒷줄에 배치 (시각적 일관성)
+ * 시각적 순서 012345 달성을 위한 매핑
+ * 원본 CSS 위치에서 531420 → 012345 변환
+ *
+ * 실제 파티 현황판 CSS 시각 순서:
+ *   시각1=pos2, 시각2=pos5, 시각3=pos1,
+ *   시각4=pos4, 시각5=pos0, 시각6=pos3
+ *
+ * 목표: 유닛 0→시각1, 1→시각2, 2→시각3, 3→시각4, 4→시각5, 5→시각6
  */
 export const FORMATION_TO_PARTY_SLOT: Record<FormationIndex, PartySlotPosition> = {
-    0: 2,  // 후열1 → 뒷줄 상단
-    1: 1,  // 후열2 → 뒷줄 중앙
-    2: 2,  // 중열1 → 뒷줄 상단 (중열은 뒷줄에 배치)
-    3: 0,  // 중열2 → 뒷줄 하단
-    4: 4,  // 전열1 → 앞줄 중앙
-    5: 3,  // 전열2 → 앞줄 하단
+    0: 2,  // 유닛0 → pos2 (시각1)
+    1: 5,  // 유닛1 → pos5 (시각2)
+    2: 1,  // 유닛2 → pos1 (시각3)
+    3: 4,  // 유닛3 → pos4 (시각4)
+    4: 0,  // 유닛4 → pos0 (시각5)
+    5: 3,  // 유닛5 → pos3 (시각6)
 };
 
 /**
@@ -141,23 +135,23 @@ export function getFormationSlot(index: FormationIndex, isEnemy: boolean = false
 
 /**
  * 매핑 일관성 검증 (개발/디버그용)
+ *
+ * 시각적 순서 012345 검증:
+ * 실제 CSS 시각 순서: pos2→pos5→pos1→pos4→pos0→pos3
+ * 유닛 0-5가 위 순서대로 매핑되어야 함
  */
 export function validateMapping(): boolean {
+    // 실제 CSS의 시각적 순서 (pos값)
+    const visualOrder: PartySlotPosition[] = [2, 5, 1, 4, 0, 3];
+
     const errors: string[] = [];
 
     ACTIVE_FORMATION_SLOTS.forEach((formIdx, unitIdx) => {
-        const formSlot = FORMATION_ALLY[formIdx];
         const partyPos = UNIT_TO_PARTY_SLOT[unitIdx];
+        const expectedPos = visualOrder[unitIdx];
 
-        // 후열 → 뒷줄(0-2), 전열 → 앞줄(3-5) 검증
-        const isBackRow = formSlot.row === 'back' || formSlot.row === 'middle';
-        const isPartyBack = partyPos <= 2;
-
-        if (formSlot.row === 'front' && isPartyBack) {
-            errors.push(`[${unitIdx}] 전열(${formSlot.label})이 뒷줄(pos=${partyPos})에 매핑됨`);
-        }
-        if (formSlot.row === 'back' && !isPartyBack) {
-            errors.push(`[${unitIdx}] 후열(${formSlot.label})이 앞줄(pos=${partyPos})에 매핑됨`);
+        if (partyPos !== expectedPos) {
+            errors.push(`유닛[${unitIdx}]이 pos=${partyPos}에 매핑됨 (예상: pos=${expectedPos})`);
         }
     });
 
@@ -166,7 +160,8 @@ export function validateMapping(): boolean {
         return false;
     }
 
-    console.log('[FormationMapping] 매핑 검증 성공');
+    console.log('[FormationMapping] 매핑 검증 성공 (시각적 순서 012345)');
+    console.log('[FormationMapping] UNIT_TO_PARTY_SLOT:', UNIT_TO_PARTY_SLOT);
     return true;
 }
 

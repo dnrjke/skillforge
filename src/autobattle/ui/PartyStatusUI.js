@@ -124,9 +124,13 @@ export default class PartyStatusUI {
                 z-index: 0;
             }
 
-            .enemy .board-sprite {
+            /* 아군: 우하향(↘️) - 전장과 일치하도록 미러링 */
+            .ally .board-sprite {
                 transform: scaleX(-1);
             }
+
+            /* 적군: 우상향(↗️) - 전장과 일치 (미러링 없음) */
+            /* .enemy .board-sprite는 기본 상태 유지 */
 
             /* ===== 캐릭터 컨테이너 ===== */
             .units-container {
@@ -139,15 +143,18 @@ export default class PartyStatusUI {
                 z-index: 1;
             }
 
-            /* 적군: 보드와 함께 유닛 컨테이너도 미러링 */
-            .enemy .units-container {
+            /* 아군: 보드와 함께 유닛 컨테이너도 미러링 */
+            .ally .units-container {
                 transform: scaleX(-1);
             }
 
-            /* 적군 슬롯: 컨테이너 반전을 상쇄하여 내용물 정상 표시 */
-            .enemy .unit-slot {
+            /* 아군 슬롯: 컨테이너 반전을 상쇄하여 내용물 정상 표시 */
+            .ally .unit-slot {
                 transform: scaleX(-1);
             }
+
+            /* 적군: 미러링 없음 (기본 상태) */
+            /* .enemy .units-container, .enemy .unit-slot는 기본 상태 유지 */
 
             /* ===== 개별 유닛 슬롯 ===== */
             .unit-slot {
@@ -172,6 +179,11 @@ export default class PartyStatusUI {
              *   CSS_Y = 원본_Y * scale - 48
              */
 
+            /*
+             * 슬롯 위치 (원본 CSS - 102a704 기준)
+             * 뒷줄 (0, 1, 2) / 앞줄 (3, 4, 5)
+             * UNIT_TO_PARTY_SLOT 매핑으로 시각적 순서 012345 달성
+             */
             /* 뒷줄 (0, 1, 2) */
             .unit-slot[data-pos="0"] { left: 57px; top: 10px; }
             .unit-slot[data-pos="1"] { left: 98px; top: -5px; }
@@ -305,10 +317,10 @@ export default class PartyStatusUI {
                 transform: none;
             }
 
-            /* 적군 아랫줄: 좌우 대칭 (왼쪽으로 이동) */
-            .enemy .unit-slot[data-pos="3"] .unit-hp-container,
-            .enemy .unit-slot[data-pos="4"] .unit-hp-container,
-            .enemy .unit-slot[data-pos="5"] .unit-hp-container {
+            /* 아군 아랫줄: 좌우 대칭 (미러링 상쇄) */
+            .ally .unit-slot[data-pos="3"] .unit-hp-container,
+            .ally .unit-slot[data-pos="4"] .unit-hp-container,
+            .ally .unit-slot[data-pos="5"] .unit-hp-container {
                 left: auto;
                 right: 44px;
             }
@@ -446,7 +458,7 @@ export default class PartyStatusUI {
                     height: 50px;
                 }
 
-                /* 모바일 타일 좌표 (180x70px, 데스크탑의 0.643배, X -20px 보정 적용) */
+                /* 모바일 타일 좌표 (원본) */
                 .unit-slot[data-pos="0"] { left: 37px; top: 6px; }
                 .unit-slot[data-pos="1"] { left: 63px; top: -3px; }
                 .unit-slot[data-pos="2"] { left: 91px; top: -13px; }
@@ -492,10 +504,10 @@ export default class PartyStatusUI {
                     left: 29px;
                 }
 
-                /* 모바일 적군 아랫줄: 좌우 대칭 */
-                .enemy .unit-slot[data-pos="3"] .unit-hp-container,
-                .enemy .unit-slot[data-pos="4"] .unit-hp-container,
-                .enemy .unit-slot[data-pos="5"] .unit-hp-container {
+                /* 모바일 아군 아랫줄: 좌우 대칭 (미러링 상쇄) */
+                .ally .unit-slot[data-pos="3"] .unit-hp-container,
+                .ally .unit-slot[data-pos="4"] .unit-hp-container,
+                .ally .unit-slot[data-pos="5"] .unit-hp-container {
                     left: auto;
                     right: 29px;
                 }
@@ -551,10 +563,10 @@ export default class PartyStatusUI {
                 <div class="unit-sprite ${this.isEnemy ? 'enemy-sprite' : ''}"></div>
             `;
 
-            // 디버깅용 인덱스 표시
+            // 디버깅용 인덱스 표시 (유닛 인덱스 + pos 값)
             const debugLabel = document.createElement('div');
             debugLabel.className = 'debug-index';
-            debugLabel.textContent = `[${unitIndex}]`;
+            debugLabel.textContent = `[${unitIndex}] p${gridIndex}`;
             debugLabel.style.cssText = `
                 position: absolute;
                 top: -25px;
