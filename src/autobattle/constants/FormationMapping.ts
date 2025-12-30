@@ -1,15 +1,15 @@
 /**
  * FormationMapping.ts - 전장 ↔ 파티 현황판 좌표 매핑 (Single Source of Truth)
  *
- * ## 새 발판 이미지 기준 배치 (2024-12-30)
+ * ## 새 발판 이미지 기준 배치 (2025-12-31)
  * 원본 이미지 좌표 (그림자 중심 기준):
  *
- * [0] 전열1 (우하단) = 998, 484
- * [1] 전열2 (우상단) = 942, 308
- * [2] 중열1 (중하단) = 676, 456
- * [3] 중열2 (중상단) = 634, 282
- * [4] 후열1 (좌하단) = 344, 480
- * [5] 후열2 (좌상단) = 300, 258
+ * [0] 전열1 (우하단) = 1003, 507
+ * [1] 전열2 (우상단) = 950, 333
+ * [2] 중열1 (중하단) = 678, 477
+ * [3] 중열2 (중상단) = 640, 303
+ * [4] 후열1 (좌하단) = 345, 461
+ * [5] 후열2 (좌상단) = 307, 272
  *
  * ## 레이아웃
  *         좌(후열)    중(중열)    우(전열)
@@ -42,33 +42,33 @@ export interface FormationSlot {
     row: BattleRow;
     x: number;
     y: number;
-    label: string;  // 후열1, 후열2, 중열1, ...
+    label: string;  // 전열1, 전열2, 중열1, ...
 }
 
 // 시각적 순서 012345 배치 (좌표 스왑: 0↔4, 1↔5)
 export const FORMATION_ALLY: readonly FormationSlot[] = [
-    { id: 0, row: 'back',   x: 400, y: 240, label: '후열1' },  // 시각 front-top
-    { id: 1, row: 'back',   x: 430, y: 420, label: '후열2' },  // 시각 front-bottom
+    { id: 0, row: 'front',   x: 400, y: 240, label: '전열1' },  // 시각 front-top
+    { id: 1, row: 'front',   x: 430, y: 420, label: '전열2' },  // 시각 front-bottom
     { id: 2, row: 'middle', x: 260, y: 220, label: '중열1' },  // 시각 mid-top
     { id: 3, row: 'middle', x: 290, y: 400, label: '중열2' },  // 시각 mid-bottom
-    { id: 4, row: 'front',  x: 120, y: 200, label: '전열1' },  // 시각 back-top
-    { id: 5, row: 'front',  x: 150, y: 380, label: '전열2' },  // 시각 back-bottom
+    { id: 4, row: 'back',  x: 120, y: 200, label: '후열1' },  // 시각 back-top
+    { id: 5, row: 'back',  x: 150, y: 380, label: '후열2' },  // 시각 back-bottom
 ] as const;
 
 export const FORMATION_ENEMY: readonly FormationSlot[] = [
-    { id: 0, row: 'back',   x: 880,  y: 240, label: '후열1' }, // 시각 front-top
-    { id: 1, row: 'back',   x: 850,  y: 420, label: '후열2' }, // 시각 front-bottom
+    { id: 0, row: 'front',   x: 880,  y: 240, label: '전열1' }, // 시각 front-top
+    { id: 1, row: 'front',   x: 850,  y: 420, label: '전열2' }, // 시각 front-bottom
     { id: 2, row: 'middle', x: 1020, y: 220, label: '중열1' }, // 시각 mid-top
     { id: 3, row: 'middle', x: 990,  y: 400, label: '중열2' }, // 시각 mid-bottom
-    { id: 4, row: 'front',  x: 1160, y: 200, label: '전열1' }, // 시각 back-top
-    { id: 5, row: 'front',  x: 1130, y: 380, label: '전열2' }, // 시각 back-bottom
+    { id: 4, row: 'back',  x: 1160, y: 200, label: '후열1' }, // 시각 back-top
+    { id: 5, row: 'back',  x: 1130, y: 380, label: '후열2' }, // 시각 back-bottom
 ] as const;
 
 // ============================================
 // 활성 슬롯
 // ============================================
 
-/** 6개 슬롯: 후열1, 후열2, 중열1, 중열2, 전열1, 전열2 */
+/** 6개 슬롯: 전열1, 전열2, 중열1, 중열2, 후열1, 후열2 */
 export const ACTIVE_FORMATION_SLOTS: readonly FormationIndex[] = [0, 1, 2, 3, 4, 5] as const;
 
 // ============================================
