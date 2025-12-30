@@ -563,26 +563,9 @@ export default class PartyStatusUI {
                 <div class="unit-sprite ${this.isEnemy ? 'enemy-sprite' : ''}"></div>
             `;
 
-            // 디버깅용 인덱스 표시 (유닛 인덱스 + pos 값)
-            const debugLabel = document.createElement('div');
-            debugLabel.className = 'debug-index';
-            debugLabel.textContent = `[${unitIndex}] p${gridIndex}`;
-            debugLabel.style.cssText = `
-                position: absolute;
-                top: -25px;
-                left: 50%;
-                transform: translateX(-50%);
-                font-size: 16px;
-                font-weight: bold;
-                color: ${this.isEnemy ? '#ff6666' : '#66ff66'};
-                text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-                z-index: 100;
-            `;
-
             slot.appendChild(shadow);
             slot.appendChild(hpContainer);
             slot.appendChild(spriteWrapper);
-            slot.appendChild(debugLabel);
 
             this.unitsContainer.appendChild(slot);
 
