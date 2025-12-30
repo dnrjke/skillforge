@@ -1,11 +1,6 @@
 /**
  * FormationMapping.ts - 전장 ↔ 파티 현황판 좌표 매핑 (Single Source of Truth)
  *
- * ## V자 대칭 구조
- * - 아군 UI: 우하향(↘️) - scaleX(-1) 미러링 적용
- * - 적군 UI: 우상향(↗️) - 기본 상태
- * - 결과: 양쪽 UI가 전장을 향해 V자 대칭
- *
  * ## 시각적 순서 012345 배치
  * 전→중→후 순서로 읽을 때 인덱스 0,1,2,3,4,5가 되도록 배치
  *
@@ -15,8 +10,8 @@
  * 하단      [1]후열2    [3]중열2    [5]전열2
  *
  * ## 파티 현황판 (PartyStatusUI.js)
- * V자 대칭 (아군 scaleX(-1)) 후 CSS 시각 순서: pos0 → pos3 → pos1 → pos4 → pos2 → pos5
- * 매핑: [0, 3, 1, 4, 2, 5]
+ * 적군 scaleX(-1) 미러링 시 CSS 시각 순서: pos2 → pos5 → pos1 → pos4 → pos0 → pos3
+ * 매핑: [2, 5, 1, 4, 0, 3]
  */
 
 // ============================================
@@ -80,16 +75,16 @@ export const ACTIVE_FORMATION_SLOTS: readonly FormationIndex[] = [0, 1, 2, 3, 4,
 /**
  * FORMATION 인덱스 → 파티 현황판 슬롯 pos 매핑
  *
- * V자 대칭 (아군 scaleX(-1)) 후 CSS 시각 순서:
- * pos0 → pos3 → pos1 → pos4 → pos2 → pos5
+ * 적군 scaleX(-1) 미러링 시 CSS 시각 순서:
+ * pos2 → pos5 → pos1 → pos4 → pos0 → pos3
  */
 export const FORMATION_TO_PARTY_SLOT: Record<FormationIndex, PartySlotPosition> = {
-    0: 0,  // 유닛0 → pos0 (시각1)
-    1: 3,  // 유닛1 → pos3 (시각2)
+    0: 2,  // 유닛0 → pos2 (시각1)
+    1: 5,  // 유닛1 → pos5 (시각2)
     2: 1,  // 유닛2 → pos1 (시각3)
     3: 4,  // 유닛3 → pos4 (시각4)
-    4: 2,  // 유닛4 → pos2 (시각5)
-    5: 5,  // 유닛5 → pos5 (시각6)
+    4: 0,  // 유닛4 → pos0 (시각5)
+    5: 3,  // 유닛5 → pos3 (시각6)
 };
 
 /**
@@ -119,8 +114,8 @@ export function getFormationSlot(index: FormationIndex, isEnemy: boolean = false
 
 /** 매핑 일관성 검증 (개발용) */
 export function validateMapping(): boolean {
-    // V자 대칭 미러링 후 CSS의 시각적 순서 (pos값)
-    const visualOrder: PartySlotPosition[] = [0, 3, 1, 4, 2, 5];
+    // 적군 scaleX(-1) 미러링 시 CSS의 시각적 순서 (pos값)
+    const visualOrder: PartySlotPosition[] = [2, 5, 1, 4, 0, 3];
 
     const errors: string[] = [];
 
