@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Skillforge: Air-Sport</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 3단 레이어 구조 -->
+    <div id="app-container">
+        <!-- Layer 0: World (Canvas) -->
+        <canvas id="world-layer"></canvas>
+
+        <!-- Layer 1: Display (연출/시나리오) -->
+        <div id="display-layer">
+            <!-- 천사상 (캐릭터 버스트) -->
+            <div id="angel-bust" class="hidden"></div>
+
+            <!-- 시나리오 UI -->
+            <div id="scenario-ui" class="hidden">
+                <div id="scenario-bg"></div>
+                <div id="dialogue-box">
+                    <p id="dialogue-text"></p>
+                </div>
+            </div>
+
+            <!-- GIF 연출 레이어 -->
+            <div id="cutscene-layer" class="hidden"></div>
+        </div>
+
+        <!-- Layer 2: System (UI/디버그) -->
+        <div id="system-layer">
+            <!-- 터치 시작 화면 -->
+            <div id="touch-start-screen">
+                <div id="touch-prompt">
+                    <p>TOUCH TO START</p>
+                </div>
+            </div>
+
+            <!-- 디버그 정보 -->
+            <div id="debug-info" class="interactive hidden"></div>
+        </div>
+    </div>
+
+    <script type="module" src="index.ts"></script>
+</body>
+</html>
