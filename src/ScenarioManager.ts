@@ -10,6 +10,7 @@
 
 import { ScenarioStep, ScenarioSequence } from './types';
 import { AudioManager } from './AudioManager';
+import { getCharacter, getSpeakerColor } from './data/characters';
 
 export interface ScenarioCallbacks {
     onStepStart?: (step: ScenarioStep, index: number) => void;
@@ -22,13 +23,15 @@ export class ScenarioManager {
     private currentSequence: ScenarioSequence | null = null;
     private currentIndex: number = 0;
     private isPlaying: boolean = false;
-    private isPaused: boolean = false;
+    private _isPaused: boolean = false;
 
     // DOM 요소
     private scenarioUi: HTMLElement | null = null;
     private scenarioBg: HTMLElement | null = null;
+    private speakerName: HTMLElement | null = null;
     private dialogueText: HTMLElement | null = null;
     private cutsceneLayer: HTMLElement | null = null;
+    private fadeOverlay: HTMLElement | null = null;
 
     // 콜백
     private callbacks: ScenarioCallbacks = {};
@@ -51,8 +54,10 @@ export class ScenarioManager {
     private initializeDOM(): void {
         this.scenarioUi = document.getElementById('scenario-ui');
         this.scenarioBg = document.getElementById('scenario-bg');
+        this.speakerName = document.getElementById('speaker-name');
         this.dialogueText = document.getElementById('dialogue-text');
         this.cutsceneLayer = document.getElementById('cutscene-layer');
+        this.fadeOverlay = document.getElementById('fade-overlay');
     }
 
     /**
@@ -69,7 +74,7 @@ export class ScenarioManager {
         this.currentSequence = sequence;
         this.currentIndex = 0;
         this.isPlaying = true;
-        this.isPaused = false;
+        this._isPaused = false;
 
         console.log(`[ScenarioManager] Starting: ${sequence.name}`);
 
@@ -125,10 +130,57 @@ export class ScenarioManager {
             this.audioManager.playSfx(step.sfx);
         }
 
+        // 화자 이름 표시
+        if (this.speakerName) {
+            if (step.speaker) {
+                const character = getCharacter(step.speaker);
+                const displayName = character?.nameKo ?? step.speaker;
+                const color = getSpeakerColor(step.speaker);
+
+                this.speakerName.textContent = displayName;
+                this.speakerName.style.color = color;
+                this.speakerName.classList.remove('hidden');
+            } else {
+                this.speakerName.classList.add('hidden');
+            }
+        }
+
         // 대사 표시 (타이핑 효과)
         if (step.text && this.dialogueText) {
             this.typeText(step.text);
         }
+    }
+
+    /**
+     * 페이드 투 블랙
+     */
+    fadeToBlack(): Promise<void> {
+        return new Promise((resolve) => {
+            if (this.fadeOverlay) {
+                this.fadeOverlay.classList.remove('hidden');
+                this.fadeOverlay.classList.add('fade-to-black');
+                setTimeout(resolve, 500);
+            } else {
+                resolve();
+            }
+        });
+    }
+
+    /**
+     * 페이드 아웃 (블랙 → 투명)
+     */
+    fadeFromBlack(): Promise<void> {
+        return new Promise((resolve) => {
+            if (this.fadeOverlay) {
+                this.fadeOverlay.classList.remove('fade-to-black');
+                setTimeout(() => {
+                    this.fadeOverlay?.classList.add('hidden');
+                    resolve();
+                }, 500);
+            } else {
+                resolve();
+            }
+        });
     }
 
     /**
@@ -283,14 +335,21 @@ export class ScenarioManager {
      * 일시 정지
      */
     pause(): void {
-        this.isPaused = true;
+        this._isPaused = true;
     }
 
     /**
      * 재개
      */
     resume(): void {
-        this.isPaused = false;
+        this._isPaused = false;
+    }
+
+    /**
+     * 일시 정지 상태 확인
+     */
+    get paused(): boolean {
+        return this._isPaused;
     }
 
     /**

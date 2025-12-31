@@ -9,10 +9,11 @@
  * - 프로토타입 우선 원칙 (§0)
  */
 
-import { detectDevice, GameState, GamePhase } from './types';
+import { detectDevice, GameState } from './types';
 import { AudioManager } from './AudioManager';
-import { ScenarioManager, OPENING_SEQUENCE } from './ScenarioManager';
+import { ScenarioManager } from './ScenarioManager';
 import { getAllSlotPositions, getSlotSize, screenToCanvas } from './Layout';
+import { OPENING_SEQUENCES, OPENING_ORDER } from './data/opening';
 
 // ============================================
 // 게임 상태
@@ -24,6 +25,9 @@ const gameState: GameState = {
     audioResumed: false,
     debugMode: true,
 };
+
+// 오프닝 시퀀스 진행 인덱스
+let openingSequenceIndex = 0;
 
 // ============================================
 // 시스템 인스턴스
@@ -160,11 +164,35 @@ async function handleTouchStart(event: Event): Promise<void> {
  */
 function startGame(): void {
     gameState.phase = 'scenario';
+    openingSequenceIndex = 0;
 
-    // 오프닝 시나리오 시작
-    scenarioManager.startSequence(OPENING_SEQUENCE);
+    // 첫 번째 오프닝 시퀀스 시작
+    playNextOpeningSequence();
 
     console.log('[Game] Started');
+}
+
+/**
+ * 다음 오프닝 시퀀스 재생
+ */
+function playNextOpeningSequence(): void {
+    if (openingSequenceIndex >= OPENING_ORDER.length) {
+        console.log('[Opening] All sequences complete');
+        gameState.phase = 'flight';
+        return;
+    }
+
+    const sequenceId = OPENING_ORDER[openingSequenceIndex];
+    const sequence = OPENING_SEQUENCES[sequenceId];
+
+    if (sequence) {
+        console.log(`[Opening] Playing sequence: ${sequenceId} (${openingSequenceIndex + 1}/${OPENING_ORDER.length})`);
+        scenarioManager.startSequence(sequence);
+    } else {
+        console.warn(`[Opening] Sequence not found: ${sequenceId}`);
+        openingSequenceIndex++;
+        playNextOpeningSequence();
+    }
 }
 
 /**
@@ -227,21 +255,121 @@ function handleKeyDown(event: KeyboardEvent): void {
             // 비행 모드로 전환 (디버그)
             gameState.phase = 'flight';
             break;
+        case 't':
+            // 튜토리얼 완료 시뮬레이션 (디버그)
+            if (gameState.phase === 'flight') {
+                completeTutorial();
+            }
+            break;
+        case 'n':
+            // 다음 시퀀스로 강제 진행 (디버그)
+            if (gameState.phase === 'scenario') {
+                openingSequenceIndex++;
+                playNextOpeningSequence();
+            }
+            break;
     }
+}
+
+/**
+ * 튜토리얼 완료 후 저녁 시퀀스로 진행
+ */
+function completeTutorial(): void {
+    console.log('[Tutorial] Complete! Moving to evening sequence...');
+    gameState.phase = 'scenario';
+    // tutorial_intro 다음은 evening_reveal
+    openingSequenceIndex = OPENING_ORDER.indexOf('evening_reveal');
+    if (openingSequenceIndex === -1) {
+        openingSequenceIndex = OPENING_ORDER.length - 2; // 마지막 두 번째
+    }
+    playNextOpeningSequence();
 }
 
 // ============================================
 // 시나리오 이벤트 처리
 // ============================================
 
-function handleScenarioEvent(eventName: string): void {
+async function handleScenarioEvent(eventName: string): Promise<void> {
     console.log(`[Scenario Event] ${eventName}`);
 
     switch (eventName) {
-        case 'FADE_TO_CLUBROOM':
-            // 화면 전환 효과
+        // 해변 시퀀스 종료 → 다음 시퀀스로
+        case 'FADE_TO_BLACK':
+            await scenarioManager.fadeToBlack();
             break;
-        case 'START_TUTORIAL':
+
+        case 'END_BEACH_SEQUENCE':
+            await scenarioManager.fadeFromBlack();
+            openingSequenceIndex++;
+            playNextOpeningSequence();
+            break;
+
+        // 플래시백 시작
+        case 'START_FLASHBACK_MEMBERS':
+            await scenarioManager.fadeToBlack();
+            await scenarioManager.fadeFromBlack();
+            openingSequenceIndex++;
+            playNextOpeningSequence();
+            break;
+
+        // 플래시백 종료 → 대립 시퀀스
+        case 'END_FLASHBACK':
+            await scenarioManager.fadeToBlack();
+            await scenarioManager.fadeFromBlack();
+            openingSequenceIndex++;
+            playNextOpeningSequence();
+            break;
+
+        // 극적 등장
+        case 'DRAMATIC_ENTRANCE':
+            openingSequenceIndex++;
+            playNextOpeningSequence();
+            break;
+
+        // 부실로 이동
+        case 'MOVE_TO_CLUBROOM_PROPER':
+            await scenarioManager.fadeToBlack();
+            await scenarioManager.fadeFromBlack();
+            openingSequenceIndex++;
+            playNextOpeningSequence();
+            break;
+
+        // 신입 비행 컷신 시작
+        case 'START_NEWCOMER_FLIGHT_CUTSCENE':
+            openingSequenceIndex++;
+            playNextOpeningSequence();
+            break;
+
+        // 에이스 언급 → 에이스 등장 시퀀스
+        case 'BUCHOU_MENTIONS_ACE':
+            openingSequenceIndex++;
+            playNextOpeningSequence();
+            break;
+
+        // 튜토리얼 시작 → 튜토리얼 인트로 시퀀스
+        case 'START_TUTORIAL_FLIGHT':
+            await scenarioManager.fadeToBlack();
+            await scenarioManager.fadeFromBlack();
+            openingSequenceIndex++;
+            playNextOpeningSequence();
+            break;
+
+        // 실제 튜토리얼 플레이
+        case 'START_FLIGHT_GAMEPLAY':
+            gameState.phase = 'flight';
+            console.log('[Tutorial] Flight gameplay started');
+            // 튜토리얼 종료 후 저녁 시퀀스를 수동으로 트리거해야 함
+            break;
+
+        // 오프닝 종료
+        case 'END_OPENING':
+            openingSequenceIndex++;
+            playNextOpeningSequence();
+            break;
+
+        // 프롤로그 완료
+        case 'PROLOGUE_COMPLETE':
+            console.log('[Opening] Prologue complete!');
             gameState.phase = 'flight';
             break;
     }
@@ -249,8 +377,7 @@ function handleScenarioEvent(eventName: string): void {
 
 function handleSequenceEnd(): void {
     console.log('[Scenario] Sequence ended');
-    // 시나리오 끝나면 비행 모드로
-    gameState.phase = 'flight';
+    // 시퀀스 종료는 이벤트로 처리하므로 여기선 로그만
 }
 
 // ============================================
