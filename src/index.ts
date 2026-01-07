@@ -1,5 +1,5 @@
 /**
- * Skillforge: Air-Sport - Entry Point
+ * Skyline Blue: Arcana Vector - Entry Point
  *
  * "설계하고 감상하는 활공 스포츠"
  *
@@ -75,7 +75,7 @@ function resizeCanvas(): void {
 
 async function initialize(): Promise<void> {
     console.log('='.repeat(50));
-    console.log('  Skillforge: Air-Sport');
+    console.log('  Skyline Blue: Arcana Vector');
     console.log('  "설계하고 감상하는 활공 스포츠"');
     console.log('='.repeat(50));
 

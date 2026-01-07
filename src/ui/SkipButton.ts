@@ -1,5 +1,5 @@
 /**
- * Skillforge Skip Button Component
+ * Skyline Blue Skip Button Component
  *
  * 모바일 게임 스타일 스킵 버튼
  * 참고: Honkai Star Rail, Blue Archive

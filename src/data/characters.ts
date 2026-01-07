@@ -1,5 +1,5 @@
 /**
- * Skillforge: Air-Sport - Character Definitions
+ * Skyline Blue: Arcana Vector - Character Definitions
  *
  * 캐릭터 데이터 정의
  * - 도입부 등장인물들

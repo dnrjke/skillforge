@@ -1,5 +1,5 @@
 /**
- * Skillforge: Air-Sport - Scenario Manager
+ * Skyline Blue: Arcana Vector - Scenario Manager
  *
  * 헌법 준수:
  * - ScenarioManager는 상태 머신이 아니다 (§7)

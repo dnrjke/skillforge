@@ -1,5 +1,5 @@
 /**
- * Skillforge UI Component System
+ * Skyline Blue UI Component System
  *
  * Unity의 Layout Group 스타일 컴포넌트 시스템
  * - 자동 레이아웃 (HorizontalLayoutGroup, VerticalLayoutGroup)

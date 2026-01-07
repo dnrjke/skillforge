@@ -1,5 +1,5 @@
 /**
- * Skillforge: Air-Sport - Opening Scenario
+ * Skyline Blue: Arcana Vector - Opening Scenario
  *
  * 도입부 시나리오 데이터
  * 사키(Saki) 애니메이션 스타일의 연출 참고

@@ -1,5 +1,5 @@
 /**
- * Skillforge: Air-Sport - Type Definitions
+ * Skyline Blue: Arcana Vector - Type Definitions
  *
  * 헌법 준수:
  * - DeviceClass: mobile | tablet (§4)

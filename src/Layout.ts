@@ -1,5 +1,5 @@
 /**
- * Skillforge: Air-Sport - Layout System
+ * Skyline Blue: Arcana Vector - Layout System
  *
  * NOTE:
  * 이 좌표계는 프로토타입 전용.

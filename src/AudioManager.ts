@@ -1,5 +1,5 @@
 /**
- * Skillforge: Air-Sport - Audio Manager
+ * Skyline Blue: Arcana Vector - Audio Manager
  *
  * 헌법 준수:
  * - Web Audio API 기반 (§8)
