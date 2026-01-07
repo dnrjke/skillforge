@@ -6,11 +6,13 @@
  * - 시간 시스템
  * - 렌더링 시스템
  * - 오디오 시스템
+ * - 퇴장 연출 시스템 (Exit Presentation)
  * - 디버그 시스템
  */
 
 import { LayerManager } from './LayerManager';
 import { TimeSystem } from './TimeSystem';
+import { ExitPresentationSystem } from './ExitPresentationSystem';
 import { RenderSystem } from '../display/RenderSystem';
 import { Layout } from '../display/Layout';
 import { AudioManager } from '../audio/AudioManager';
@@ -27,6 +29,7 @@ export class Game {
     // Core Systems
     private layerManager: LayerManager;
     private timeSystem: TimeSystem;
+    private exitPresentationSystem: ExitPresentationSystem;
     private renderSystem: RenderSystem;
     private layout: Layout;
     private audioManager: AudioManager;
@@ -36,6 +39,9 @@ export class Game {
     private _battleState: BattleState = 'idle';
     private allyUnits: UnitData[] = [];
     private enemyUnits: UnitData[] = [];
+
+    // 퇴장 중인 유닛 추적
+    private exitingUnits: Set<string> = new Set();
 
     // Debug
     private debugConfig: DebugConfig = { ...DEFAULT_DEBUG_CONFIG };
@@ -49,6 +55,7 @@ export class Game {
         this.layout = new Layout();
         this.audioManager = new AudioManager();
         this.renderSystem = new RenderSystem(this.layerManager, this.layout);
+        this.exitPresentationSystem = new ExitPresentationSystem(this.layerManager, this.layout);
         this.debugOverlay = new DebugOverlay(this.layerManager);
     }
 
@@ -82,19 +89,23 @@ export class Game {
             // 4. 오디오 시스템 초기화
             await this.audioManager.initialize();
 
-            // 5. 디버그 오버레이 초기화
+            // 5. 퇴장 연출 시스템 초기화
+            this.exitPresentationSystem.initialize();
+            this.setupExitPresentationCallbacks();
+
+            // 6. 디버그 오버레이 초기화
             this.debugOverlay.initialize(this.debugConfig);
 
-            // 6. 더미 데이터 로드
+            // 7. 더미 데이터 로드
             this.loadDummyData();
 
-            // 7. 시간 시스템 콜백 등록
+            // 8. 시간 시스템 콜백 등록
             this.setupTimeCallbacks();
 
-            // 8. 이벤트 리스너 설정
+            // 9. 이벤트 리스너 설정
             this.setupEventListeners();
 
-            // 9. UI 초기화
+            // 10. UI 초기화
             this.initializeUI();
 
             console.log('[Game] Initialization complete!');
@@ -106,6 +117,19 @@ export class Game {
             console.error('[Game] Initialization failed:', error);
             throw error;
         }
+    }
+
+    /**
+     * 퇴장 연출 콜백 설정
+     */
+    private setupExitPresentationCallbacks(): void {
+        this.exitPresentationSystem.onComplete((unitId) => {
+            console.log(`[Game] Exit presentation complete: ${unitId}`);
+            this.exitingUnits.delete(unitId);
+
+            // 전투 종료 체크 (퇴장 연출 완료 후)
+            this.checkBattleEnd();
+        });
     }
 
     /**
@@ -123,7 +147,8 @@ export class Game {
 
         console.log('[Game] Loaded dummy units:', {
             allies: allies.length,
-            enemies: enemies.length
+            enemies: enemies.length,
+            exitTypes: allies.map(u => `${u.name}: ${u.exitPresentation?.type ?? 'FALL'}`),
         });
     }
 
@@ -138,6 +163,9 @@ export class Game {
 
         // 프레임 콜백 (렌더링)
         this.timeSystem.onFrame((deltaTime, elapsed) => {
+            // 퇴장 연출 업데이트
+            this.exitPresentationSystem.update(deltaTime);
+
             this.render();
             this.debugOverlay.updateFPS(deltaTime);
         });
@@ -242,15 +270,26 @@ export class Game {
 
         // 오디오 테스트 버튼
         const audioBtn = this.createButton('Test Audio', async () => {
-            // 오디오 컨텍스트 활성화 (사용자 상호작용 필요)
             await this.audioManager.resume();
             this.audioManager.playTestTone('sfx', 440, 0.1);
+        });
+
+        // 퇴장 연출 테스트 버튼
+        const exitTestBtn = this.createButton('Test Exit', () => {
+            // 랜덤 유닛 퇴장 테스트
+            const allUnits = [...this.allyUnits, ...this.enemyUnits];
+            const aliveUnits = allUnits.filter(u => u.stats.hp > 0 && !this.exitingUnits.has(u.id));
+            if (aliveUnits.length > 0) {
+                const randomUnit = aliveUnits[Math.floor(Math.random() * aliveUnits.length)];
+                this.triggerUnitExit(randomUnit, 'HP_ZERO');
+            }
         });
 
         container.appendChild(battleBtn);
         container.appendChild(speedBtn);
         container.appendChild(debugBtn);
         container.appendChild(audioBtn);
+        container.appendChild(exitTestBtn);
 
         return container;
     }
@@ -326,6 +365,9 @@ export class Game {
 
         // CT 충전
         [...this.allyUnits, ...this.enemyUnits].forEach(unit => {
+            // 퇴장 중인 유닛은 스킵
+            if (this.exitingUnits.has(unit.id)) return;
+
             if (unit.stats.hp > 0) {
                 const newCT = this.timeSystem.chargeUnitCT(
                     unit.id,
@@ -333,7 +375,7 @@ export class Game {
                     deltaTime
                 );
 
-                // CT 100% 도달 시 행동 (간단한 데모)
+                // CT 100% 도달 시 행동
                 if (this.timeSystem.isUnitReady(unit.id)) {
                     this.executeUnitAction(unit);
                     this.timeSystem.resetUnitCT(unit.id);
@@ -343,14 +385,14 @@ export class Game {
     }
 
     /**
-     * 유닛 행동 실행 (데모)
+     * 유닛 행동 실행
      */
     private executeUnitAction(unit: UnitData): void {
         console.log(`[Game] ${unit.name} (${unit.team}) acts!`);
 
         // 간단한 공격 시뮬레이션
         const targets = unit.team === 'ally' ? this.enemyUnits : this.allyUnits;
-        const aliveTargets = targets.filter(t => t.stats.hp > 0);
+        const aliveTargets = targets.filter(t => t.stats.hp > 0 && !this.exitingUnits.has(t.id));
 
         if (aliveTargets.length > 0) {
             const target = aliveTargets[Math.floor(Math.random() * aliveTargets.length)];
@@ -359,21 +401,34 @@ export class Game {
 
             console.log(`[Game] ${unit.name} deals ${damage} damage to ${target.name} (HP: ${target.stats.hp}/${target.stats.maxHp})`);
 
-            // 사망 처리
+            // 사망 처리 → 퇴장 연출 트리거
             if (target.stats.hp <= 0) {
-                console.log(`[Game] ${target.name} has fallen!`);
-                this.timeSystem.removeUnitCT(target.id);
+                this.triggerUnitExit(target, 'HP_ZERO');
             }
         }
+    }
 
-        // 승리 조건 체크
-        this.checkBattleEnd();
+    /**
+     * 유닛 퇴장 연출 트리거
+     * "Exit Presentation은 사망 애니메이션이 아니라, 캐릭터 퇴장의 무대다."
+     */
+    private triggerUnitExit(unit: UnitData, reason: 'HP_ZERO' | 'FORCED_RETREAT' | 'SCRIPTED'): void {
+        if (this.exitingUnits.has(unit.id)) return;
+
+        console.log(`[Game] Triggering exit presentation: ${unit.name} (${unit.exitPresentation?.type ?? 'FALL'})`);
+
+        this.exitingUnits.add(unit.id);
+        this.timeSystem.removeUnitCT(unit.id);
+        this.exitPresentationSystem.requestExit(unit, reason);
     }
 
     /**
      * 전투 종료 체크
      */
     private checkBattleEnd(): void {
+        // 퇴장 중인 유닛이 있으면 대기
+        if (this.exitingUnits.size > 0) return;
+
         const allyAlive = this.allyUnits.some(u => u.stats.hp > 0);
         const enemyAlive = this.enemyUnits.some(u => u.stats.hp > 0);
 
@@ -388,26 +443,34 @@ export class Game {
      * 렌더링
      */
     private render(): void {
+        const ctx = this.layerManager.getContext();
+
         // Canvas 클리어
         this.layerManager.clearCanvas();
 
         // 배경 렌더링
         this.renderSystem.renderBackground();
 
-        // 슬롯 렌더링
+        // 슬롯 렌더링 (퇴장 중인 슬롯은 흐리게)
         this.renderSystem.renderSlots(this.layout.getAllSlots('ally'), 'ally');
         this.renderSystem.renderSlots(this.layout.getAllSlots('enemy'), 'enemy');
 
-        // 유닛 렌더링
-        this.renderSystem.renderUnits(this.allyUnits, 'ally', this.layout, this.timeSystem);
-        this.renderSystem.renderUnits(this.enemyUnits, 'enemy', this.layout, this.timeSystem);
+        // 유닛 렌더링 (퇴장 중인 유닛 제외)
+        const activeAllyUnits = this.allyUnits.filter(u => !this.exitingUnits.has(u.id));
+        const activeEnemyUnits = this.enemyUnits.filter(u => !this.exitingUnits.has(u.id));
+
+        this.renderSystem.renderUnits(activeAllyUnits, 'ally', this.layout, this.timeSystem);
+        this.renderSystem.renderUnits(activeEnemyUnits, 'enemy', this.layout, this.timeSystem);
+
+        // 퇴장 연출 렌더링 (Layer 0)
+        this.exitPresentationSystem.render(ctx);
 
         // 디버그 오버레이
         if (this.debugConfig.showSlotLabels || this.debugConfig.showUnitLabels) {
             this.debugOverlay.render(
                 this.layout,
-                this.allyUnits,
-                this.enemyUnits,
+                activeAllyUnits,
+                activeEnemyUnits,
                 this.timeSystem
             );
         }
@@ -422,6 +485,10 @@ export class Game {
      */
     public startBattle(): void {
         if (this._battleState === 'running') return;
+
+        // 퇴장 연출 초기화
+        this.exitPresentationSystem.forceCompleteAll();
+        this.exitingUnits.clear();
 
         // 유닛 HP 리셋 (테스트용)
         [...this.allyUnits, ...this.enemyUnits].forEach(unit => {
@@ -472,10 +539,18 @@ export class Game {
     }
 
     /**
+     * ExitPresentationSystem 접근자
+     */
+    public get exitPresentation(): ExitPresentationSystem {
+        return this.exitPresentationSystem;
+    }
+
+    /**
      * 정리
      */
     public destroy(): void {
         this.timeSystem.stop();
+        this.exitPresentationSystem.destroy();
         this.layerManager.destroy();
         this.audioManager.destroy();
         Game.instance = null;

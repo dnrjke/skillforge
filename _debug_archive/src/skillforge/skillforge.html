@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+
+    <!--
+    ================================================================================
+    MOBILE-FIRST ADAPTIVE LAYOUT
+    ================================================================================
+    "태블릿은 다른 UI가 아니라, 더 여유 있는 모바일이다."
+
+    Design Principles:
+    - Base: Mobile 9:16 Portrait (<=480px)
+    - Tablet: Extended mobile (481-1024px), NOT desktop
+    - No landscape mode support
+    - Canvas maintains fixed logical resolution
+    - Adaptive, NOT Responsive
+    ================================================================================
+    -->
+
+    <!-- Mobile Viewport & PWA Settings -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0a0a15">
+    <meta name="format-detection" content="telephone=no">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABISURBVFhH7c4xDQAwDASwKv8/Z7sCZOAE3tmu7T3OzKx9i4joReIL0l4k7kXi/0hc/ReJexG9SNyLxBekL0h7kbgXia9F9AIzMwPfJZJYMQAAAABJRU5ErkJggg==">
+
+    <title>Skillforge Alpha</title>
+
+    <style>
+        /* ============================================================
+         * CSS RESET & MOBILE FOUNDATION
+         * Base: 9:16 Portrait Mobile
+         * ============================================================ */
+
+        :root {
+            /* Safe Area Insets (iOS Notch/Dynamic Island) */
+            --sat: env(safe-area-inset-top, 0px);
+            --sab: env(safe-area-inset-bottom, 0px);
+            --sal: env(safe-area-inset-left, 0px);
+            --sar: env(safe-area-inset-right, 0px);
+
+            /* Theme Colors */
+            --bg-dark: #0a0a15;
+            --bg-mid: #151525;
+            --bg-decoration: #0d0d18;
+            --text-primary: #ffffff;
+            --text-secondary: #aaaaaa;
+            --accent-ally: #4488ff;
+            --accent-enemy: #ff4444;
+
+            /* Canvas Logical Resolution (9:16 Portrait) */
+            --canvas-aspect: 9 / 16;
+            --canvas-logical-width: 360;
+            --canvas-logical-height: 640;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            -webkit-text-size-adjust: 100%;
+            text-size-adjust: 100%;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-dark);
+
+            /* Block native gestures */
+            touch-action: none;
+            overscroll-behavior: none;
+
+            /* Prevent text selection */
+            user-select: none;
+            -webkit-user-select: none;
+
+            /* Prevent callout on long press (iOS) */
+            -webkit-touch-callout: none;
+
+            /* Prevent tap highlight */
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* ============================================================
+         * GAME ROOT CONTAINER
+         * Uses 100dvh for Safari address bar handling
+         * ============================================================ */
+
+        .game-root {
+            position: relative;
+            width: 100%;
+            height: 100dvh;
+
+            /* Fallback for browsers without dvh */
+            height: 100vh;
+            @supports (height: 100dvh) {
+                height: 100dvh;
+            }
+
+            /* Safe Area Padding */
+            padding-top: var(--sat);
+            padding-bottom: var(--sab);
+            padding-left: var(--sal);
+            padding-right: var(--sar);
+
+            /* Flex center for canvas container */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            overflow: hidden;
+        }
+
+        /* ============================================================
+         * CANVAS CONTAINER (Maintains 9:16 Aspect)
+         * ============================================================ */
+
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            max-width: 100%;
+            aspect-ratio: var(--canvas-aspect);
+            max-height: 100%;
+
+            /* Center horizontally */
+            margin: 0 auto;
+
+            /* Prevent overflow */
+            overflow: hidden;
+        }
+
+        /* ============================================================
+         * LAYER 0: WORLD (Canvas)
+         * Fixed logical resolution, centered
+         * ============================================================ */
+
+        #world-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            display: block;
+
+            /* Prevent canvas drag */
+            -webkit-user-drag: none;
+        }
+
+        /* ============================================================
+         * LAYER 1: DISPLAY (Presentation)
+         * Angel Bust, Skill Popups, Damage Text
+         * ============================================================ */
+
+        #display-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 500;
+
+            /* Pass clicks to canvas by default */
+            pointer-events: none;
+        }
+
+        #angel-bust-placeholder {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            pointer-events: none;
+        }
+
+        #memorial-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* ============================================================
+         * LAYER 2: SYSTEM (UI)
+         * Settings, Modals, Debug
+         * ============================================================ */
+
+        #system-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+
+            /* Pass clicks to lower layers by default */
+            pointer-events: none;
+        }
+
+        /* Enable pointer events for interactive elements */
+        .interactive {
+            pointer-events: auto;
+        }
+
+        /* ============================================================
+         * TABLET DECORATION LAYER (Outside Canvas)
+         * Only visible on tablets where extra space exists
+         * ============================================================ */
+
+        .tablet-decoration {
+            display: none;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            width: calc((100vw - min(100vw, 100vh * 9 / 16)) / 2);
+            background: var(--bg-decoration);
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .tablet-decoration.left {
+            left: 0;
+        }
+
+        .tablet-decoration.right {
+            right: 0;
+        }
+
+        /* Decorative firefly particles for tablet margins */
+        .tablet-decoration::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                radial-gradient(circle at 20% 30%, rgba(100, 150, 255, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(100, 150, 255, 0.02) 0%, transparent 40%);
+        }
+
+        /* ============================================================
+         * DEVICE ADAPTIVE BREAKPOINTS
+         * Mobile: <=480px (base)
+         * Tablet: 481-1024px (extended mobile)
+         * NO DESKTOP CONCEPT
+         * ============================================================ */
+
+        /* MOBILE (Base - Default) */
+        /* All styles above are mobile-first */
+
+        /* TABLET (Extended Mobile) */
+        @media screen and (min-width: 481px) and (max-width: 1024px) {
+            /* Show decoration areas on tablet */
+            .tablet-decoration {
+                display: block;
+            }
+
+            /* Slightly larger UI elements on tablet (1.1x) */
+            #angel-bust-placeholder {
+                transform: scale(1.1);
+                transform-origin: top left;
+            }
+
+            /* Modal decoration spacing on tablet */
+            .modal-overlay {
+                padding: 20px;
+            }
+        }
+
+        /* Large Tablet (still tablet, not desktop) */
+        @media screen and (min-width: 769px) and (max-width: 1024px) {
+            #angel-bust-placeholder {
+                transform: scale(1.15);
+            }
+        }
+
+        /* ============================================================
+         * TEST INTERFACE (Bottom Right)
+         * ============================================================ */
+
+        #test-interface {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-width: 120px;
+        }
+
+        #test-interface button {
+            padding: 6px 10px;
+            background: rgba(80, 80, 120, 0.8);
+            border: 1px solid rgba(150, 150, 200, 0.4);
+            border-radius: 4px;
+            color: white;
+            font-size: 11px;
+            cursor: pointer;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+
+        #test-interface button:active {
+            background: rgba(100, 100, 150, 0.9);
+        }
+
+        /* ============================================================
+         * LOADING SCREEN
+         * ============================================================ */
+
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-dark);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease-out;
+        }
+
+        #loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-title {
+            font-family: 'Georgia', serif;
+            font-size: 20px;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            letter-spacing: 3px;
+        }
+
+        .loading-spinner {
+            width: 32px;
+            height: 32px;
+            border: 2px solid rgba(100, 150, 255, 0.2);
+            border-top: 2px solid var(--accent-ally);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* ============================================================
+         * TYPOGRAPHY
+         * ============================================================ */
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+                         'Helvetica Neue', Arial, sans-serif;
+            font-size: 14px;
+            color: var(--text-primary);
+            line-height: 1.4;
+        }
+
+        /* ============================================================
+         * DEBUG INFO
+         * ============================================================ */
+
+        #debug-device-info {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            padding: 4px 8px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #888;
+            font-family: monospace;
+            font-size: 10px;
+            border-radius: 4px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="loading-title">SKILLFORGE</div>
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Tablet Decoration Areas (only visible on tablets) -->
+    <div class="tablet-decoration left"></div>
+    <div class="tablet-decoration right"></div>
+
+    <!-- Main Game Root -->
+    <div class="game-root">
+        <!-- Canvas Container (9:16 Aspect Ratio) -->
+        <div class="canvas-container">
+            <!-- Layer 0: World (Canvas) -->
+            <canvas id="world-layer" aria-label="Battle Arena"></canvas>
+
+            <!-- Layer 1: Display (Presentation) -->
+            <div id="display-layer">
+                <div id="angel-bust-placeholder"></div>
+                <div id="memorial-container"></div>
+            </div>
+
+            <!-- Layer 2: System (UI) -->
+            <div id="system-layer">
+                <div id="debug-device-info"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Entry Point Script -->
+    <script type="module" src="./index.ts"></script>
+
+    <!-- Hide loading screen after initialization -->
+    <script>
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                var loadingScreen = document.getElementById('loading-screen');
+                if (loadingScreen) {
+                    loadingScreen.classList.add('hidden');
+                    setTimeout(function() {
+                        loadingScreen.remove();
+                    }, 500);
+                }
+            }, 300);
+        });
+    </script>
+</body>
+</html>

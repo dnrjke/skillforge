@@ -1,0 +1,294 @@
+/**
+ * Skillforge: Air-Sport - Mobile-First Adaptive Stylesheet
+ *
+ * 헌법 준수:
+ * - CSS 리셋으로 모바일 Safari 대응
+ * - 3단 레이어 구조 (World/Display/System)
+ * - 9:16 비율 고정, 센터링
+ */
+
+/* ============================================
+   CSS Reset (헌법 §5)
+   ============================================ */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overscroll-behavior: none;
+    overflow: hidden;
+    background: #000;
+    font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Safari Safe Area */
+:root {
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+}
+
+/* ============================================
+   App Container (9:16 비율 고정)
+   ============================================ */
+#app-container {
+    position: relative;
+    width: 100%;
+    height: 100dvh;
+    max-width: calc(100dvh * 9 / 16);
+    margin: 0 auto;
+    background: #0a0a15;
+    overflow: hidden;
+}
+
+/* Tablet: 중앙 배치 */
+@media screen and (min-width: 768px) {
+    #app-container {
+        box-shadow: 0 0 60px rgba(0, 100, 255, 0.1);
+    }
+}
+
+/* ============================================
+   Layer 0: World (Canvas)
+   ============================================ */
+#world-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+/* ============================================
+   Layer 1: Display (연출)
+   ============================================ */
+#display-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 500;
+    pointer-events: none;
+}
+
+#angel-bust {
+    position: absolute;
+    top: var(--sat, 10px);
+    left: 10px;
+    width: 100px;
+    height: 130px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+#angel-bust img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+#scenario-ui {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+#scenario-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    transition: opacity 0.5s ease;
+}
+
+#dialogue-box {
+    position: absolute;
+    bottom: calc(var(--sab, 20px) + 20px);
+    left: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 12px;
+    padding: 20px;
+    padding-top: 16px;
+    pointer-events: auto;
+}
+
+#speaker-name {
+    display: inline-block;
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 8px;
+    padding: 2px 10px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+#dialogue-text {
+    margin: 0;
+    color: #fff;
+    font-size: 16px;
+    line-height: 1.6;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* 페이드 오버레이 */
+#fade-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+}
+
+#fade-overlay.fade-to-black {
+    opacity: 1;
+}
+
+#cutscene-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.9);
+}
+
+#cutscene-layer img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+/* ============================================
+   Layer 2: System (UI)
+   ============================================ */
+#system-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+#system-layer .interactive {
+    pointer-events: auto;
+}
+
+/* Touch Start Screen */
+#touch-start-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+    transition: opacity 0.5s ease;
+}
+
+#touch-start-screen.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+#touch-prompt {
+    text-align: center;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+#touch-prompt p {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 18px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.6; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.05); }
+}
+
+/* Debug Info */
+#debug-info {
+    position: absolute;
+    top: var(--sat, 10px);
+    right: 10px;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.8);
+    color: #0f0;
+    font-family: monospace;
+    font-size: 11px;
+    border-radius: 4px;
+}
+
+/* ============================================
+   Utility Classes
+   ============================================ */
+.hidden {
+    display: none !important;
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+}
+
+.fade-out {
+    animation: fadeOut 0.5s ease-out forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+/* ============================================
+   Tablet Adaptations (헌법 §4)
+   ============================================ */
+@media screen and (min-width: 768px) {
+    #angel-bust {
+        width: 140px;
+        height: 180px;
+    }
+
+    #dialogue-box {
+        left: 40px;
+        right: 40px;
+        padding: 24px;
+    }
+
+    #dialogue-text {
+        font-size: 18px;
+    }
+}
