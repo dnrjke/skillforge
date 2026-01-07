@@ -14,6 +14,7 @@ import { AudioManager } from './AudioManager';
 import { ScenarioManager } from './ScenarioManager';
 import { getAllSlotPositions, getSlotSize, screenToCanvas } from './Layout';
 import { OPENING_SEQUENCES, OPENING_ORDER } from './data/opening';
+import { SkipButton } from './ui/SkipButton';
 
 // ============================================
 // 게임 상태
@@ -37,10 +38,12 @@ let canvas: HTMLCanvasElement;
 let ctx: CanvasRenderingContext2D;
 let audioManager: AudioManager;
 let scenarioManager: ScenarioManager;
+let skipButton: SkipButton;
 
 // DOM 요소
 let touchStartScreen: HTMLElement | null;
 let debugInfo: HTMLElement | null;
+let systemLayer: HTMLElement | null;
 
 // ============================================
 // Canvas Resize (헌법 §5)
@@ -81,6 +84,7 @@ async function initialize(): Promise<void> {
     ctx = canvas.getContext('2d')!;
     touchStartScreen = document.getElementById('touch-start-screen');
     debugInfo = document.getElementById('debug-info');
+    systemLayer = document.getElementById('system-layer');
 
     // 디바이스 감지
     gameState.deviceClass = detectDevice();
@@ -102,6 +106,15 @@ async function initialize(): Promise<void> {
     scenarioManager.setCallbacks({
         onEvent: handleScenarioEvent,
         onSequenceEnd: handleSequenceEnd,
+    });
+
+    // 스킵 버튼 초기화 (Hold-to-Skip 스타일)
+    skipButton = new SkipButton({
+        parent: systemLayer ?? document.body,
+        holdDuration: 800,
+        onSkip: handleSkipButtonPress,
+        onSkipStart: () => console.log('[Skip] Hold started'),
+        onSkipCancel: () => console.log('[Skip] Cancelled'),
     });
 
     // 이벤트 리스너 설정
@@ -277,12 +290,26 @@ function handleKeyDown(event: KeyboardEvent): void {
 function completeTutorial(): void {
     console.log('[Tutorial] Complete! Moving to evening sequence...');
     gameState.phase = 'scenario';
+    skipButton.hide();
     // tutorial_intro 다음은 evening_reveal
     openingSequenceIndex = OPENING_ORDER.indexOf('evening_reveal');
     if (openingSequenceIndex === -1) {
         openingSequenceIndex = OPENING_ORDER.length - 2; // 마지막 두 번째
     }
     playNextOpeningSequence();
+}
+
+/**
+ * 스킵 버튼 클릭 처리
+ * 플레이 파트(비행 모드)에서 스토리 시퀀스로 스킵
+ */
+function handleSkipButtonPress(): void {
+    console.log('[Skip] Button pressed - skipping flight section');
+
+    if (gameState.phase === 'flight') {
+        // 비행 모드 스킵 → 저녁 시퀀스로 이동
+        completeTutorial();
+    }
 }
 
 // ============================================
@@ -357,6 +384,7 @@ async function handleScenarioEvent(eventName: string): Promise<void> {
         // 실제 튜토리얼 플레이
         case 'START_FLIGHT_GAMEPLAY':
             gameState.phase = 'flight';
+            skipButton.show();  // 스킵 버튼 표시
             console.log('[Tutorial] Flight gameplay started');
             // 튜토리얼 종료 후 저녁 시퀀스를 수동으로 트리거해야 함
             break;
